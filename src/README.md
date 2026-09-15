@@ -21,9 +21,9 @@ src/engine/                   --tools/transcode.py-->  build/cp1250/   (what the
 Everything under `build/` is generated and gitignored. Regenerate and verify with:
 
 ```sh
-python tools/gen-src.py                  # original/  -> build/src/
-python tools/transcode.py --check        # proves the round trip is byte-exact
-python tools/transcode.py --to-cp1250    # src/engine/ -> build/cp1250/
+python3 tools/gen-src.py                  # original/  -> build/src/
+python3 tools/transcode.py --check        # proves the round trip is byte-exact
+python3 tools/transcode.py --to-cp1250    # src/engine/ -> build/cp1250/
 ```
 
 `--check` asserts `to_cp1250(to_utf8(x)) == x` for all 37 files, so the UTF-8 encoding
@@ -71,8 +71,8 @@ mirror of the original — `transcode.py --check` still reports it clean.
 ## Building
 
 ```sh
-python tools/build.py          # regenerates build/cp1250/, compiles, links
-python tools/build.py -v       # ...showing every command
+python3 tools/build.py          # regenerates build/cp1250/, compiles, links
+python3 tools/build.py -v       # ...showing every command
 ```
 
 Flags, and the reason for each, are documented at the top of `tools/build.py`.

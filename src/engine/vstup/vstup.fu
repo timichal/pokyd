@@ -772,7 +772,7 @@ Typ_slova novevyznamy;
 
     g_vetacloveka.slova[poziceslova].PRIPOJ(novevyznamy);
     g_vetacloveka.pocetslov=poziceslova+1;
-    sprintf(g_vetacloveka.slova[poziceslova].vlastnislovo,slovo);
+    strcpy(g_vetacloveka.slova[poziceslova].vlastnislovo,slovo);
     novevyznamy.VYMAZ_OBSAH();
    }                            //zkopirovani vyznamu slov do "g_vetacloveka.slova"
 

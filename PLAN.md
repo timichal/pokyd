@@ -9,19 +9,29 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 1 — building the engine natively. 1.1, 1.2 and 1.3 done. **The engine
-compiles and links**, as `build/native/pokyd.exe`, via `python tools/build.py`.
+**Phase:** 1 — building the engine natively. 1.1 through 1.4 done. **The engine
+compiles and links**, as `build/native/pokyd.exe`, via `python3 tools/build.py`. The
+patch set against the original is one line, recorded in `PATCHES.md`.
 
-**Next action:** Phase 1, step 1.4 — the `sprintf`→`strcpy` fix (hazard 2) and
-`PATCHES.md`. 1.3 already moved the hazard flags into `tools/build.py`, so 1.4 is now only
-that one required source change plus the audit file recording it. Then 1.5, the console
-driver — the first time any of this code will actually run.
+**Next action:** Phase 1, step 1.5 — the console driver in `src/driver/`, the first time
+any of this code will actually run. Read the two warnings in 1.5 below before starting:
+`IQ_POKYDE_ODPOVEZ` does not exist in a `BEZ_PROSTREDI` build, and
+`NACTI_A_ROZSKLONUJ_ZAKLADNI_SLOVNIK` has a DOS test-harness tail that frees the
+dictionary again. Also expect stdout to be noisy — see the `vstup.fu:801-809` note in
+`PATCHES.md`.
 
 ---
 
 ## Toolchain on this machine
 
-Probed 2026-09-15. `gcc`/`g++` MinGW-W64 16.1.0 (ucrt64), `python` 3.14.7.
+Re-probed 2026-09-15 on a **second machine**, and the results carry over: `gcc`/`g++`
+MinGW-W64 16.1.0 (ucrt64) is identical, `node` v24.20.0 is present (new — Phase 3.3 has
+its smoke-test runner). The one difference is Python. **Use `python3`, not `python`.**
+On this machine `python3` is 3.14.7 as before, but bare `python` resolves to a miniforge
+3.12.7 that is first on `PATH`. The tools are stdlib-only and work under both, but the
+commands throughout this file say `python3` so the recorded toolchain is the one actually
+used.
+
 **No `clang`, no `cl`, no `emcc`** — Emscripten has to be installed before Phase 3 starts.
 Phase 1 targets MinGW g++; expect to re-diff everything once clang enters the picture, since
 hazard 1 (`char` signedness) differs between the two by default. As of 1.3 the engine builds
@@ -173,10 +183,24 @@ Specific things that will bite. Each has a task attached in the phases below.
    defaults to *unsigned*. The dictionary checksums, `DEKODOVANY_ZNAK`, and the mood delta
    (`POSLEDNI_ZNAK(dekodovanapodminka)-100` in `INTELIG.FU`) all depend on signed wraparound.
    **Must build with `-fsigned-char`.** Silent corruption otherwise.
-2. **Format-string bug with user input.** `POROZUMEJ_VETE_NAPSANE_CLOVEKEM` (`VSTUP.FU:774`)
-   does `sprintf(g_vetacloveka.slova[poziceslova].vlastnislovo, slovo)` — the user's own word
-   as a format string. Typing `%s` will crash or leak memory. Must become `strcpy`. This is a
-   required fix, not a cleanup.
+2. **Format-string bug with user input.** ~~`POROZUMEJ_VETE_NAPSANE_CLOVEKEM`
+   (`VSTUP.FU:774`) does `sprintf(..., slovo)` — the user's own word as a format string.
+   Typing `%s` will crash or leak memory.~~ **Fixed in 1.4, but the reasoning above was
+   wrong and the correction matters.** `%` never reaches that call: `slovo` is assembled
+   character by character at `vstup.fu:751-761` and only bytes `JELI_PISMENO` accepts get
+   copied in. Compiled and run over all 256 values, that predicate accepts 181, and every
+   accepted byte below 0x80 is `a-zA-Z` or `*`. `%` is 0x25 and is a word *separator*.
+   So there was no vulnerability, and `sprintf`→`strcpy` is instead **provably
+   behaviour-preserving** — which is why it was safe to apply to a museum piece.
+
+   Two things survive the correction. The safety property is non-local and rests on
+   `-fsigned-char`: it is the `pismeno < 0` arm of `JELI_PISMENO` that admits the accented
+   CP1250 letters, so under clang's unsigned-`char` default the argument collapses — this
+   is hazard 1 with teeth, and Phase 3 is where it bites. And a second instance of the
+   same shape does exist and is **not** patched: `printf(novytext)` in
+   `NAPIS_TEXT_V_LATIN_2` (`vstup.fu:1235`), which is reachable with user-derived text.
+   It is safe for the same reason plus the fact that the CP1250→CP852 conversion only
+   rewrites high-bit bytes. Full argument in `PATCHES.md`.
 3. **Hardcoded absolute includes.** ~~Every `.IN` file uses `#include "\!IQPokyd\!Zdrojak\..."`
    and `DOS.IN` uses `f:\!iqpokyd\...`.~~ **Solved in 1.1** by `tools/gen-src.py`, which mirrors
    the tree into `build/src/` with those paths rewritten relative. Note that no `-I` flag can
@@ -242,6 +266,24 @@ Specific things that will bite. Each has a task attached in the phases below.
       recompiled `IQPOKYD.IQP` matches the shipped one, CRLF was right. If Michal still has
       the original archive, re-adding `original/` under the new attributes would restore the
       true bytes — his call, and his commit.
+
+      **Worse than recorded, and now partly fixed (1.4).** `original/** text eol=crlf`
+      applied to *binaries* too, because the binary block under it did not list every
+      binary extension in the archive. Five files were getting the CRLF smudge on every
+      checkout: `!Prostre/font.fon` (+67 bytes), `res/Thumbs.db` (+86), and the three
+      `.OBJ` (+22, +107, +169). Reproduced in a clean clone and fixed by adding
+      `*.fon *.obj *.gid *.db` (both cases) to `.gitattributes`; verified by cloning from
+      the fixed repo and getting blob-exact bytes and a clean `git status`. The 32 files
+      that matter were never affected — `slovnik.iqp`, both `.IQP`s, all 19 bitmaps, the
+      TTF, the three `.EXE`s and the `.HLP`/`.GID` all match their blobs byte-for-byte,
+      because their extensions were already declared.
+
+      What this does **not** fix is the blobs themselves. Those five were committed
+      through the text filter, and CRLF→LF is not injective: a true `0D 0A` and a bare
+      `0A` both store as `0A`. Their pre-commit bytes are gone. Only `font.fon` is
+      plausibly archive material and it is not in the Phase 6.2 asset list, so nothing
+      downstream depends on it — but if the original archive turns up, those five are the
+      files to re-add, not just `GRAMATIK.IQZ`.
 - [ ] How faithful should the UI be? The original's assets are all here — 1.2 MB background
       bitmap, custom TTF, menu bitmaps, and `IQPokyd.rc` with exact dialog layouts. Decide at
       Phase 6 once there's something running.
@@ -332,13 +374,31 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       `poziceprostoru`, `hodnota1`, `hodnota2`, `debuginfoznak`, `vysledek`. Suppressed:
       `-Wno-write-strings` (1588 hits of the pre-ISO `char *p = "literal"`) and
       `-Wno-misleading-indentation` (57 hits of the author's one-space indent style).
-- [ ] 1.4 Apply the required fix **in `src/engine/`**: `sprintf`→`strcpy` (hazard 2).
-      Record every change to original code in `PATCHES.md` with file, line, and why. From
-      here on `transcode.py --check` will list those files as differing from the original;
-      that list and `PATCHES.md` must agree, which makes the check an audit of the patch
-      set. The flags this step used to own (`-fsigned-char`, `-fwrapv`,
-      `-fno-strict-aliasing`, `-O1`) went into `tools/build.py` in 1.3 — compiling for the
-      first time without them would have produced a reference binary we could not trust.
+- [x] 1.4 **Done** — `src/engine/vstup/vstup.fu:775` is now `strcpy`, and `PATCHES.md`
+      exists as the prose half of the audit. The patch set is **one line, −1 byte**;
+      `transcode.py --check` names exactly one differing file and `diff -r build/src
+      build/cp1250` prints exactly that line, so the two halves agree. The build is
+      unchanged in every observable way: 39 warnings in the same seven categories and the
+      same counts, same link-check output (220 / 201 / 6568 B).
+
+      The step's own finding is that **hazard 2 was misdiagnosed** — there was never a
+      reachable format-string bug, because `%` cannot survive `JELI_PISMENO`. See the
+      rewritten hazard 2 above. The patch stands anyway, now justified as provably
+      behaviour-preserving rather than as a security fix, which is a stronger footing for
+      a museum piece: it cannot change an answer the engine gives.
+
+      Two further findings, both recorded in `PATCHES.md` under "considered and not
+      applied", neither patched:
+      - `printf(novytext)` in `NAPIS_TEXT_V_LATIN_2` (`vstup.fu:1235`) is the same bug
+        shape and *is* reachable with user-derived text (`intelig.fu:146`/`:167` pass a
+        re-inflected word from your own sentence). Safe for the same `JELI_PISMENO`
+        reason, plus the CP1250→CP852 switch being guarded by `znak < 0` with all 30
+        replacement bytes in `0x82..0xFD`. Left alone; `printf("%s", …)` if that ever
+        changes.
+      - **`vstup.fu:801-809` prints to stdout on every sentence**, unguarded — every
+        recognised base form, via `NAPIS_TEXT_V_LATIN_2`. A debug leftover the author
+        commented out in the block just below (819-867) but not here. 1.5 and 1.6 have to
+        cope with the noise rather than delete it.
 - [ ] 1.5 Console driver in `src/driver/` (build.py links it automatically once it exists):
       load `slovnik.iqp` + `IQPOKYD.IQP`, read stdin lines, print replies. Two things 1.3
       turned up that this step has to handle. **`IQ_POKYDE_ODPOVEZ` lives in
@@ -448,10 +508,14 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
 
 ## Reference
 
+- **Changes to original code: `PATCHES.md`.** One line so far. It pairs with
+  `python3 tools/transcode.py --check`, which names every file differing from the
+  original; that list and `PATCHES.md` must agree, and `diff -r build/src build/cp1250`
+  shows the patch set as a diff.
 - Source pipeline and how to regenerate it: `src/README.md`.
   `tools/gen-src.py` (original → `build/src/`), `tools/transcode.py`
   (`build/src/` ⇄ `src/engine/` → `build/cp1250/`), `tools/dump-dict.py` (dictionary decoder).
-- Building: `python tools/build.py`. Every flag is justified in that file's docstring, and
+- Building: `python3 tools/build.py`. Every flag is justified in that file's docstring, and
   the Win32/MFC replacement it compiles against is `src/shim/`, described in `src/README.md`.
 - Engine entry point: `IQ_POKYDE_ODPOVEZ` — `Aplikace/Prostred/PROSTRED.FU:212`.
   Pipeline is `POROZUMEJ_VETE_NAPSANE_CLOVEKEM` → `ZPRACUJ_VETU`
