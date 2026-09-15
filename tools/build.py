@@ -52,10 +52,13 @@ fopen instead of GetModuleFileName).
 Usage
 -----
     python tools/build.py            # objects + link check (or the driver, if present)
+    python tools/build.py --wasm     # phase 3.2: the wasm module, via emcc
     python tools/build.py -v         # show every command
 """
 
 import argparse
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -89,6 +92,60 @@ CACHE = "SLOVNIK.TMP"        # the inflected dictionary, written by the engine
 
 CXX = "g++"
 
+# --- Emscripten, phase 3.2 --------------------------------------------------
+#
+# emcc is looked up by absolute path and deliberately *not* expected on PATH.
+# Sourcing emsdk_env puts emsdk's own node (24.19.0) ahead of the system node
+# (24.20.0) that PLAN.md 3.3 pins as the smoke-test runner, and an activated
+# emsdk is one more thing a second machine has to reproduce exactly.  Nothing
+# here needs either: emcc resolves `.emscripten` relative to itself, so an
+# un-activated, un-PATHed install works as it stands.
+#
+# Order of search: POKYD_EMCC, then $EMSDK, then the usual install roots, then
+# PATH as a last resort for whoever does have it activated.
+EMSDK_KORENY = [
+    Path("C:/Program Files/emsdk"),
+    Path("C:/emsdk"),
+    Path.home() / "emsdk",
+    Path("/usr/lib/emsdk"),
+]
+
+# Where the sysroot cache goes when the shipped one cannot be written.  An emsdk
+# under C:/Program Files has a 602 MB cache/ that needs elevation to touch, and
+# the first link wants to write to it.  This is a cache, so it belongs in the
+# user's cache directory -- not in build/, which is meant to be deletable.
+EM_CACHE = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".cache") / "pokyd" / "emcache"
+
+WASM = ROOT / "build" / "wasm"
+
+# The 15 of pokyd_api.h, plus the allocator: the CP1250 boundary in phase 4.1 has
+# to put bytes into the heap itself, because there is no UTF-8 helper that will do
+# it for a code page.  The leading underscore is the C symbol as the linker sees it.
+EXPORTY = [
+    "_pokyd_init", "_pokyd_load_dictionaries", "_pokyd_shutdown", "_pokyd_error",
+    "_pokyd_say", "_pokyd_sentence_count", "_pokyd_seed",
+    "_pokyd_get_settings", "_pokyd_set_settings", "_pokyd_set_mood",
+    "_pokyd_progress", "_pokyd_phase",
+    "_pokyd_export_cache", "_pokyd_import_cache", "_pokyd_free",
+    "_malloc", "_free",
+]
+
+# --no-entry because src/driver/ is left out of this build: it has a main(), and
+# 3.2 builds a library.  The data files go into /pokyd/ in MEMFS, which is the
+# directory pokyd_init() chdir()s into -- the engine opens every file by bare name
+# in the current directory and writes the 17 MB SLOVNIK.TMP next to them, so it
+# has to be writable.  Hence ALLOW_MEMORY_GROWTH, which the inflected dictionary
+# needs on its own account anyway.
+WASM_LINK = [
+    "--no-entry",
+    "-sMODULARIZE=1",
+    "-sEXPORT_NAME=PokydModule",
+    "-sALLOW_MEMORY_GROWTH=1",
+    "-sINVOKE_RUN=0",
+    "-sEXPORTED_FUNCTIONS=" + ",".join(EXPORTY),
+    "-sEXPORTED_RUNTIME_METHODS=ccall,cwrap,FS,HEAPU8",
+]
+
 STD = ["-std=gnu++98"]
 HAZARDS = ["-fsigned-char", "-fwrapv", "-fno-strict-aliasing", "-O1"]
 DEFINES = ["-DBEZ_PROSTREDI=1"]
@@ -110,6 +167,135 @@ int main(void) {
   return 0;
  }
 """
+
+
+def najdi_emcc():
+    """Locate emcc without requiring it on PATH.  Returns (Path, None) or (None, why)."""
+    prepis = os.environ.get("POKYD_EMCC")
+    if prepis:
+        kandidat = Path(prepis)
+        if kandidat.is_file():
+            return kandidat, None
+        return None, f"POKYD_EMCC is set to {kandidat}, which is not a file"
+
+    koreny = []
+    if os.environ.get("EMSDK"):
+        koreny.append(Path(os.environ["EMSDK"]))
+    koreny += EMSDK_KORENY
+    for koren in koreny:
+        for jmeno in ("emcc.exe", "emcc.bat", "emcc"):
+            kandidat = koren / "upstream" / "emscripten" / jmeno
+            if kandidat.is_file():
+                return kandidat, None
+
+    nalezene = shutil.which("emcc")
+    if nalezene:
+        return Path(nalezene), None
+
+    return None, ("no emcc.  Looked at POKYD_EMCC, $EMSDK, "
+                  + ", ".join(str(k) for k in EMSDK_KORENY) + ", and PATH.\n"
+                  "Install it with:  git clone https://github.com/emscripten-core/emsdk\n"
+                  "then emsdk install latest && emsdk activate latest.  Activating is\n"
+                  "enough; it does not have to go on PATH.  Or point POKYD_EMCC straight\n"
+                  "at the emcc executable.")
+
+
+def em_prostredi(emcc, verbose):
+    """The environment emcc runs in.  Two variables, both about staying out of the way.
+
+    EM_CONFIG pins the .emscripten next to the install rather than whatever a
+    stray ~/.emscripten might say.  EM_CACHE moves the sysroot cache somewhere
+    writable when the shipped one is not -- an install under C:/Program Files
+    needs elevation, and the first link fails on it otherwise.  Redirecting means
+    emscripten rebuilds the handful of libs this build actually uses, once.
+
+    Both are setdefault, so an activated emsdk keeps its own answers.
+    """
+    prostredi = dict(os.environ)
+    koren = emcc.parent.parent.parent          # <emsdk>/upstream/emscripten/emcc
+
+    config = koren / ".emscripten"
+    if config.is_file():
+        prostredi.setdefault("EM_CONFIG", str(config))
+
+    zasoba = emcc.parent / "cache"
+    try:
+        zkouska = zasoba / ".pokyd-write-test"
+        zkouska.touch()
+        zkouska.unlink()
+        zapisovatelna = True
+    except OSError:
+        zapisovatelna = False
+    if not zapisovatelna:
+        EM_CACHE.mkdir(parents=True, exist_ok=True)
+        prostredi.setdefault("EM_CACHE", str(EM_CACHE))
+        if verbose:
+            print(f"  {zasoba} is not writable, EM_CACHE -> {EM_CACHE}")
+
+    return prostredi
+
+
+def prelozit_wasm(args):
+    """Phase 3.2.  Engine + shim + api to a MODULARIZE'd wasm module.
+
+    The compile flags are the native ones unchanged: the hazard set is not a g++
+    preference, it is the engine's requirement.  -fsigned-char most of all --
+    x86 g++ defaults to signed and wasm clang does not, so this is the build
+    where dropping it silently changes the dictionary checksums (hazard 1).
+    """
+    emcc, potiz = najdi_emcc()
+    if emcc is None:
+        print(potiz)
+        return 1
+    print(f"emcc    {emcc}")
+    prostredi = em_prostredi(emcc, args.verbose)
+
+    # The preloaded files come from build/run/, under the bare names KONSTANT.K
+    # expects.  Same layout the native driver is run in.
+    if priprav_run_adresar():
+        return 1
+
+    WASM.mkdir(parents=True, exist_ok=True)
+    sources = sorted(SHIM.glob("*.cpp")) + sorted(API.glob("*.cpp"))
+
+    objects = []
+    for src in sources:
+        obj = WASM / (src.stem + ".o")
+        print(f"compiling {src.relative_to(ROOT)}")
+        if run([emcc] + CXXFLAGS + ["-c", src, "-o", obj], args.verbose, prostredi):
+            return 1
+        objects.append(obj)
+
+    # --embed-file, not --preload-file, and the difference is worth writing down.
+    #
+    # Preloading emits a fourth artifact, pokyd.data, and its loader resolves the
+    # name through Module.locateFile -- falling back to a bare 'pokyd.data' that
+    # node reads relative to the process working directory, not to pokyd.mjs.  So
+    # a preloaded module only loads from build/wasm/ unless every caller passes a
+    # locateFile.  That cannot be defaulted from --pre-js either: the packager's
+    # loader is emitted at the top of the factory and runs before pre-js does.
+    #
+    # Embedding sidesteps all of it -- same MEMFS, same /pokyd/, one artifact
+    # fewer, and `await PokydModule()` works from any directory with no options.
+    # The bill is 161 KB of dictionary and rule base inlined into pokyd.mjs, which
+    # at this size is not worth a configuration contract.  Revisit if PROFIL.IQP
+    # (7.5) or a bigger dictionary ever joins them.
+    #
+    # Relative names, and the link runs with build/run/ as the working directory,
+    # so nothing about this machine's checkout ends up in the output.
+    vlozit = []
+    for jmeno in DATA:
+        vlozit += ["--embed-file", f"{jmeno}@/pokyd/{jmeno}"]
+
+    vystup = WASM / "pokyd.mjs"
+    print(f"linking {vystup.relative_to(ROOT)}  (module PokydModule)")
+    if run([emcc] + objects + HAZARDS + WASM_LINK + vlozit + ["-o", vystup],
+           args.verbose, prostredi, cwd=RUN):
+        return 1
+
+    print(f"ok -> {vystup}")
+    print('     data embedded at /pokyd/ -- the module wants pokyd_init("/pokyd")')
+    return 0
 
 
 def priprav_run_adresar():
@@ -143,16 +329,18 @@ def priprav_run_adresar():
     return 0
 
 
-def run(cmd, verbose):
+def run(cmd, verbose, env=None, cwd=None):
     if verbose:
         print("  " + " ".join(str(c) for c in cmd))
-    return subprocess.call([str(c) for c in cmd])
+    return subprocess.call([str(c) for c in cmd], env=env, cwd=cwd)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-v", "--verbose", action="store_true", help="show every command")
+    ap.add_argument("--wasm", action="store_true",
+                    help="build the wasm module with emcc instead of the native binary")
     args = ap.parse_args()
 
     # Never build stale bytes.
@@ -167,6 +355,9 @@ def main() -> int:
     if run([sys.executable, ROOT / "tools" / "build-gramatik.py", "--quiet"]
            + (["-v"] if args.verbose else []), args.verbose):
         return 1
+
+    if args.wasm:
+        return prelozit_wasm(args)
 
     OUT.mkdir(parents=True, exist_ok=True)
 

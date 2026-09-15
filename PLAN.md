@@ -9,7 +9,7 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 3 — WebAssembly. **3.1 is done**; 3.2 is blocked on installing Emscripten.
+**Phase:** 3 — WebAssembly. **3.1 and 3.2 are done**; 3.3 is the gate.
 Phases 1 and 2 are complete, 1.1–1.6 and 2.1–2.5.
 **The engine runs, answers in Czech, and the conversation is on disk.**
 `python3 tools/build.py` builds `build/native/pokyd.exe` and lays out `build/run/`;
@@ -48,7 +48,7 @@ check runs on every build and fails it if the recompiled rules ever stop matchin
 author's — which is what makes building from source the safer option rather than the
 braver one. The dictionary is the 11,207-word `original/slovnik.iqp` (2.2).
 
-**3.1 is done.** The exported surface is `src/api/pokyd_api.h` — sixteen `extern "C"`
+**3.1 is done.** The exported surface is `src/api/pokyd_api.h` — fifteen `extern "C"`
 functions and one flat struct, no C++ type in it — implemented in `pokyd_api.cpp`,
 which is now the one place that holds `PRIPRAV_GLOBALY`, the loading sequence,
 `IQ_POKYDE_ODPOVEZ` and `CMfcDlg::OnNovaveta`. The console driver stopped carrying
@@ -73,9 +73,22 @@ question of who does the reading** — see the note under `pokyd_phase` about th
 author's 0-50/50-100 subdivision being behind `IQPOKYDWINMFC == 1` and therefore
 absent here.
 
-**Next action:** 3.2. **Install Emscripten first**; there is no `emcc` on this
-machine and 3.2 cannot start without it. 3.3 is the gate that matters: the wasm build
-must reproduce `test/golden/rozhovor.txt` byte for byte.
+**3.2 is done: the engine compiles to wasm.** `python3 tools/build.py --wasm` produces
+`build/wasm/pokyd.mjs` (137 KB) and `pokyd.wasm` (450 KB) — `MODULARIZE`d as
+`PokydModule`, all 17 exports present, both data files embedded in MEMFS at `/pokyd/`.
+Node v24.20.0 loads it **from any directory with no options**, and `pokyd_init("/pokyd")`
+returns 0. Emscripten is 6.0.9, installed at `C:/Program Files/emsdk`, and `build.py`
+finds it by absolute path — it is not on `PATH` and does not need to be.
+
+What 3.2 has *not* done is make it say anything. The module has never answered a
+sentence; it has only loaded. Every byte-exactness claim in this file is still a claim
+about the native build.
+
+**Next action:** 3.3, and it is the gate that matters: the wasm build must reproduce
+`test/golden/rozhovor.txt` byte for byte. Build with `python3 tools/build.py --wasm`,
+`import PokydModule from 'build/wasm/pokyd.mjs'`, and drive the exported surface —
+`pokyd_init("/pokyd")`, `pokyd_load_dictionaries()`, then `pokyd_say()` per line of
+`test/golden/rozhovor.in`, with the settings and the seed from `test/golden/README.md`.
 
 ---
 
@@ -89,10 +102,17 @@ On this machine `python3` is 3.14.7 as before, but bare `python` resolves to a m
 commands throughout this file say `python3` so the recorded toolchain is the one actually
 used.
 
-**No `clang`, no `cl`, no `emcc`** — Emscripten has to be installed before Phase 3 starts.
-Phase 1 targets MinGW g++; expect to re-diff everything once clang enters the picture, since
-hazard 1 (`char` signedness) differs between the two by default. As of 1.3 the engine builds
-clean on that g++ with the flags in `tools/build.py`.
+**`emcc` 6.0.9 is installed**, as of 3.2, at `C:/Program Files/emsdk` — the emsdk default
+on Windows. It is **not activated and not on `PATH`**, deliberately, and nothing needs it to
+be: `tools/build.py --wasm` finds it by absolute path (see 3.2 for the search order and the
+two environment variables the location forces). Sourcing `emsdk_env` would also put emsdk's
+bundled node 24.19.0 ahead of the system 24.20.0 that 3.3 runs on, which is a divergence
+nobody wants to debug.
+
+Still **no `clang`, no `cl`** other than emsdk's own. Phase 1 targets MinGW g++, and the two
+disagree on hazard 1 (`char` signedness) by default — which is why `-fsigned-char` is written
+down in `tools/build.py` rather than assumed. As of 1.3 the engine builds clean on that g++;
+as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (see 3.3).
 
 ## Conventions
 
@@ -763,16 +783,76 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       `g_praveprovadenaakce` 2/3/4 at `SLOVNIK.FU:3260`, `:3329`, `:3340`, all three
       inside `#if IQPOKYDWINMFC == 1`, so in a `BEZ_PROSTREDI` build `g_procentanacitani`
       runs 0→100 three times over during `POKYD_FAZE_SKLONOVANI`.
-- [ ] 3.2 Emscripten build: `-fsigned-char -O1 -fwrapv -fno-strict-aliasing`,
-      `ALLOW_MEMORY_GROWTH`, `MODULARIZE`, preload `slovnik.iqp` + `IQPOKYD.IQP` into MEMFS.
-      Take both from `build/run/`, which `tools/build.py` already lays out with the right
-      two files under the bare names `KONSTANT.K` expects — the rule base there is the one
-      compiled from `GRAMATIK.IQZ` (2.5), not the 2004 binary.
+- [x] 3.2 **Emscripten build — `python3 tools/build.py --wasm`.** Same script as the native
+      build, one flag. The compile flags are the native ones unchanged: the hazard set is the
+      engine's requirement, not a g++ preference, and `-fsigned-char` is the one that
+      silently changes the dictionary checksums if it goes missing on clang (hazard 1).
+
+      **emcc is found by absolute path and is deliberately not on `PATH`.** `najdi_emcc()`
+      searches `POKYD_EMCC`, then `$EMSDK`, then the usual install roots
+      (`C:/Program Files/emsdk` first — that is where it is on this machine), then `PATH`
+      as a last resort for whoever does have it activated. Nothing needs `emsdk_env`
+      sourced: emcc resolves its own `.emscripten` relative to itself, verified by running
+      it with an empty environment.
+
+      Two things the install location forced, both in `em_prostredi()`. The emsdk ships a
+      602 MB `cache/` that lives under `C:/Program Files` and needs elevation to write —
+      and the first link wants to write to it — so `EM_CACHE` is redirected to
+      `%LOCALAPPDATA%/pokyd/emcache`, *only* when the shipped one is genuinely not
+      writable, so an activated emsdk keeps its own answer. The redirect costs one sysroot
+      rebuild, ~30 s, `libc.a` being most of it, and never again. `EM_CONFIG` is pinned to
+      the install's own `.emscripten` so a stray `~/.emscripten` cannot quietly redirect
+      the build.
+
+      **`--embed-file`, not `--preload-file`** — a deviation from what this line used to
+      ask for, and the reason should survive. Preloading emits a fourth artifact,
+      `pokyd.data`, whose loader resolves that name through `Module.locateFile` and falls
+      back to the bare name — which node reads relative to the *process working directory*,
+      not to `pokyd.mjs`. So a preloaded module only loads from `build/wasm/` unless every
+      caller passes a `locateFile`, and that cannot be defaulted from `--pre-js` either:
+      the packager's loader is emitted at the top of the factory and runs before pre-js
+      does. This was hit for real, as an `ENOENT` on `D:/code/pokyd/pokyd.data`, before it
+      was understood. The two files are 161 KB together (`SLOVNIK.IQP` 90,289 +
+      `IQPOKYD.IQP` 71,287), which is cheaper to inline than to write a configuration
+      contract that 3.3, 4.2 and 5.1 each have to honour separately. Revisit if `PROFIL.IQP`
+      (7.5) or a larger dictionary ever joins them.
+
+      They still come from `build/run/`, laid out by the same `priprav_run_adresar()` the
+      native driver uses, so the rule base is the one compiled from `GRAMATIK.IQZ` (2.5)
+      and not the 2004 binary. They land at `/pokyd/` in MEMFS, which is what
+      `pokyd_init("/pokyd")` chdir()s into — the engine opens every file by bare name in
+      the current directory and writes the 17 MB `SLOVNIK.TMP` next to them, so it has to
+      be writable. Hence `ALLOW_MEMORY_GROWTH`, which the inflected dictionary needs on its
+      own account anyway.
+
+      `src/driver/` is left out of this build: it has a `main()` and this is a library,
+      hence `--no-entry` and `-sINVOKE_RUN=0`. `EXPORTY` is the fifteen of `pokyd_api.h`
+      plus `_malloc` and `_free`, which 4.1 needs because no UTF-8 helper will write CP1250
+      bytes into the heap on its behalf. The link runs with `build/run/` as its working
+      directory so that nothing about this machine's checkout reaches the output — checked,
+      there is no `D:/code/pokyd` anywhere in `pokyd.mjs`.
+
+      Verified in node v24.20.0, imported from the repo root rather than from `build/wasm/`:
+      all 17 exports present, `/pokyd/` holds `SLOVNIK.IQP` (90,289 B) and `IQPOKYD.IQP`
+      (71,287 B), `pokyd_init("/pokyd")` returns 0 and `pokyd_phase()` reads
+      `POKYD_FAZE_NECINNY`. **No sentence has been said yet** — the module has never been
+      past loading, and `pokyd_load_dictionaries()` has never been called in wasm. That is
+      3.3, and until it passes, nothing here is evidence about the engine's answers.
 - [ ] 3.3 Node smoke test: same inputs as 1.6, diff against the native transcript.
       **They must match exactly.** Any divergence is a hazard-1/4 bug — fix before moving on.
       Hazard 11 is already settled — `src/shim/nahoda.h` gives both builds the same
       `rand()` — so this test can pass; check that the shim is actually in the Emscripten
-      include path before blaming the engine for a divergence. Time the *second* run too,
+      include path before blaming the engine for a divergence.
+
+      Read the warnings before blaming the engine, too: clang's inventory is not g++'s.
+      The 3.2 build emits 1,208 `-Winvalid-source-encoding` — CP1250 bytes in char and
+      string literals, hazard 6, informational, clang keeps the raw byte — and they bury
+      eleven that are not noise: 4 `-Wunused-variable`, 3 `-Wsometimes-uninitialized`, and
+      one each of `-Wself-assign`, `-Wlogical-op-parentheses`, `-Wformat-security` and
+      `-Wchar-subscripts`. The last of those sits directly on hazard 1 and is the first
+      place to look if the transcript diverges. None are silenced, per the standing rule
+      about the g++ warnings — but if 3.3 needs to read them, `--wasm -v 2>&1 | grep -v
+      invalid-source-encoding` is how. Time the *second* run too,
       not just the first — that is the only way hazard 10 shows itself. The inputs are
       `test/golden/rozhovor.in` and the settings in `test/golden/README.md`; the file to
       `cmp` against is `test/golden/rozhovor.txt`.
