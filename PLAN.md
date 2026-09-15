@@ -9,8 +9,9 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 3 — WebAssembly — **is complete: 3.1 through 3.4.** The gate is passed and
-the numbers are in. Phases 1 and 2 are complete, 1.1–1.6 and 2.1–2.5.
+**Phase:** 4 — the JS boundary — **is under way: 4.1 is done.** Phase 3 is complete,
+3.1 through 3.4; the gate is passed and the numbers are in. Phases 1 and 2 are complete,
+1.1–1.6 and 2.1–2.5.
 **The engine runs, answers in Czech, and the conversation is on disk.**
 `python3 tools/build.py` builds `build/native/pokyd.exe` and lays out `build/run/`;
 `build/native/pokyd.exe --data build/run` holds a conversation. The patch set against
@@ -106,8 +107,45 @@ rather than a progress bar; a warm start from the cache is **0.11 s**. So **the
 native working set. And the browser bench reproduces the golden transcript byte for byte
 in Chrome 152, cold and warm — 5.1's riskiest assumption retired before 5.1 starts.
 
-**Next action:** 4.1, the CP1250 codec — the last thing standing between the engine and
-a page. Then 4.2 and 4.4, in that order and both for reasons 3.4 measured, before the
+**4.1 is done, and the web side has its first file.** `src/web/cp1250.ts` is the codec —
+256 entries, both directions, no dependencies, and nothing else in the project may turn a
+byte into a character. `node test/web/cp1250.test.ts` puts **71 checks** on it and needs
+nothing but node, which strips the types itself; there is still no `package.json`.
+
+The table was not typed out by hand. It is generated from `TextDecoder("windows-1250")`
+and cross-checked against Python's `cp1250`, which **agree on all 251 bytes Python
+defines**. The five Python leaves undefined — `0x81 0x83 0x88 0x90 0x98` — are the C1
+controls here, which is what the Encoding Standard says and what every browser does, and
+filling them is what makes the map a **bijection on all 256 values**. That is not
+pedantry: `slovnik.iqp` and `IQPOKYD.IQP` use every byte value there is (`0x90` included
+— hazard 6 met it in the CP852 tables) and both **round-trip byte for byte**, as do
+`GRAMATIK.IQZ` and both golden files. A codec with five holes in it could not have.
+
+That round trip is also why 4.1 closes without an end-to-end run. `rozhovor.in` and
+`rozhovor.txt` are exactly the bytes the engine consumes and produces, and decode→encode
+returns them unchanged — so on the golden conversation the codec is provably invisible to
+the engine. Wiring it to `pokyd_say` is 4.2's plumbing, not a further question about the
+codec.
+
+**Two things the round trip cannot settle, because they are decisions and not facts.**
+Encoding is total on strings and CP1250 is not, so text the codepage cannot hold has to
+become *something*: it becomes `?` (0x3F), which `JELI_PISMENO` rejects, so a stray emoji
+arrives as a **word separator** rather than as a foreign letter inside a word — the
+failure the tokenizer is built to survive. And input is NFC-normalized first, which is
+load-bearing rather than tidy: Apple keyboards hand over decomposed Czech, `c` + U+030C,
+and CP1250 has no combining caron, so without it `č` would silently arrive as `c`. Both
+are on by default, both have a flag, and a best-fit pass (`ø`→`o`, `æ`→`ae`) sits
+between them and the replacement byte — which is also roughly what an MFC `CString`
+handed the engine in 2005.
+
+Checked where it will actually run: headless **Chrome 152** returns results identical to
+node's on the table, the 256-byte round trip, normalization, best fit and the astral
+cases — and Chrome's own `TextDecoder("windows-1250")` agrees with our table on all 256
+bytes. The module imports nothing, from node or anywhere, and typechecks clean under
+`tsc --strict`.
+
+**Next action:** 4.2, the Web Worker, then 4.4, the IndexedDB cache — 3.4's order, and
+both load-bearing rather than refinements. 4.3 follows 4.2 because it has to. Then the
 5.1 slice.
 
 ---
@@ -163,6 +201,11 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   — `python3 tools/bench-native.py` and `node test/wasm/bench.mjs [--browser]` — diff the
   same transcript on every run, so they are slower ways of asking the same question and
   never a faster way of avoiding it.
+- **A third command asks a different question.** `node test/web/cp1250.test.ts` says
+  whether the boundary still converts CP1250 both ways without losing anything. It never
+  loads the engine and it is not a substitute for the two above; run it after touching
+  `src/web/`. Anything under `src/web/` is UTF-8, ASCII-only in content, and CRLF like
+  everything else.
 
 ---
 
@@ -1030,8 +1073,10 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
 4.4, and only then 5.1.** A 15.3 s synchronous first load is a frozen tab, so the worker
 is not a refinement and the cache is not an optimization.
 
-- [ ] 4.1 CP1250 ⇄ UTF-16 codec, both directions, with the full 256-entry table. Unit tests
-      covering `ě š č ř ž ý á í é ů ú ň ť ď ó`.
+- [x] 4.1 CP1250 ⇄ UTF-16 codec, both directions, with the full 256-entry table. Unit tests
+      covering `ě š č ř ž ý á í é ů ú ň ť ď ó`. **Done** — `src/web/cp1250.ts`,
+      71 checks in `test/web/cp1250.test.ts`, all 30 accented Czech letters and all 256
+      bytes both ways. See the Status section for the two decisions encode had to make.
 - [ ] 4.2 Run the engine in a Web Worker; typed message protocol. **Required, not a
       refinement** — 3.4 measured `pokyd_load_dictionaries()` at 15.3 s on a first visit,
       and it is one synchronous call.
@@ -1120,6 +1165,10 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
   working directory the driver wants.
 - Running it: `build/native/pokyd.exe --data build/run` (`--help` for the options).
   `src/driver/pokyd.cpp` says at each call site which line of the original it mirrors.
+- The JS boundary: `src/web/cp1250.ts` is the codec and the only place a byte becomes a
+  character in either direction — phase 4.1. Its 256-entry table's provenance, and the
+  two policy decisions encode had to make, are in that file's header; the evidence is in
+  `test/web/cp1250.test.ts`, run with plain `node`.
 - Engine entry point: `IQ_POKYDE_ODPOVEZ` — `Aplikace/Prostred/PROSTRED.FU:212`, and it is
   not the whole story: `!Prostre/mfcDlg.cpp:596-607` wraps it in the pre-processing the
   engine assumes has happened. Both are reproduced in `src/driver/pokyd.cpp`.

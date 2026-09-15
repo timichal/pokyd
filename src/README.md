@@ -69,6 +69,32 @@ Compiling `Aplikace/` without `!Prostre/` means bringing them back. They live in
 `src/shim/tridy.h` rather than in `src/engine/`, which keeps that tree a byte-exact
 mirror of the original — `transcode.py --check` still reports it clean.
 
+## `src/web/` — the JS side of the boundary
+
+Phase 4.1 onward. TypeScript, no dependencies, no build step needed to test it:
+node 24 strips the types itself, so `node test/web/cp1250.test.ts` runs as it stands.
+Vite arrives at phase 5.1 and will consume these files unchanged.
+
+| File | What it is |
+|---|---|
+| `cp1250.ts` | The codec. The full 256-entry CP1250 table and both directions across it, and the only place in the project where a byte becomes a character or the reverse. `pokyd_api.h` says every `char *` crossing the API is CP1250 and has to stay CP1250; this is the one door in that wall. |
+
+The table is a **bijection on all 256 byte values**, including the five CP1250 leaves
+undefined, so decode loses nothing and encode invents nothing. That is what lets
+`slovnik.iqp` and `IQPOKYD.IQP` — which between them use every byte there is — survive a
+round trip unchanged, and it is the codec's main test.
+
+Two things about `encodeCp1250` are policy rather than table lookup, and both are
+argued in the file's header: text CP1250 cannot hold becomes `?`, which the engine's
+`JELI_PISMENO` treats as a word separator rather than as a letter, and input is
+NFC-normalized first so decomposed Czech from an Apple keyboard does not silently lose
+its diacritics.
+
+Same house rules as the rest of our code: **ASCII only**, which is why the table is
+spelled in `\uXXXX` escapes and the tests name Czech letters by code point. Exported
+names are English, matching `pokyd_api.h` on the other side of the boundary; local
+names stay Czech like everywhere else.
+
 ## `src/api/` — the exported surface
 
 `pokyd_api.h` is everything outside the engine may use: sixteen `extern "C"`
