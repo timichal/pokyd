@@ -43,3 +43,46 @@ lands, and every such difference belongs in `PATCHES.md`.
   characters — leave them escaped. Everything else in the tree is plain readable Czech.
 - **Comments and identifiers stay Czech**, matching the original, so the two trees can
   be diffed by eye.
+
+## `src/shim/` — the Win32/MFC surface, replaced
+
+`Aplikace/` is plain C++ apart from a thin Windows crust it picked up from living
+inside an MFC project. This directory is that crust, rewritten: it is what
+`!Prostre/` used to hand the engine, minus the window. Our code, ASCII only (it is
+handed to the compiler as-is, so it has to read identically in CP1250 and UTF-8).
+
+| File | What it is |
+|---|---|
+| `engine.h` | What a driver includes. Mirrors `!Prostre/IQPokyd.h` in structure and order: forward declarations → `hlavicky.in` → class definitions → the engine's globals. |
+| `engine.cpp` | The engine as one translation unit. Mirrors `!Prostre/IQPokyd.cpp`: `#define IQPOKYDWINMFC 0` then `#include "vsechno.in"`. `vsechno.in` is not a header — it is the program, and the original compiled it in exactly one `.cpp` too. |
+| `tridy.h` | `Typ_slova`, `Struktura_vety`, `Nastaveni` — lines 43–130 of `!Prostre/IQPokyd.h`, verbatim. See below. |
+| `win32.h` / `.cpp` | `BYTE`/`WORD`/`DWORD`, `MAX_PATH`, and the three calls the core still makes: `MessageBox`, `Sleep`, `GetModuleFileName`. |
+| `prostredi.h` / `.cpp` | The two `Prostred/` globals referenced from outside the `IQPOKYDWINMFC == 1` guards: `g_HWNDhlavnihookna` and `g_zavritvlaknoprocesu`. |
+| `conio.h` | Stub. `vsechno.in` includes `<conio.h>` unconditionally; `-I src/shim` puts this ahead of MinGW's, so every toolchain sees the same one. Emscripten has none at all. |
+
+**The source drop's `Aplikace/` is not self-contained.** `Vstup/NASTAVEN.TR` still
+calls itself *"soubor s definicí třídy pro nastavení"* and `Intelig/INTELIG.TR`
+*"definice tříd Typ_slova a Struktura_vety"*, but both class bodies had long since
+moved into `!Prostre/IQPokyd.h` and only forward declarations were left behind.
+Compiling `Aplikace/` without `!Prostre/` means bringing them back. They live in
+`src/shim/tridy.h` rather than in `src/engine/`, which keeps that tree a byte-exact
+mirror of the original — `transcode.py --check` still reports it clean.
+
+## Building
+
+```sh
+python tools/build.py          # regenerates build/cp1250/, compiles, links
+python tools/build.py -v       # ...showing every command
+```
+
+Flags, and the reason for each, are documented at the top of `tools/build.py`.
+Two that are easy to get wrong:
+
+- **`-DBEZ_PROSTREDI=1`**, not a bare `-DBEZ_PROSTREDI`. `Debug/DEBUG.FU:115` tests
+  `BEZ_PROSTREDI == 1`, which an empty macro turns into a preprocessor syntax error.
+- **`IQPOKYDWINMFC` is not a build flag.** `engine.cpp` defines it to 0. That is what
+  selects the author's own console paths — `printf` progress instead of
+  `g_handletext1->SetWindowText`, plain `fopen` instead of `GetModuleFileName`.
+
+The build prints ~39 warnings and that is on purpose; `PLAN.md` step 1.3 catalogues
+them. Seven are `-Wmaybe-uninitialized`, which is hazard 4 handing us its own list.

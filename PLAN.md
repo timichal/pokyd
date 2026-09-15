@@ -9,10 +9,13 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 1 — building the engine natively. 1.1 and 1.2 done.
+**Phase:** 1 — building the engine natively. 1.1, 1.2 and 1.3 done. **The engine
+compiles and links**, as `build/native/pokyd.exe`, via `python tools/build.py`.
 
-**Next action:** Phase 1, step 1.3 — stub the Win32/MFC surface and get the first real
-compile. 1.1 and 1.2 have only ever run the preprocessor; nothing has been compiled yet.
+**Next action:** Phase 1, step 1.4 — the `sprintf`→`strcpy` fix (hazard 2) and
+`PATCHES.md`. 1.3 already moved the hazard flags into `tools/build.py`, so 1.4 is now only
+that one required source change plus the audit file recording it. Then 1.5, the console
+driver — the first time any of this code will actually run.
 
 ---
 
@@ -21,7 +24,8 @@ compile. 1.1 and 1.2 have only ever run the preprocessor; nothing has been compi
 Probed 2026-09-15. `gcc`/`g++` MinGW-W64 16.1.0 (ucrt64), `python` 3.14.7.
 **No `clang`, no `cl`, no `emcc`** — Emscripten has to be installed before Phase 3 starts.
 Phase 1 targets MinGW g++; expect to re-diff everything once clang enters the picture, since
-hazard 1 (`char` signedness) differs between the two by default.
+hazard 1 (`char` signedness) differs between the two by default. As of 1.3 the engine builds
+clean on that g++ with the flags in `tools/build.py`.
 
 ## Conventions
 
@@ -206,6 +210,22 @@ Specific things that will bite. Each has a task attached in the phases below.
    (6 in `DEBUG.FU`, 4 in `SLOVNIK.FU`). C++11 reads `"text "MACRO` as a user-defined
    literal. GCC downgrades it to `-Wliteral-suffix` and still concatenates, but don't rely on
    that — **build `-std=gnu++98`**, which is also closer to what MSVC6 gave the original.
+   Confirmed in 1.3: under `-std=gnu++98` gcc concatenates all 10 correctly. With `-Wall` it
+   still points at them as `-Wc++11-compat` ("requires a space between string literal and
+   macro"), which is a note about a future standard, not about this build.
+
+9. **`Aplikace/` is not self-contained.** Found in 1.3. `Vstup/NASTAVEN.TR` describes itself
+   as *"soubor s definicí třídy pro nastavení"* and `Intelig/INTELIG.TR` as *"definice tříd
+   Typ_slova a Struktura_vety"*, but neither holds a class any more: the author had moved
+   all five class bodies into `!Prostre/IQPokyd.h` (lines 43–170) and left forward
+   declarations behind. So the GPL source drop's engine tree cannot be compiled from itself —
+   `Typ_slova`, `Struktura_vety` and `Nastaveni` have to come back from the MFC header. They
+   are recovered verbatim into `src/shim/tridy.h`, which keeps `src/engine/` a byte-exact
+   mirror of the original. The other two, `IQPokydWav` (mmsystem) and `RozvrzeniVet`
+   (`CString`), are referenced only from `Prostred/` and stay out. One line of the three had
+   to change: MSVC6 accepted a member declared `void Typ_slova::ZKOPIRUJ_...` *inside*
+   `class Typ_slova`; ISO C++ calls that an extra qualification. Dropping the qualifier
+   declares the same member function.
 
 ---
 
@@ -259,15 +279,76 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       transcoding). The only escapes introduced are the 60 CP852 byte constants of hazard 6.
       `.gitattributes` added to pin CRLF, without which the proof breaks on a Linux clone.
       Also confirmed: `-std=gnu++98` silences hazard 8 completely — zero diagnostics.
-- [ ] 1.3 Stub the Win32/MFC surface: build with `BEZ_PROSTREDI` and `IQPOKYDWINMFC=0`,
-      stub `conio.h`, `NAHLAS_CHYBU`, `NAPIS_TEXT_V_LATIN_2`, and the `g_handletext*` /
-      `g_procentanacitani` progress globals.
-- [ ] 1.4 Apply the required fixes **in `src/engine/`**: `sprintf`→`strcpy` (hazard 2),
-      `-fsigned-char`, `-fwrapv -fno-strict-aliasing -O1`. Record every change to original
-      code in `PATCHES.md` with file, line, and why. From here on `transcode.py --check`
-      will list those files as differing from the original; that list and `PATCHES.md` must
-      agree, which makes the check an audit of the patch set.
-- [ ] 1.5 Console driver: load `slovnik.iqp` + `IQPOKYD.IQP`, read stdin lines, print replies.
+- [x] 1.3 **Done** — `src/shim/` is the Win32/MFC surface, replaced, and `tools/build.py`
+      drives the build. **Gate passed: the engine compiles and links.**
+      `build/native/pokyd.exe` is for now a generated link check that prints the size of
+      `Nastaveni` (220 B), `g_odpovedpocitace` (201 B) and `Struktura_vety` (6568 B); once
+      `src/driver/` exists build.py links that instead. `src/engine/` is untouched —
+      `transcode.py --check` still reports the working copy clean, so `PATCHES.md` has
+      nothing to say yet.
+
+      The surface turned out smaller than this step assumed, and differently shaped:
+
+      - **`NAPIS_TEXT_V_LATIN_2` needed no stub.** It is real engine code,
+        `Vstup/VSTUP.FU:1230`, and does what it says — CP1250 → CP852, then `printf`.
+      - **`g_procentanacitani` needed no stub either.** It is not a `Prostred/` global;
+        `Slovnik/SLOVNIK.PR:47` defines it and the engine keeps it current whether or not
+        anyone is reading. That is what phase 4.3 wires to the loading bar.
+      - **`g_handletext1..3` are genuinely gone**, and that is fine: every reference to them
+        is under `#if IQPOKYDWINMFC == 1`.
+      - What *is* needed from `Prostred/` is two globals whose references sit outside those
+        guards — `g_HWNDhlavnihookna` (the MessageBox owner in `NAHLAS_CHYBU`) and
+        `g_zavritvlaknoprocesu` (`SLOVNIK.FU:3345`, where the console path tests a cancel
+        flag only the MFC path could ever set; inert here, which is what we want).
+      - **`NAHLAS_CHYBU` is not stubbed, it is taken as written.** Its switch is guarded by
+        `#if IQPOKYDWINMFC == 1 || BEZ_PROSTREDI == 1`, so a `BEZ_PROSTREDI` build gets the
+        MessageBox branch. That reads like a slip — "no environment" ought to select the
+        console branch below it — but that branch calls a `NAPIS_V_LATIN2` which exists
+        nowhere in the corpus and `return`s before its own second half, so it has not been
+        compiled in twenty years. We gave `MessageBox` somewhere to go instead (stderr).
+      - The one real judgement call: the shim's `MessageBox` returns **`IDCANCEL`**, not
+        `IDOK`. 9 of the 11 `_STORNO_` call sites are a `goto ZNOVU` retry loop around an
+        out-of-memory or a failed write. With a user at the dialog OK is right — the retry
+        usually works. With nobody there it spins forever, so the shim answers "Storno" and
+        the process stops at the error instead of hanging on it.
+      - `BEZ_PROSTREDI` **must be `=1`**, not a bare define: `DEBUG.FU:115` tests
+        `BEZ_PROSTREDI == 1`, and an empty macro makes that line a preprocessor syntax error.
+      - `<signal.h>` had to come back — `NAHLAS_CHYBU` calls `raise(SIGABRT)` and used to get
+        it from `StdAfx.h`.
+
+      Hazard 9 below, the missing class definitions, is the finding that mattered and is what
+      the step actually cost.
+
+      **Warnings: 39, all catalogued, none silenced except formatting.** `-Wall` stays on
+      because it is hazard 4's own inventory. 10 `-Wc++11-compat` (hazard 8, benign under
+      `gnu++98`); 10 `-Wconversion-null` and 5 `-Wpointer-arith`, every one of them `NULL`
+      used as a `BYTE` 0 in `POROVNEJ_MNOZINU_ATRIBUTU_Z_TYPU_SLOVA`, which MSVC6's
+      `#define NULL 0` made exact and gcc's `__null` keeps exact; 4 `-Wunused-variable`, 1
+      `-Wunused-but-set-variable`, 1 `-Wparentheses`; 1 `-Wchar-subscripts`
+      (`INTELIG.FU:611` — a rule slot id 0–9 held in a `char`, worth a second look under
+      `-fsigned-char` even though the values cannot go high). And **7
+      `-Wmaybe-uninitialized`**, which is hazard 4 naming its own suspects:
+      `nejlepsiodpoved` (`INTELIG.FU:119`, exactly as predicted), `poziceps`,
+      `poziceprostoru`, `hodnota1`, `hodnota2`, `debuginfoznak`, `vysledek`. Suppressed:
+      `-Wno-write-strings` (1588 hits of the pre-ISO `char *p = "literal"`) and
+      `-Wno-misleading-indentation` (57 hits of the author's one-space indent style).
+- [ ] 1.4 Apply the required fix **in `src/engine/`**: `sprintf`→`strcpy` (hazard 2).
+      Record every change to original code in `PATCHES.md` with file, line, and why. From
+      here on `transcode.py --check` will list those files as differing from the original;
+      that list and `PATCHES.md` must agree, which makes the check an audit of the patch
+      set. The flags this step used to own (`-fsigned-char`, `-fwrapv`,
+      `-fno-strict-aliasing`, `-O1`) went into `tools/build.py` in 1.3 — compiling for the
+      first time without them would have produced a reference binary we could not trust.
+- [ ] 1.5 Console driver in `src/driver/` (build.py links it automatically once it exists):
+      load `slovnik.iqp` + `IQPOKYD.IQP`, read stdin lines, print replies. Two things 1.3
+      turned up that this step has to handle. **`IQ_POKYDE_ODPOVEZ` lives in
+      `Prostred/PROSTRED.FU`**, so `BEZ_PROSTREDI` removes the documented entry point and
+      the driver has to call the pipeline itself (`POROZUMEJ_VETE_NAPSANE_CLOVEKEM` →
+      `ZPRACUJ_VETU` → `VYBER_JEDNU_ODPOVED_Z_ODPOVEDI_PODLE_HISTORIE`) — which is also
+      exactly the surface phase 3.1 has to export. And **`NACTI_A_ROZSKLONUJ_ZAKLADNI_SLOVNIK`
+      is not a plain loader under `IQPOKYDWINMFC != 1`**: `SLOVNIK.FU:3344-3357` is the
+      author's own DOS test-harness tail, which frees the entire dictionary again and waits
+      for a keypress. Read that block before calling the function.
 - [ ] 1.6 **Milestone: hold a conversation in Czech in a terminal.** Save a transcript to
       `test/golden/` as the reference for later diffs.
 
@@ -370,6 +451,8 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
 - Source pipeline and how to regenerate it: `src/README.md`.
   `tools/gen-src.py` (original → `build/src/`), `tools/transcode.py`
   (`build/src/` ⇄ `src/engine/` → `build/cp1250/`), `tools/dump-dict.py` (dictionary decoder).
+- Building: `python tools/build.py`. Every flag is justified in that file's docstring, and
+  the Win32/MFC replacement it compiles against is `src/shim/`, described in `src/README.md`.
 - Engine entry point: `IQ_POKYDE_ODPOVEZ` — `Aplikace/Prostred/PROSTRED.FU:212`.
   Pipeline is `POROZUMEJ_VETE_NAPSANE_CLOVEKEM` → `ZPRACUJ_VETU`
   (= `ROZEBER_NEINTELIGENTNE_VETU` + `ODPOVEZ_PODLE_IQ_PODMINEK`) →
