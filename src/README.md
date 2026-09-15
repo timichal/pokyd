@@ -58,6 +58,7 @@ handed to the compiler as-is, so it has to read identically in CP1250 and UTF-8)
 | `tridy.h` | `Typ_slova`, `Struktura_vety`, `Nastaveni` — lines 43–130 of `!Prostre/IQPokyd.h`, verbatim. See below. |
 | `win32.h` / `.cpp` | `BYTE`/`WORD`/`DWORD`, `MAX_PATH`, and the three calls the core still makes: `MessageBox`, `Sleep`, `GetModuleFileName`. |
 | `prostredi.h` / `.cpp` | The two `Prostred/` globals referenced from outside the `IQPOKYDWINMFC == 1` guards: `g_HWNDhlavnihookna` and `g_zavritvlaknoprocesu`. |
+| `nahoda.h` / `.cpp` | Our `rand()` and `srand()`, defined over `<stdlib.h>` before the engine is included. The Microsoft CRT's LCG, which is what the 2005 MFC build drew from and what ucrt64 still hands back — so it is a no-op here and it is what stops MinGW and musl from telling two different conversations. Hazard 11 in `PLAN.md`. |
 | `conio.h` | Stub. `vsechno.in` includes `<conio.h>` unconditionally; `-I src/shim` puts this ahead of MinGW's, so every toolchain sees the same one. Emscripten has none at all. |
 
 **The source drop's `Aplikace/` is not self-contained.** `Vstup/NASTAVEN.TR` still

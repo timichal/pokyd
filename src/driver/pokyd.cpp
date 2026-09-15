@@ -350,7 +350,10 @@ char *radek=NULL;
   /* Seed last, not first: ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU reseeds from
      the clock on its way out (SLOVNIK.FU:1732, after a fixed seed obfuscates
      the cache), so a --seed set before loading only survives on runs that found
-     a cache.  rand() is what picks between equally unheard answers. */
+     a cache.  rand() is what picks between equally unheard answers -- and since
+     1.6 it is ours, not the C runtime's (src/shim/nahoda.h), so the same seed
+     gives the same conversation on any toolchain.  That is what makes the
+     test/golden/ transcript worth diffing at 3.3. */
   srand(o_seed_zadan ? o_seed : (unsigned)time(NULL));
 
   if (o_prepis != NULL && (f_prepis=fopen(o_prepis,"wb")) == NULL) {

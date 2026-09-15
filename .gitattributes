@@ -48,3 +48,11 @@ src/engine/**     text eol=crlf
 *.GID   binary
 *.db    binary
 *.DB    binary
+
+# The phase 1.6 golden conversation.  CP1250 with CRLF, written by the driver's
+# --transcript and diffed byte for byte against the wasm run at 3.3, so git must
+# not touch it: -text disables both the checkout smudge and the index
+# normalization.  Not `binary` -- a changed answer should still show up in a diff,
+# mojibake or not.
+test/golden/rozhovor.in    -text
+test/golden/rozhovor.txt   -text

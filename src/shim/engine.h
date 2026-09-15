@@ -18,6 +18,13 @@
 
 #include "win32.h"
 
+/* Before anything the engine includes, because it takes rand() and srand() over
+   from <stdlib.h> and has to be the first to say so.  Hazard 11: the answer
+   picker rolls a die on most sentences, and two C runtimes do not roll the same
+   one.  See nahoda.h -- it is a no-op on this toolchain and the point of it is
+   phase 3. */
+#include "nahoda.h"
+
 /* IQPokyd.h forward-declares these before hlavicky.in, because the prototypes in
    there take them by reference.  Same order here. */
 class Typ_slova;

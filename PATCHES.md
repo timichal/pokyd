@@ -165,6 +165,19 @@ console branch below it calls a function that exists nowhere in the corpus. Hand
 `src/shim/` by giving `MessageBox` somewhere to go (stderr), not by editing the original.
 See PLAN.md 1.3.
 
+### The 22 `rand()` / `srand()` calls
+
+Hazard 11: the answer picker breaks ties with `rand()` (`intelig.fu:74`, `:111`) and the
+mood drifts by `(rand()%3)-1` (`:532`), so the conversation depends on whose C runtime is
+underneath — and phase 3.3 wants a native and a wasm transcript to match byte for byte.
+The obvious patch is to give the engine a generator of its own. Not applied: none of the
+22 call sites changes. `src/shim/nahoda.h` defines `rand()` and `srand()` over `<stdlib.h>`
+before the engine is included, and implements the Microsoft CRT's LCG — the one the 2005
+MFC build actually drew from. Verified to be a no-op on this toolchain: ucrt64's `rand`
+matches it over 2000 draws from each of six seeds, the phase 1.6 golden transcript is
+identical with the shim and without it, and so is the 18 MB `SLOVNIK.TMP` whose obfuscator
+runs thousands of draws through it. Our code, not the engine's. See PLAN.md 1.6.
+
 ---
 
 ## Verifying the patch set

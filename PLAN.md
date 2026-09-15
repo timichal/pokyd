@@ -9,21 +9,28 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 1 — building the engine natively. 1.1 through 1.5 done. **The engine runs
-and answers in Czech.** `python3 tools/build.py` builds `build/native/pokyd.exe` and
-lays out `build/run/`; `build/native/pokyd.exe --data build/run` holds a conversation.
-The patch set against the original is still one line, recorded in `PATCHES.md`.
+**Phase:** 1 — building the engine natively. **Done, all of it: 1.1 through 1.6.**
+**The engine runs, answers in Czech, and the conversation is on disk.**
+`python3 tools/build.py` builds `build/native/pokyd.exe` and lays out `build/run/`;
+`build/native/pokyd.exe --data build/run` holds a conversation. The patch set against
+the original is still one line, recorded in `PATCHES.md`.
 
 Measured on the way: cold start **4.5 s** (11,207 base words → **402,252** forms,
 37 MB peak working set, a 17.3 MB `SLOVNIK.TMP`), warm start **0.4 s**, and a clean
 teardown — zero unfreed blocks after a ten-sentence conversation. That is hazard 5
 answered, and answered much more cheaply than it was written.
 
-**Next action:** Phase 1, step 1.6 — sit down and have a real conversation, save it to
-`test/golden/`. Use `--transcript` (clean CP1250, CRLF) rather than piping stdout, which
-is noisy by design. Before writing the golden file, settle the `rand()` question in
-hazard 10: as things stand a transcript is only reproducible on the toolchain that
-produced it, which is exactly what 3.3 wants to diff across.
+Hazard 11 is closed too, and cheaply. `src/shim/nahoda.h` takes `rand()`/`srand()` over
+from the C runtime and implements the Microsoft CRT's own LCG — the generator the 2005
+MFC build actually drew from. Natively it is a *verified* no-op: ucrt64 hands back that
+exact sequence, so it costs nothing here and buys 3.3 its byte-for-byte diff. The
+23-sentence golden conversation is in `test/golden/`, with a README recording the command
+that made it.
+
+**Next action:** Phase 2, step 2.3 — build `GRAMATIK.C` as a host tool and recompile
+`GRAMATIK.IQZ` → `IQPOKYD.IQP`, which 2.4 then diffs against the shipped one. That
+settles both the 2004/2005 question and the line-endings question below. 2.2 (which
+dictionary ships) can be decided on paper at any point; 2.3 is the one with work in it.
 
 ---
 
@@ -287,18 +294,32 @@ Specific things that will bite. Each has a task attached in the phases below.
     gone. Test for it at 3.3 by timing the *second* run, not the first. If it breaks,
     the fix is a one-identifier patch with a strong argument behind it.
 
-11. **`rand()` is the C runtime's, and the toolchains do not agree.** Also 1.5.
-    `VRAT_CISLO_ODPOVEDI_PODLE_HISTORIE` picks between equally-unheard answers with
-    `rand()%pocetabsolutnichvitezu` (`INTELIG.FU:111`), which happens on most sentences,
-    so the conversation is a function of the seed *and of whose `rand()` it is*. Same seed
-    on the same binary reproduces exactly (verified); MinGW's LCG and Emscripten's musl
-    will diverge on the first tie. That directly contradicts 3.3's "they must match
-    exactly", so one of the two has to give: either the shim supplies its own `rand`/`srand`
-    to both builds — cheap, and it is our code, not the engine's — or 3.3 compares
-    transcripts per-toolchain and loses its sharpest test. Leaning to the shim `rand`.
-    Note also that seeding must happen *after* loading:
+11. **~~`rand()` is the C runtime's, and the toolchains do not agree.~~ Closed at 1.6,
+    by the shim.** `VRAT_CISLO_ODPOVEDI_PODLE_HISTORIE` picks between equally-unheard
+    answers with `rand()%pocetabsolutnichvitezu` (`INTELIG.FU:74` and `:111`), which
+    happens on most sentences, and `URCI_ZMENU_NALADY` drifts the mood by `(rand()%3)-1`
+    (`:532`), so the conversation was a function of the seed *and of whose `rand()` it is*
+    — MinGW's LCG and Emscripten's musl would have diverged on the first tie, which
+    directly contradicts 3.3's "they must match exactly".
+
+    Of the two ways out — our own `rand` in the shim, or 3.3 comparing per-toolchain and
+    losing its sharpest test — the shim won, and it turned out to cost nothing at all.
+    `src/shim/nahoda.h` defines `rand()`/`srand()` over `<stdlib.h>` before the engine is
+    included and implements **the Microsoft CRT's LCG** (`seed = seed*214013 + 2531011`,
+    take bits 16–30) — not an arbitrary generator but the one IQ Pokyd's own MSVC build
+    drew from in 2005, which makes this the faithful choice as well as the portable one.
+    ucrt64's `rand` *is* that sequence (checked over 2000 draws from each of six seeds),
+    so nothing moved natively: the 1.6 golden transcript is byte-identical with the shim
+    and without it, and so is the 18,131,435-byte `SLOVNIK.TMP`, whose obfuscator
+    (`SLOVNIK.FU:1855-1861`) runs thousands of draws through it. That last one is the
+    strong check, and it is worth re-running as a one-liner if the shim is ever touched.
+
+    Two things it does not change. Seeding still has to happen *after* loading:
     `ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU` reseeds from the clock on its way out
-    (`SLOVNIK.FU:1732`), so a seed set before a cold start does not survive it.
+    (`SLOVNIK.FU:1732`), so a seed set before a cold start does not survive it — the
+    driver seeds last for that reason, and 3.1 must too. And the shim's state is a single
+    global, not the CRT's per-thread one; fine for the engine and for the phase 4.2
+    worker, but not something to hand two threads.
 
 ---
 
@@ -503,8 +524,29 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       `--state` to watch the mood drift (it does: ten sentences moved it 46 → 20 points).
       The console gets CP852 both ways, because that is what the engine's own `printf`s
       already produce; `--cp1250` turns that off for pipes.
-- [ ] 1.6 **Milestone: hold a conversation in Czech in a terminal.** Save a transcript to
-      `test/golden/` as the reference for later diffs.
+- [x] 1.6 **Milestone: hold a conversation in Czech in a terminal** — **done**, and it
+      talks back. 23 sentences in `test/golden/rozhovor.in`, what IQ Pokyd answered in
+      `test/golden/rozhovor.txt`, and `test/golden/README.md` records the exact command,
+      the settings (`--seed 20050415 --character 3 --mood 3 --human m --computer m`) and
+      what must hold for the file to stay valid. Both data files are CP1250 with CRLF and
+      `.gitattributes` marks them `-text`, so no checkout can rewrite a byte of the thing
+      3.3 diffs against.
+
+      *"Jsi hloupý." → "S tím nic nenaděláš, tak to prostě je."* The mood machinery is
+      visibly working — it opens with *"Ahoj, jsem rád, že jsi tu."* and by the end is
+      answering *"Tak ty musíš? Hm, to je jiná."*
+
+      **Hazard 11 settled first, as the step required, and it cost nothing.** The shim
+      `rand` is in `src/shim/nahoda.h` / `.cpp` and is the Microsoft CRT's LCG; hazard 11
+      above has the argument and the verification. Nothing in the engine changed, so
+      `PATCHES.md` gains an entry under "considered and not applied", not a patch.
+
+      What was checked, beyond the shim being a no-op: **cold start and warm start produce
+      the same transcript** (delete `SLOVNIK.TMP`, run again, `cmp`), which is the driver's
+      seed-after-load order paying off; **stderr is empty both ways**, so the block counter
+      still balances after a 23-sentence conversation; and the build is still 39 warnings
+      in the same seven categories. There is no `PROFIL.IQP` in `build/run/` — if one ever
+      appears the answers move, and the golden file is void.
 
 ## Phase 2 — Data
 
@@ -539,9 +581,12 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       `ALLOW_MEMORY_GROWTH`, `MODULARIZE`, preload `slovnik.iqp` + `IQPOKYD.IQP` into MEMFS.
 - [ ] 3.3 Node smoke test: same inputs as 1.6, diff against the native transcript.
       **They must match exactly.** Any divergence is a hazard-1/4 bug — fix before moving on.
-      Settle hazard 11 first or this test cannot pass: the answer picker calls `rand()`,
-      and MinGW's and musl's disagree. Time the *second* run too, not just the first —
-      that is the only way hazard 10 shows itself.
+      Hazard 11 is already settled — `src/shim/nahoda.h` gives both builds the same
+      `rand()` — so this test can pass; check that the shim is actually in the Emscripten
+      include path before blaming the engine for a divergence. Time the *second* run too,
+      not just the first — that is the only way hazard 10 shows itself. The inputs are
+      `test/golden/rozhovor.in` and the settings in `test/golden/README.md`; the file to
+      `cmp` against is `test/golden/rozhovor.txt`.
 - [ ] 3.4 Measure cold-start time and peak heap; compare against 1.5's native 4.5 s /
       37 MB / 402,252 forms. Decide whether the `SLOVNIK.TMP` cache is required for launch
       or a later optimization — at 4.5 s native it may well be the latter.

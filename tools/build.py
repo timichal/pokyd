@@ -26,8 +26,9 @@ The flags, and why each one
 -fwrapv                 Hazard 4: signed overflow is relied on, not avoided.
 -fno-strict-aliasing    Hazard 4: 2005 C++, globals and casts everywhere.
 -O1                     Hazard 4 again.  -O2 is not safe to reach for without
-                        re-diffing the output, and there is nothing to diff against
-                        until 1.6.
+                        re-diffing the output.  Since 1.6 there is something to diff
+                        against: test/golden/ holds a conversation and the command that
+                        produced it, so a flag change is one cmp away from an answer.
 -DBEZ_PROSTREDI=1       Drops Aplikace/Prostred/, the MFC window.  It has to be 1
                         and not merely defined: Debug/DEBUG.FU:115 tests
                         `BEZ_PROSTREDI == 1`, and an empty macro makes that line a

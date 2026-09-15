@@ -1,0 +1,46 @@
+> Ahoj!
+< Ahoj, jsem rád, že jsi tu.
+> Jak se máš?
+< No, jak by se mi daøilo. Normálnì. Vždy jsem jenom stroj. Ale jinak dobrý.
+> Jmenuji se Michal.
+< Tak to nemáš moc dobrý.
+> Já jsem programátor.
+< Hm, to máš recht.
+> Co dìláš?
+< Já nic dìlám.
+> Umíš èesky?
+< Snad jo, rebele.
+> Kolik je ti let?
+< No jo, to je docela dost možný.
+> Kde bydlíš?
+< Nevím, kam tím míøíš.
+> Máš rád hudbu?
+< Snad jo, hochu.
+> Já mám rád hudbu.
+< Dìlej si pro mì za mì co chceš.
+> Jsi hloupý.
+< S tím nic nenadìláš, tak to prostì je.
+> Nejsem hloupý.
+< No dobrá, když to øíkáš...
+> Proè se ptáš?
+< Osud to takhle zaøídil, tak se mì neptej na dùvod!
+> Mùj poèítaè je rychlý.
+< Tak to máš výjimeènì pravdu.
+> Znáš Aleše Jandu?
+< Já myslím, že urèitì.
+> Dnes je hezky.
+< Tak to je bezva.
+> Nudím se.
+< A proè nudíš?
+> Chceš si hrát?
+< Chci. Ty mi to mùžeš splnit?
+> Umíš poèítat?
+< No jo, to je docela dost možný.
+> Kolik je pìt a pìt?
+< Snad jo, rebele.
+> Mám hlad.
+< Já vím, mání není nic pøíjemného.
+> Už musím jít.
+< Tak ty musíš? Hm, to je jiná.
+> Nashledanou!
+< To teda jo, to je fakt.
