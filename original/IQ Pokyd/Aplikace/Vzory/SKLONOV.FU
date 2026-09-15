@@ -1,0 +1,1359 @@
+/* Tento zdrojov˝ kÛd je pod licencÌ GNU/GPL. M˘ûete ho pouûÌt k vlastnÌ
+   pot¯ebÏ, ale nesmÌte jej ani programy zaloûenÈ na tomto kÛdu vyuûÌt komerËnÏ!
+
+   Jedn· se o zdrojov˝ kÛd programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleöe Jandy
+*/
+
+/* IQ Pokyd - sklonov.fu - funkce pot¯ebnÈ pro skloÚov·nÌ slovnÌch druh˘
+   Aleö Janda (C) K›BLSoft 2002-2005 (kÛdov·nÌ Windows 1250)
+*/
+
+
+void UPRAV_DLOUHE_SLOVO_PRO_IQPOKYD(char *retezec) {
+  UPRAV_SLOVO_PRO_IQPOKYD(retezec,1);
+ }
+
+void UPRAV_SLOVO_PRO_IQPOKYD(char *retezec) {
+  UPRAV_SLOVO_PRO_IQPOKYD(retezec,0);
+ }
+
+void UPRAV_SLOVO_PRO_IQPOKYD(char *retezec,BYTE dlouhe) {
+int poz1,poz2,celkem=strlen(retezec);
+char *pomocslovo=NULL;
+  if (dlouhe == 0) {
+    pomocslovo=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+    if (celkem >= DELKA_FRONTY) {
+      NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Moc dlouhy retezec!");
+     }
+   }
+  else pomocslovo=ALOKUJ_RETEZEC(celkem+celkem/2+1);
+
+  for (poz1=0,poz2=0; poz1 < celkem; poz1++,poz2++) {
+    if (strncmp(retezec+poz1,"ch",2) == 0) { pomocslovo[poz2]='*'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"di",2) == 0) { pomocslovo[poz2]='Ô'; continue; }
+    if (strncmp(retezec+poz1,"ti",2) == 0) { pomocslovo[poz2]='ù'; continue; }
+    if (strncmp(retezec+poz1,"ni",2) == 0) { pomocslovo[poz2]='Ú'; continue; }
+    if (strncmp(retezec+poz1,"dÌ",2) == 0) { pomocslovo[poz2]='Ô'; continue; }
+    if (strncmp(retezec+poz1,"tÌ",2) == 0) { pomocslovo[poz2]='ù'; continue; }
+    if (strncmp(retezec+poz1,"nÌ",2) == 0) { pomocslovo[poz2]='Ú'; continue; }
+    if (strncmp(retezec+poz1,"dÏ",2) == 0) { pomocslovo[poz2]='Ô'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"tÏ",2) == 0) { pomocslovo[poz2]='ù'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"nÏ",2) == 0) { pomocslovo[poz2]='Ú'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"bÏ",2) == 0) { pomocslovo[poz2]='B'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"fÏ",2) == 0) { pomocslovo[poz2]='F'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"mÏ",2) == 0) { pomocslovo[poz2]='M'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"pÏ",2) == 0) { pomocslovo[poz2]='P'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"qÏ",2) == 0) { pomocslovo[poz2]='Q'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"vÏ",2) == 0) { pomocslovo[poz2]='V'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"wÏ",2) == 0) { pomocslovo[poz2]='W'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    pomocslovo[poz2]=retezec[poz1];
+
+    if (poz1 >= DELKA_FRONTY && dlouhe == 0) {
+      NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Moc dlouhy retezec!");
+     }
+   }
+  pomocslovo[poz2]=0;
+  strcpy(retezec,pomocslovo);
+
+  UVOLNI(pomocslovo);
+ }
+
+void ODUPRAV_DLOUHE_SLOVO_PRO_IQPOKYD(char *retezec) {
+  ODUPRAV_SLOVO_PRO_IQPOKYD(retezec,1);
+ }
+
+void ODUPRAV_SLOVO_PRO_IQPOKYD(char *retezec) {
+  ODUPRAV_SLOVO_PRO_IQPOKYD(retezec,0);
+ }
+
+void ODUPRAV_SLOVO_PRO_IQPOKYD(char *retezec,BYTE dlouhe) {
+int poz1,poz2,celkem=strlen(retezec),jemnost=0;
+char *pomocslovo=NULL;
+  if (dlouhe == 0) {
+    pomocslovo=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+    if (celkem >= DELKA_FRONTY) {
+      NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Moc dlouhy retezec!");
+     }
+   }
+  else pomocslovo=ALOKUJ_RETEZEC(celkem+celkem/2+1);
+
+  for (poz1=0,poz2=0; poz1 < celkem; poz1++,poz2++) {
+    if (jemnost == 1 && retezec[poz1] == 'e') { pomocslovo[poz2]='Ï'; continue; }
+    jemnost=0;
+    if (retezec[poz1] == '*') { pomocslovo[poz2]='c'; poz2++; pomocslovo[poz2]='h'; continue; }
+    if (retezec[poz1] == 'B') { pomocslovo[poz2]='b'; jemnost=1; continue; }
+    if (retezec[poz1] == 'F') { pomocslovo[poz2]='f'; jemnost=1; continue; }
+    if (retezec[poz1] == 'M') { pomocslovo[poz2]='m'; jemnost=1; continue; }
+    if (retezec[poz1] == 'P') { pomocslovo[poz2]='p'; jemnost=1; continue; }
+    if (retezec[poz1] == 'Q') { pomocslovo[poz2]='q'; jemnost=1; continue; }
+    if (retezec[poz1] == 'V') { pomocslovo[poz2]='v'; jemnost=1; continue; }
+    if (retezec[poz1] == 'W') { pomocslovo[poz2]='w'; jemnost=1; continue; }
+    if (retezec[poz1] == 'D') { pomocslovo[poz2]='d'; continue; }
+    if (retezec[poz1] == 'T') { pomocslovo[poz2]='t'; continue; }
+    if (retezec[poz1] == 'N') { pomocslovo[poz2]='n'; continue; }
+    if (strncmp(retezec+poz1,"Ôi",2) == 0) { pomocslovo[poz2]='d'; continue; }
+    if (strncmp(retezec+poz1,"ùi",2) == 0) { pomocslovo[poz2]='t'; continue; }
+    if (strncmp(retezec+poz1,"Úi",2) == 0) { pomocslovo[poz2]='n'; continue; }
+    if (strncmp(retezec+poz1,"ÔÌ",2) == 0) { pomocslovo[poz2]='d'; continue; }
+    if (strncmp(retezec+poz1,"ùÌ",2) == 0) { pomocslovo[poz2]='t'; continue; }
+    if (strncmp(retezec+poz1,"ÚÌ",2) == 0) { pomocslovo[poz2]='n'; continue; }
+    if (strncmp(retezec+poz1,"Ôe",2) == 0) { pomocslovo[poz2]='d'; poz2++; pomocslovo[poz2]='Ï'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"ùe",2) == 0) { pomocslovo[poz2]='t'; poz2++; pomocslovo[poz2]='Ï'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"Úe",2) == 0) { pomocslovo[poz2]='n'; poz2++; pomocslovo[poz2]='Ï'; poz1++; continue; }
+    pomocslovo[poz2]=retezec[poz1];
+
+    if (poz1 >= DELKA_FRONTY && dlouhe == 0) {
+      NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Moc dlouhy retezec!");
+     }
+   }
+  pomocslovo[poz2]=0;
+  strcpy(retezec,pomocslovo);
+
+  UVOLNI(pomocslovo);
+ }
+
+void PROVED_KOREKCI_U_SLOVA_PRO_IQPOKYD(char *retezec) {
+int pozice,celkem=strlen(retezec);
+ //tato funkce provede odstraneni "zjemnenych" jiz nemajicich smysl znaku,
+ // ktere zde zustaly po skloneni
+
+  for (pozice=0; pozice < celkem; pozice++) {
+    if ((retezec[pozice] == 'B'
+      || retezec[pozice] == 'F'
+      || retezec[pozice] == 'M'
+      || retezec[pozice] == 'P'
+      || retezec[pozice] == 'Q'
+      || retezec[pozice] == 'V'
+      || retezec[pozice] == 'W') && retezec[pozice+1] != 'e') {
+      retezec[pozice]+=32;
+     }
+   }
+ }
+
+BYTE ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(char *zdroj,char *vysledek,char *slovo,char *cimnahradit,int &pozicezdroj,int &pozicevysledek) {
+int pozice;
+
+  if (pozicezdroj > 0 && JELI_PISMENO(zdroj[pozicezdroj-1]) == 1)
+   return(0);        //hledane slovo nesmi byt uprostred slova
+
+  for (pozice=0; slovo[pozice] != 0; pozice++) {
+    if (slovo[pozice] != zdroj[pozice+pozicezdroj]) {
+      if (VRAT_MALE_PISMENO(zdroj[pozice+pozicezdroj]) == slovo[pozice])
+       continue;      //tolerance velk˝ch pÌsmen ve zdrojovÈm textu
+      if ((slovo[pozice] == 'i' && zdroj[pozice+pozicezdroj] == 'y')
+       || (slovo[pozice] == 'y' && zdroj[pozice+pozicezdroj] == 'i'))
+       continue;
+      if (slovo[pozice] == 'd'
+       && zdroj[pozice+pozicezdroj] == 'Ô'
+       && zdroj[pozice+pozicezdroj+1] == 'i')
+       continue;     //Ôi -> di
+                                    //tolerance pravopisu
+      return(0);
+     }
+   }
+  if (JELI_PISMENO(zdroj[pozice+pozicezdroj]) == 1) return(0);
+
+  strcpy(vysledek+pozicevysledek,cimnahradit);
+  if (JELI_VELKE_PISMENO(zdroj[pozicezdroj]) == 1)
+   vysledek[pozicevysledek]=VRAT_VELKE_PISMENO(cimnahradit[0]);
+  pozicezdroj+=strlen(slovo)-1;
+  pozicevysledek+=strlen(cimnahradit)-1;
+
+  return(1);         //odpovÌd·
+ }
+
+char *UPRAV_VETU_PRO_IQPOKYD(char *retezec) {
+//funkce nahradÌ slova "ses", "sis", "abychom" atd. jejich
+//dvouslovn˝mi (byù nespisovn˝mi) ekvivalenty.
+//Tato z·mÏna je Ëeötin·¯sk· past a jejÌ odstranÏnÌ je nutnÈ
+//pro spr·vnÈ pochopenÌ slov.
+//VracÌ nov˝ pointer na vÏtu, star˝ dealokuje!!!
+
+int poz1,poz2,celkem=strlen(retezec),jemnost=0;
+char *vysledek=NULL;
+  vysledek=ALOKUJ_RETEZEC(celkem+celkem/2+1);
+
+  for (poz1=0,poz2=0; poz1 < celkem; poz1++,poz2++) {
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"sis","jsi si",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"ses","jsi se",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"by*","by jsem",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"bysem","by jsem",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"by*om","by jsme",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"bys","by jsi",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"bysme","by jsme",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"byste","by jste",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"aby*","aby jsem",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"abysem","aby jsem",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"aby*om","aby jsme",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"abys","aby jsi",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"abysme","aby jsme",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"abyste","aby jste",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"kdyby*","kdyby jsem",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"kdybysem","kdyby jsem",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"kdyby*om","kdyby jsme",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"kdybys","kdyby jsi",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"kdybysme","kdyby jsme",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(retezec,vysledek,"kdybyste","kdyby jste",poz1,poz2) == 1)
+     continue;
+
+    vysledek[poz2]=retezec[poz1];
+   }
+  vysledek[poz2]=0;
+  UVOLNI(retezec);
+  return(vysledek);
+ }
+
+void ODUPRAV_VETU_PRO_IQPOKYD(void) {
+//funkce se aplikuje na GLOB¡LNÕ PROMÃNNOU g_odpovedpocitace
+//funkce nahradÌ slova "jsi si", "aby jsme" atd. jejich
+//spisovn˝mi ekvivalenty. Prov·dÌ se p¯Ìmo na vygenerovanou
+//vÏtu p¯ed naps·nÌm.
+
+int poz1,poz2,celkem=strlen(g_odpovedpocitace),jemnost=0;
+char *vysledek=NULL;
+  vysledek=ALOKUJ_RETEZEC(MAX_DELKA_ODPOVEDI_POCITACE);
+
+  for (poz1=0,poz2=0; poz1 < celkem; poz1++,poz2++) {
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(g_odpovedpocitace,vysledek,"jsi si","sis",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(g_odpovedpocitace,vysledek,"jsi se","ses",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(g_odpovedpocitace,vysledek,"by jsem","bych",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(g_odpovedpocitace,vysledek,"by jsme","bychom",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(g_odpovedpocitace,vysledek,"by jsi","bys",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(g_odpovedpocitace,vysledek,"aby jsem","abych",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(g_odpovedpocitace,vysledek,"aby jsme","abychom",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(g_odpovedpocitace,vysledek,"aby jsi","abys",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(g_odpovedpocitace,vysledek,"kdyby jsem","kdybych",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(g_odpovedpocitace,vysledek,"kdyby jsme","kdybychom",poz1,poz2) == 1)
+     continue;
+    if (ZAMEN_SLOVA_VE_VETE_PRO_IQPOKYD(g_odpovedpocitace,vysledek,"kdyby jsi","kdybys",poz1,poz2) == 1)
+     continue;
+
+    vysledek[poz2]=g_odpovedpocitace[poz1];
+
+    if (poz2 >= MAX_DELKA_ODPOVEDI_POCITACE) {
+      NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Moc dlouhy retezec!");
+     }
+   }
+  vysledek[poz2]=0;
+  strcpy(g_odpovedpocitace,vysledek);
+  UVOLNI(vysledek);
+ }
+
+void VYMAZ_FRONTU(void) {
+  g_slovavefronte[0]=0;
+  g_pomocnesloveso[0]=0;
+ }
+
+void PRIDEJ_DO_FRONTY(void) {
+  if ((strlen(g_slovavefronte)+strlen(g_slovo)+2) >= DELKA_FRONTY) {
+    NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Moc dlouha fronta!");
+   }
+
+  if (g_slovavefronte[0] != 0) strcat(g_slovavefronte,",");
+  strcat(g_slovavefronte,g_slovo);
+ }
+
+void PRIDEJ_DO_FRONTY(char *co) {
+  if (g_slovavefronte[0] != 0) strcat(g_slovavefronte,",");
+  strcat(g_slovavefronte,co);
+ }
+
+void POMOCNE_SLOVESO(BYTE jake,BYTE zapor) {
+#define _jsem_ 1
+#define _jsi_ 2
+//3 neni
+#define _jsme_ 4
+#define _jste_ 5
+//6 neni
+#define _budu_ 11
+#define _budes_ 12
+#define _bude_ 13
+#define _budeme_ 14
+#define _budete_ 15
+#define _budou_ 16
+  if (zapor == 1) strcpy(g_pomocnesloveso,"ne");
+  else g_pomocnesloveso[0]=0;
+  switch(jake) {
+    case 1: strcat(g_pomocnesloveso,"jsem"); break;
+    case 2: strcat(g_pomocnesloveso,"jsi"); break;
+                         //tvar u 3. osoby j.Ë. neexistuje
+    case 4: strcat(g_pomocnesloveso,"jsme"); break;
+    case 5: strcat(g_pomocnesloveso,"jste"); break;
+                         //tvar u 3. osoby mn.Ë. neexistuje
+    case 11: strcat(g_pomocnesloveso,"budu"); break;
+    case 12: strcat(g_pomocnesloveso,"budeö"); break;
+    case 13: strcat(g_pomocnesloveso,"bude"); break;
+    case 14: strcat(g_pomocnesloveso,"budeme"); break;
+    case 15: strcat(g_pomocnesloveso,"budete"); break;
+    case 16: strcat(g_pomocnesloveso,"budou"); break;
+   }
+ }
+
+void PRIDEJ_DO_PRECHODNE_FRONTY(char *kam,char *co) {
+  if (co[0] == 0) return;
+  if (kam[0] != 0) strcat(kam,",");
+  strcat(kam,co);
+ }
+
+void PRIDEJ_NA_ZACATEK_FRONTY(void) {
+int pozice,posun=strlen(g_slovo)+1;
+  if (g_slovavefronte[0] == 0) strcpy(g_slovavefronte,g_slovo);
+  else {
+    if ((strlen(g_slovo)+strlen(g_slovavefronte)+1) >= DELKA_FRONTY) {
+      NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Moc dlouhy retezec!");
+     }
+    for (pozice=strlen(g_slovavefronte)+posun; pozice > (posun-1); pozice--) {
+      g_slovavefronte[pozice]=g_slovavefronte[pozice-posun];
+     }
+    strcpy(g_slovavefronte,g_slovo);
+    g_slovavefronte[posun-1]=',';
+   }
+ }
+
+void PRIDEJ_NA_ZACATEK_FRONTY(char *co) {
+int pozice,posun=strlen(co)+1;
+  if (g_slovavefronte[0] == 0) strcpy(g_slovavefronte,co);
+  else {
+    for (pozice=strlen(g_slovavefronte)+posun; pozice > (posun-1); pozice--) {
+      g_slovavefronte[pozice]=g_slovavefronte[pozice-posun];
+     }
+    strcpy(g_slovavefronte,co);
+    g_slovavefronte[posun-1]=',';
+   }
+ }
+
+void PRIDEJ_NA_KONEC(char *co) {
+  if ((strlen(g_slovo)+strlen(co)+1) >= DELKA_JEDNODUCHEHO_SLOVA) {
+    NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Moc dlouhe slovo!");
+   }
+  strcat(g_slovo,co);
+ }
+
+void PRIDEJ_NA_ZACATEK(char *co) {
+char *pomocneslovo=NULL;
+  if ((strlen(g_slovo)+strlen(co)+1) >= DELKA_JEDNODUCHEHO_SLOVA) {
+    NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Moc dlouhe slovo!");
+   }
+  pomocneslovo=ALOKUJ_RETEZEC(DELKA_JEDNODUCHEHO_SLOVA);
+
+  strcpy(pomocneslovo,co);
+  strcat(pomocneslovo,g_slovo);
+  strcpy(g_slovo,pomocneslovo);
+
+  UVOLNI(pomocneslovo);
+ }
+
+BYTE OREZ_FRONTU_NA_1_SLOVO(int kolikate) {   //kolikate slovo se ma vratit,
+                                               //pricemz 1. slovo je "1"
+  return(OREZ_FRONTU_NA_1_SLOVO(g_slovavefronte,kolikate));
+ }
+     //  *** pretizeni funkce ***
+BYTE OREZ_FRONTU_NA_1_SLOVO(char *fronta,int kolikate) {
+    //kolikate slovo se ma vratit, pricemz 1. slovo je "1"
+int pozice1,pozice2;
+int kolik;
+  for (pozice1=0,kolik=1; kolik < kolikate && fronta[pozice1] != 0; pozice1++) {
+    if (fronta[pozice1] == ',') kolik++;
+   }
+  if (fronta[pozice1] == 0) return(0);   //uz neni ve fronte zadne slovo
+  for (pozice2=0; fronta[pozice1] != ',' && fronta[pozice1] != 0; pozice1++,pozice2++) {
+    fronta[pozice2]=fronta[pozice1];
+   }
+  fronta[pozice2]=0;
+  return(1);                                            //uspesne orezano
+ }
+
+BYTE ZJEMNI_ZNAK(char *retezec,int pozice) {
+// vraci: 0 - znak nezjemnen
+//        1 - souhlaska byla opravdu zjemnena
+//        2 - souhlaska byla zjemnena jen symbolicky (b => B, m => M atd.) 
+  switch(retezec[pozice]) {
+    case '*': retezec[pozice]='ö'; return(1);
+    case 'c': retezec[pozice]='Ë'; return(1);
+    case 'r': retezec[pozice]='¯'; return(1);
+    case 'k': retezec[pozice]='c'; return(1);
+    case 'h': retezec[pozice]='z'; return(1);
+    case 'g': retezec[pozice]='z'; return(1);
+    case 'b': retezec[pozice]='B'; return(2); // ---------------------------
+    case 'f': retezec[pozice]='F'; return(2); // ---------------------------
+    case 'm': retezec[pozice]='M'; return(2); // | neboli nahrazky         |
+    case 'p': retezec[pozice]='P'; return(2); // | symbolizujici "jemnost" |
+    case 'q': retezec[pozice]='Q'; return(2); // |                         |
+    case 'v': retezec[pozice]='V'; return(2); // ---------------------------
+    case 'w': retezec[pozice]='W'; return(2); // ---------------------------
+    case 'd': retezec[pozice]='Ô'; return(1);
+    case 't': retezec[pozice]='ù'; return(1);
+    case 'n': retezec[pozice]='Ú'; return(1);
+    default: return(0);
+   }
+ }
+
+BYTE ZJEMNI_SLOVO_PODSTJM(void) {
+  return(ZJEMNI_ZNAK(g_slovo,strlen(g_slovo)-1));
+ }
+
+BYTE PODM_ZKRAT_SAMOHLASKU_ODZADU(char *retezec,int kolikatou,BYTE co_kontrolovat) {
+int pozice=strlen(retezec);
+  if (pozice < kolikatou) return(0);
+  if (pozice == 3) {	//tedy kdyû je slovo na 4 pÌsmena (posl. pÌsmeno chybÌ)
+    if ((co_kontrolovat&8) == 8) {
+      if (POSLEDNI_ZNAK(retezec) == 'r' &&	//Ìra: dÌra - dÏr
+       retezec[pozice-2] == 'Ì') {
+        ZJEMNI_ZNAK(retezec,0); retezec[1]='e';
+       }
+     }
+    if ((co_kontrolovat&16) == 16) {
+      if (POSLEDNI_PISMENA(retezec,"Ìl") == 1) {	//Ìlo: dÌlo - dÏl
+        ZJEMNI_ZNAK(retezec,0); retezec[1]='e';
+       }
+     }
+   }
+  if ((co_kontrolovat&1) == 1) {
+    if (POSLEDNI_PISMENA(retezec,"·b") == 0 && POSLEDNI_PISMENA(retezec,"·h") == 0
+     && POSLEDNI_PISMENA(retezec,"·l") == 0 && POSLEDNI_PISMENA(retezec,"·m") == 0
+     && POSLEDNI_PISMENA(retezec,"·n") == 0 && POSLEDNI_PISMENA(retezec,"·r") == 0
+     && POSLEDNI_PISMENA(retezec,"Ìl") == 0 && POSLEDNI_PISMENA(retezec,"Ìp") == 0)
+      return(0);                     //vöe konËÌ na 'a'
+   }
+  if ((co_kontrolovat&2) == 2) {
+    if (POSLEDNI_ZNAK(retezec) != 'c' && POSLEDNI_PISMENA(retezec,"Ìl") == 0)
+     return(0);                      //koncovka "ce" nebo "Ìle"
+   }
+  if ((co_kontrolovat&4) == 4) {
+    if (POSLEDNI_PISMENA(retezec,"Èn") == 0 && POSLEDNI_PISMENA(retezec,"Èn") == 0)
+     return(0);                      //vöe konËÌ na 'o'
+   }
+  pozice-=kolikatou;
+  switch(retezec[pozice]) {
+    case '·': retezec[pozice]='a'; break;
+    case 'È': retezec[pozice]='e'; break;
+    case 'Ì': retezec[pozice]='i'; break;
+    case '˝': retezec[pozice]='y'; break;
+    default: return(0);
+   }
+  return(1);
+ }
+
+BYTE MEKKA_SOUHLASKA(char pismeno) {
+  switch(pismeno) {
+    case 'û': case 'ö': case 'Ë': case '¯': case 'c': case 'j':
+    case 'Ô': case 'ù': case 'Ú':
+     return(1);
+    default: return(0);
+   }
+ }
+
+BYTE TVRDA_SOUHLASKA(char pismeno) {
+  switch(pismeno) {
+    case 'h': case '*': case 'k': case 'r': case 'd': case 't': case 'n':
+    case 'D': case 'T': case 'N':
+     return(1);
+    default: return(0);
+   }
+ }
+
+char POSLEDNI_ZNAK(char *retezec) {
+int pozice=strlen(retezec);
+  if (pozice == 0) return(0);
+  else return(retezec[pozice-1]);
+ }
+
+char PREDPOSLEDNI_ZNAK(char *retezec) {
+int pozice=strlen(retezec);
+  if (pozice <= 1) return(0);
+  else return(retezec[pozice-2]);
+ }
+
+char PREDPREDPOSLEDNI_ZNAK(char *retezec) {
+int pozice=strlen(retezec);
+  if (pozice <= 2) return(0);
+  else return(retezec[pozice-3]);
+ }
+
+BYTE POSLEDNI_PISMENA(char *retezec,char *hledane) {
+int pozice=strlen(retezec),pozice2=strlen(hledane);
+  if (pozice < pozice2) return(0);
+  if (strcmp(retezec+pozice-pozice2,hledane) == 0) return(1);
+  else return(0);
+ }
+
+BYTE JELI_PISMENO(char pismeno) {
+  if ((pismeno >= 'a' && pismeno <= 'z')
+   || (pismeno >= 'A' && pismeno <= 'Z')
+   || pismeno < 0 || pismeno == '*') return(1);
+  else return(0);
+ }
+
+BYTE JELI_SAMOHLASKA(char pismeno) {
+  switch(pismeno) {
+    case 'a': case 'e': case 'i': case 'o': case 'u': case 'y':
+    case '·': case 'È': case 'Ï': // 'Ï' asi nemusÌ b˝t (ale pro jistotu)
+    case 'Ì': case 'Û': case '˙': case '˝': case '˘':
+      return(1);
+    default: return(0);
+   }
+ }
+
+BYTE JELI_SOUHLASKA(char pismeno) {
+  if (JELI_SAMOHLASKA(pismeno) == 0
+   && JELI_PISMENO(pismeno) == 1) return(1);
+  else return(0);
+ }
+
+BYTE JELI_MALE_PISMENO(char znak) {
+  if (JELI_PISMENO(znak) == 1 && VRAT_MALE_PISMENO(znak) == znak) return(1);
+  else return(0);
+ }
+
+BYTE JELI_VELKE_PISMENO(char znak) {
+  if (JELI_PISMENO(znak) == 1 && VRAT_VELKE_PISMENO(znak) == znak) return(1);
+  else return(0);
+ }
+
+char VRAT_MALE_PISMENO(char znak) {
+  if (znak >= 'A' && znak <= 'Z') return(znak+32);
+  else if (znak >= 'a' && znak <= 'z') return(znak);
+  else if (znak < 0) switch(znak) {
+    case '¡': return('·');
+    case '…': return('È');
+    case 'Ã': return('Ï');
+    case 'Õ': return('Ì');
+    case '”': return('Û');
+    case '⁄': return('˙');
+    case 'Ÿ': return('˘');
+    case '›': return('˝');
+    case 'é': return('û');
+    case 'ä': return('ö');
+    case '»': return('Ë');
+    case 'ÿ': return('¯');
+    case 'œ': return('Ô');
+    case 'ç': return('ù');
+    case '“': return('Ú');
+
+    case 'º': return('æ');
+    case '¿': return('‡');
+    case 'å': return('ú');
+    case '≈': return('Â');
+    case 'è': return('ü');
+    case '∆': return('Ê');
+    case '—': return('Ò');
+    case 'À': return('Î');
+    case '‹': return('¸');
+    case '÷': return('ˆ');
+    case 'ƒ': return('‰');
+    case '‘': return('Ù');
+
+    default: return(znak);
+   }
+  else return(znak);
+ }
+
+char VRAT_VELKE_PISMENO(char znak) {
+  if (znak >= 'a' && znak <= 'z') return(znak-32);
+  else if (znak >= 'A' && znak <= 'Z') return(znak);
+  else if (znak < 0) switch(znak) {
+    case '·': return('¡');
+    case 'È': return('…');
+    case 'Ï': return('Ã');
+    case 'Ì': return('Õ');
+    case 'Û': return('”');
+    case '˙': return('⁄');
+    case '˘': return('Ÿ');
+    case '˝': return('›');
+    case 'û': return('é');
+    case 'ö': return('ä');
+    case 'Ë': return('»');
+    case '¯': return('ÿ');
+    case 'Ô': return('œ');
+    case 'ù': return('ç');
+    case 'Ú': return('“');
+
+    case 'æ': return('º');
+    case '‡': return('¿');
+    case 'ú': return('å');
+    case 'Â': return('≈');
+    case 'ü': return('è');
+    case 'Ê': return('∆');
+    case 'Ò': return('—');
+    case 'Î': return('À');
+    case '¸': return('‹');
+    case 'ˆ': return('÷');
+    case '‰': return('ƒ');
+    case 'Ù': return('‘');
+
+    default: return(znak);
+   }
+  else return(znak);
+ }
+
+void PREVED_NA_MALA_PISMENA(char *slovo) {
+WORD pozice,celkem=strlen(slovo);
+  for (pozice=0; pozice < celkem; pozice++) {
+    slovo[pozice]=VRAT_MALE_PISMENO(slovo[pozice]);
+   }
+ }
+
+BYTE POROVNEJ_DVA_RETEZCE(char *text1,char *text2) {
+// porovn· 2 ¯etÏzce bez ohledu na velikost pÌsmen a samoz¯ejmÏ
+// i s diakritikou
+// VracÌ:  0 - nejsou stejnÈ
+//         1 - jsou stejnÈ
+
+  return POROVNEJ_DVA_RETEZCE(text1,text2,strlen(text1)+1);
+             // +1 proto, aby se porovnavaly i zaverecne nuly
+             // (retezce musi byt stejne dlouhe)
+ }
+BYTE POROVNEJ_DVA_RETEZCE(char *text1,char *text2,WORD kolik) {
+// porovn· 2 ¯etÏzce bez ohledu na velikost pÌsmen a samoz¯ejmÏ
+// i s diakritikou, max. "kolik" znak˘, PÿETÕéENÕ FUNKCE
+// VracÌ:  0 - nejsou stejnÈ
+//         1 - jsou stejnÈ
+
+WORD pozice;
+
+  for (pozice=0; pozice < kolik; pozice++) {
+    if (VRAT_MALE_PISMENO(text1[pozice]) != VRAT_MALE_PISMENO(text2[pozice])) {
+      return(0);         //neshoduje se
+     }
+   }
+  return(1);             //shoduje se
+ }
+
+WORD POCET_SLABIK(char *retezec) {
+int pozice,celkem=strlen(retezec);
+WORD slabik=0;
+BYTE rl,samohl;
+  for (pozice=0,rl=0,samohl=1; pozice < celkem; pozice++) {
+    if (JELI_SAMOHLASKA(retezec[pozice]) == 1) {
+      if (retezec[pozice] == 'u' && (samohl == 'a' || samohl == 'o'));
+      else if (rl != 1) slabik++;
+      samohl=retezec[pozice]; rl=0;
+     }
+    else switch(retezec[pozice]) {
+      case 'l': case 'r': if (samohl == 0) { slabik++; rl=1; } samohl=0; break;
+      default: rl=0; samohl=0; break;
+     }
+   }
+  return(slabik);
+ }
+
+BYTE MALI_KONCOVKA_SLABIKU(char *retezec) {
+// vraci:  0 - konec slova neobsahuje slabiku, je vhodne dosadit pomocnou
+//             samohlasku
+//         1 - konec slova obsahuje slabiku, netreba dosazovat pomocnou
+//             samohlasku
+//         2 - konec slova obsahuje zvucnou slabiku slabiku (napr. st),
+//             je vhodny tvar bez pomocne samohlasky i tvar s ni
+
+int pozice,celkem=strlen(retezec);
+
+  if (JELI_SAMOHLASKA(retezec[celkem-1]) == 1
+   || JELI_SAMOHLASKA(retezec[celkem-2]) == 1) return(1);   //samohlaska
+                                                            //na konci
+  if (celkem < 3) pozice=0;                        //prilis kratke slovo
+  else {
+    pozice=celkem-2;
+    if (retezec[pozice] == 'r' || retezec[pozice] == 'l') {
+      if (JELI_SAMOHLASKA(retezec[pozice-1]) == 1) return(0);   //"narv(i)"
+      else return(1);                                           //"zmrv"
+     }
+   }
+  if (POSLEDNI_PISMENA(retezec,"st") == 1
+   || POSLEDNI_PISMENA(retezec,"öt") == 1) return(2);
+
+  return(0);
+ }
+
+BYTE OREZ_O_SAMOHLASKU(char *retezec) {
+int pozice=strlen(retezec);
+  if (pozice == 0) return(0);
+  if (JELI_SAMOHLASKA(retezec[pozice-1]) == 1) {
+    retezec[pozice-1]=0; return(1);
+   }
+  return(0);
+ }
+
+BYTE OREZ_POSLEDNI_ZNAKY(char *retezec,BYTE kolik) {
+int pozice=strlen(retezec);
+  if (pozice < kolik) {       //retezec je kratsi nez pocet orezavanych znaku
+    retezec[0]=0; return(0);
+   }
+  retezec[pozice-kolik]=0;
+  return(1);
+ }
+
+void ODSTRAN_E(char *retezec) {
+int pozice=strlen(retezec);
+  if (pozice <= 2) return;
+  if (retezec[pozice-2] == 'e') {
+    retezec[pozice-2]=0;		//docasne zkraceni retezce
+    retezec[pozice-2]=retezec[pozice-1];
+    retezec[pozice-1]=0;
+   }
+ }
+
+void PODM_ODSTRAN_E(char *retezec) {
+int pozice=strlen(retezec);
+char znak;
+  if (pozice <= 2) return;
+  if (retezec[pozice-2] == 'e') {
+    znak=retezec[pozice-1];
+    retezec[pozice-1]=0;		//docasne zkraceni retezce
+    if (POCET_SLABIK(retezec) > 1) {
+      retezec[pozice-2]=znak;
+      retezec[pozice-1]=0;
+     }
+    else retezec[pozice-1]=znak;  //prilis kratke slovo, nezkracuje se
+   }
+ }
+
+void PODM_ODSTRAN_E_C(char *retezec) {
+int pozice=strlen(retezec);
+char znak;
+  if (pozice <= 2) return;
+  switch(POSLEDNI_ZNAK(retezec)) {
+    case 'c':
+      if (retezec[pozice-2] == 'e') {
+        znak=retezec[pozice-1];
+        retezec[pozice-1]=0;		//docasne zkraceni retezce
+        if (POCET_SLABIK(retezec) > 1) {
+          retezec[pozice-2]=znak;
+          retezec[pozice-1]=0;
+         }
+        else retezec[pozice-1]=znak;
+       }
+      break;
+    default: break;
+   }
+ }
+
+BYTE PODM_VLOZ_E(char *retezec,BYTE co_kontrolovat,BYTE vlozenie) {
+int delka=strlen(retezec);
+  switch(vlozenie) {
+    case 0: return(0);
+    case 1: goto PROVED;
+   }                               //jinak proved autodetekci
+
+  if (JELI_SAMOHLASKA(retezec[delka-2]) == 1 || JELI_SAMOHLASKA(retezec[delka-1]) == 1)
+   return(0);				//celkovÈ urychlenÌ funkce
+  if ((co_kontrolovat&1) == 1) {
+    if (POSLEDNI_PISMENA(retezec,"cp") == 1 ||
+        POSLEDNI_PISMENA(retezec,"ct") == 1 ||
+        POSLEDNI_PISMENA(retezec,"dû") == 1 ||
+        POSLEDNI_PISMENA(retezec,"ft") == 1 ||
+        POSLEDNI_PISMENA(retezec,"*t") == 1 ||
+        POSLEDNI_PISMENA(retezec,"jö") == 1 ||
+        POSLEDNI_PISMENA(retezec,"jt") == 1 ||
+        POSLEDNI_PISMENA(retezec,"kt") == 1 ||
+        POSLEDNI_PISMENA(retezec,"vln") == 1 ||
+        POSLEDNI_PISMENA(retezec,"lv") == 1 ||
+        POSLEDNI_PISMENA(retezec,"lz") == 1 ||
+        POSLEDNI_PISMENA(retezec,"mb") == 1 ||
+        POSLEDNI_PISMENA(retezec,"mp") == 1 ||
+        POSLEDNI_PISMENA(retezec,"ms") == 1 ||
+        POSLEDNI_PISMENA(retezec,"nb") == 1 ||
+        POSLEDNI_PISMENA(retezec,"nz") == 1 ||
+        POSLEDNI_PISMENA(retezec,"ips") == 1 ||
+        POSLEDNI_PISMENA(retezec,"rd") == 1 ||
+        POSLEDNI_PISMENA(retezec,"rf") == 1 ||
+        POSLEDNI_PISMENA(retezec,"r*") == 1 ||
+        POSLEDNI_PISMENA(retezec,"rp") == 1 ||
+        POSLEDNI_PISMENA(retezec,"rt") == 1 ||
+        (POSLEDNI_PISMENA(retezec,"rv") == 1 && retezec[delka-3] != 'a') ||
+        POSLEDNI_PISMENA(retezec,"rz") == 1 ||
+        POSLEDNI_PISMENA(retezec,"sb") == 1 ||
+        POSLEDNI_PISMENA(retezec,"öt") == 1 ||
+        POSLEDNI_PISMENA(retezec,"vd") == 1 ||
+        POSLEDNI_PISMENA(retezec,"ûd") == 1) return(0);
+   }
+  if ((co_kontrolovat&2) == 2) {
+    if (POSLEDNI_PISMENA(retezec,"jn") == 1 ||
+        POSLEDNI_PISMENA(retezec,"ll") == 1 ||
+        POSLEDNI_PISMENA(retezec,"lm") == 1 ||
+        POSLEDNI_PISMENA(retezec,"ng") == 1 ||
+        POSLEDNI_PISMENA(retezec,"rg") == 1) return(0);
+   }
+  if (POSLEDNI_PISMENA(retezec,"lt") == 1 ||
+      POSLEDNI_PISMENA(retezec,"nd") == 1 ||
+      POSLEDNI_PISMENA(retezec,"nt") == 1 ||
+      POSLEDNI_PISMENA(retezec,"rb") == 1 ||
+      (POSLEDNI_PISMENA(retezec,"rn") == 1 && JELI_SOUHLASKA(retezec[delka-3]) == 1) ||
+      POSLEDNI_PISMENA(retezec,"st") == 1 ||
+      POSLEDNI_PISMENA(retezec,"zd") == 1) return(0);
+
+  PROVED:
+  retezec[delka+1]=0;
+  retezec[delka]=retezec[delka-1];
+  retezec[delka-1]='e';
+  return(1);
+ }
+
+BYTE PODM_ODSTRAN_US(char *retezec,BYTE co_kontrolovat,BYTE koncovkaus) {
+int delka=strlen(retezec);
+  switch(koncovkaus) {
+    case 0: return(0);
+    case 1: goto PROVED;
+   }                         //jinak proved autodetekci
+
+  if (JELI_SOUHLASKA(retezec[delka-2]) == 1 || JELI_SAMOHLASKA(retezec[delka-1]) == 1)
+   return(0);				//celkovÈ urychlenÌ funkce
+  if ((co_kontrolovat&1) == 1) {                  //vzor p·n
+    if (POSLEDNI_PISMENA(retezec,"ius") == 1
+     || POSLEDNI_PISMENA(retezec,"ias") == 1
+     || POSLEDNI_PISMENA(retezec,"ras") == 1) goto PROVED;
+   }
+  if ((co_kontrolovat&2) == 2) {                  //vzor hrad
+    if (POSLEDNI_PISMENA(retezec,"smus") == 1
+     || POSLEDNI_PISMENA(retezec,"tmus") == 1
+     || POSLEDNI_PISMENA(retezec,"zmus") == 1
+     || POSLEDNI_PISMENA(retezec,"lus") == 1) goto PROVED;
+   }
+  return(0);
+
+PROVED:
+  retezec[delka-2]=0;
+  return(1);
+ }
+
+BYTE PODM_ODSTRAN_UM(char *retezec,BYTE koncovkaum) {
+int delka=strlen(retezec);
+  switch(koncovkaum) {
+    case 0: return(0);
+    case 1: goto PROVED;
+   }                               //jinak proved autodetekci
+
+  if (POSLEDNI_PISMENA(retezec,"um") == 1 && delka > 4) goto PROVED;
+  return(0);
+
+  PROVED:
+  retezec[delka-2]=0;
+  return(1);
+ }
+
+void ZMEN_PREDPOSLEDNI_U_NA_O(char *retezec) {
+int delka=strlen(retezec);
+  if (retezec[delka-2] == '˘')          //nap¯. ve slovÏ "b˘h"
+   retezec[delka-2]='o';
+ }
+
+void PRIDEJ_PRED_KAZDE_SLOVO(char *co) {
+int pozice1,pozice2,pridani;
+char *slovavefronte2=NULL;
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+  for (pozice1=0,pozice2=0,pridani=1; g_slovavefronte[pozice1] != 0; pozice1++,pozice2++) {
+    if (pridani == 1) {			//pridani vlastniho slova
+      slovavefronte2[pozice2]=0; strcat(slovavefronte2,co); pozice2+=strlen(co);
+     }
+    slovavefronte2[pozice2]=g_slovavefronte[pozice1];
+    if (g_slovavefronte[pozice1] == ',') pridani=1;	//dalsi slovo
+    else pridani=0;
+    if (pozice2 >= (DELKA_FRONTY-DELKA_JEDNODUCHEHO_SLOVA)) {
+      NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Pravdepodobne moc dlouha fronta!");
+     }
+   }
+  slovavefronte2[pozice2]=0;
+  strcpy(g_slovavefronte,slovavefronte2);
+
+  UVOLNI(slovavefronte2);
+ }
+
+void PRIDEJ_ZA_KAZDE_SLOVO(char *co) {
+int pozice1,pozice2;
+char *slovavefronte2=NULL;
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+  for (pozice1=0,pozice2=0; g_slovavefronte[pozice1] != 0; pozice1++,pozice2++) {
+    if (g_slovavefronte[pozice1] == ',') {	//pridani koncovky
+      slovavefronte2[pozice2]=0; strcat(slovavefronte2,co); pozice2+=strlen(co);
+     }
+    slovavefronte2[pozice2]=g_slovavefronte[pozice1];
+    if (pozice2 >= (DELKA_FRONTY-DELKA_JEDNODUCHEHO_SLOVA)) {
+      NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Pravdepodobne moc dlouha fronta!");
+     }
+   }
+  slovavefronte2[pozice2]=0; strcat(slovavefronte2,co);
+  strcpy(g_slovavefronte,slovavefronte2);
+
+  UVOLNI(slovavefronte2);
+ }
+
+BYTE ZJEMNI_KONCOVKU_PRIDJM(void) {
+int pozice=strlen(g_slovo)-1;
+  switch(g_slovo[pozice]) {
+    case 'h': case 'g': g_slovo[pozice]='z'; break;     // h,g  -  z
+    case '*': g_slovo[pozice]='ö'; break;               // ch   -  ö
+    case 'r': g_slovo[pozice]='¯'; break;               // r    -  ¯
+    case 'k': switch(g_slovo[pozice-1]) {
+                case 's': g_slovo[pozice-1]='ö';
+                          g_slovo[pozice]='ù'; break;   // sk˝  -  ötÌ
+                case 'c': g_slovo[pozice-1]='Ë';
+                          g_slovo[pozice]='ù'; break;   // ck˝  -  ËtÌ
+                default: g_slovo[pozice]='c'; break;    // k    -  c
+               } break;
+    case 'c': g_slovo[pozice]='Ë'; break;               // c    -  Ë
+    case 'b': g_slovo[pozice]='B'; break; // ---------------------------
+    case 'f': g_slovo[pozice]='F'; break; // ---------------------------
+    case 'm': g_slovo[pozice]='M'; break; // | neboli nahrazky         |
+    case 'p': g_slovo[pozice]='P'; break; // | symbolizujici "jemnost" |
+    case 'q': g_slovo[pozice]='Q'; break; // |                         |
+    case 'v': g_slovo[pozice]='V'; break; // ---------------------------
+    case 'w': g_slovo[pozice]='W'; break; // ---------------------------
+    case 'd': g_slovo[pozice]='Ô'; break;               // d    -  Ô
+    case 't': g_slovo[pozice]='ù'; break;               // t    -  ù
+    case 'n': g_slovo[pozice]='Ú'; break;               // n    -  Ú
+    default: return(0);
+   }
+  return(1);
+ }
+
+BYTE ZJEMNI_KONCOVKU_SLOVESA_1(void) {
+int pozice=strlen(g_slovo)-1;
+  switch(g_slovo[pozice]) {
+    case 'b': g_slovo[pozice]='B'; break; // ---------------------------
+    case 'f': g_slovo[pozice]='F'; break; // ---------------------------
+    case 'm': g_slovo[pozice]='M'; break; // | neboli nahrazky         |
+    case 'p': g_slovo[pozice]='P'; break; // | symbolizujici "jemnost" |
+    case 'q': g_slovo[pozice]='Q'; break; // |                         |
+    case 'v': g_slovo[pozice]='V'; break; // ---------------------------
+    case 'w': g_slovo[pozice]='W'; break; // ---------------------------
+    case 'd': g_slovo[pozice]='Ô'; break;               // d    -  Ô
+    case 't': g_slovo[pozice]='ù'; break;               // t    -  ù
+    case 'n': g_slovo[pozice]='Ú'; break;               // n    -  Ú
+    default: return(0);
+   }
+  return(1);
+ }
+
+char ZJEMNI_KONCOVKU_SLOVESA_2(char znak) {
+  switch(znak) {
+    case 'b': return('B');  // ---------------------------
+    case 'f': return('F');  // ---------------------------
+    case 'm': return('M');  // | neboli nahrazky         |
+    case 'p': return('P');  // | symbolizujici "jemnost" |
+    case 'q': return('Q');  // |                         |
+    case 'v': return('V');  // ---------------------------
+    case 'w': return('W');  // ---------------------------
+    case 'd': return('Ô');                            // d    -  Ô
+    case 't': return('ù');                            // t    -  ù
+    case 'n': return('Ú');                            // n    -  Ú
+    default: return(znak);
+   }
+ }
+
+BYTE ZDRSNI_KONCOVKU_SLOVESA(void) {
+int pozice=strlen(g_slovo)-1;
+  switch(g_slovo[pozice]) {
+    case 'Ë': PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,pozice-1,0);
+              g_slovo[pozice]='k'; break;
+    case 'ö': g_slovo[pozice]='s'; break;
+    case 'û': if (JELI_SOUHLASKA(PREDPOSLEDNI_ZNAK(g_slovo)) == 1)
+               g_slovo[pozice]='h';     //lûe -> lhal
+              else g_slovo[pozice]='z';     //maûe -> mazal
+              break;
+    default: return(0);
+   }
+  return(1);
+ }
+
+char ZKRAT_SAMOHLASKU(char pismeno) {
+  switch(pismeno) {
+    case '·': return('a');
+    case 'È': return('e');
+    case 'Ì': return('i');
+    case 'Û': return('o');
+    case '˙': case '˘': return('u');
+    case '˝': return('y');
+    default: return(pismeno);
+   }
+ }
+
+char PRODLUZ_SAMOHLASKU(char pismeno) {
+  switch(pismeno) {
+    case 'a': return('·');
+    case 'e': return('È');
+    case 'i': return('Ì');
+    case 'o': return('Û');
+    case 'u': return('˘');
+    case 'y': return('˝');
+    default: return(pismeno);
+   }
+ }
+
+BYTE PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(char *retezec) {
+int pozice=strlen(retezec);
+char predposl,posl,koncovkast=0;
+  if (pozice <= 1) return(0);
+  if (POSLEDNI_PISMENA(retezec,"st") == 1) {        //r˘st
+    koncovkast=1; OREZ_POSLEDNI_ZNAKY(retezec,1); pozice--;
+   }
+  predposl=retezec[pozice-2]; posl=retezec[pozice-1];
+  switch(predposl) {
+    case 'a': retezec[pozice-2]='·'; break;
+    case 'e': retezec[pozice-2]='È'; break;
+    case 'i': retezec[pozice-2]='Ì'; break;
+    case 'o': retezec[pozice-2]='˘'; break;
+    case 'u': retezec[pozice-2]='o'; retezec[pozice-1]='u';  //u -> ou
+              retezec[pozice]=posl; retezec[pozice+1]=0; break;
+    case 'y': retezec[pozice-2]='˝'; break;
+   }
+  if (koncovkast == 1) strcat(retezec,"t");
+  return(1);
+ }
+
+BYTE ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(char *retezec,BYTE zmena_i_na_e) {
+int pozice=strlen(retezec);
+char predposl,posl,dvoupismkoncovka=0;
+  if (pozice < 3) return(0);                //min. 3 znaky
+  if (POSLEDNI_PISMENA(retezec,"st") == 1) {        //r˘st
+    dvoupismkoncovka=1; OREZ_POSLEDNI_ZNAKY(retezec,1); pozice--;
+   }
+  else if (POSLEDNI_PISMENA(retezec,"sù") == 1) {        //jistÌ
+    dvoupismkoncovka=2; OREZ_POSLEDNI_ZNAKY(retezec,1); pozice--;
+   }
+  else if (POSLEDNI_PISMENA(retezec,"zÔ") == 1) {        //brzdÌ
+    dvoupismkoncovka=3; OREZ_POSLEDNI_ZNAKY(retezec,1); pozice--;
+   }
+  predposl=retezec[pozice-2]; posl=retezec[pozice-1];
+  switch(predposl) {
+    case '·': retezec[pozice-2]='a'; break;
+    case 'È': retezec[pozice-2]='e'; break;
+    case 'Ì': if (zmena_i_na_e == 1 && retezec[pozice-3] == 'b'
+               || retezec[pozice-3] == 'f' || retezec[pozice-3] == 'm'
+               || retezec[pozice-3] == 'v') {
+                retezec[pozice-2]='e';
+                retezec[pozice-3]=ZJEMNI_KONCOVKU_SLOVESA_2(retezec[pozice-3]);
+               }
+              else retezec[pozice-2]='i';
+              break;
+    case '˘': retezec[pozice-2]='o'; break;
+    case 'u': if (retezec[pozice-3] == 'o') {           //ou -> u
+                retezec[pozice-3]='u'; retezec[pozice-2]=posl;
+                retezec[pozice-1]=0;
+               } break;
+    case '˝': retezec[pozice-2]='y'; break;
+   }
+  switch(dvoupismkoncovka) {
+    case 1: strcat(retezec,"t"); break;
+    case 2: strcat(retezec,"ù"); break;
+    case 3: strcat(retezec,"Ô"); break;
+   }
+  return(1);
+ }
+
+char *VRAT_5_PAD_Z_RETEZCE(char *jmenozaklad,BYTE rod) {
+char *navrat=NULL;
+BYTE vzor;
+int pozice;
+
+  navrat=ALOKUJ_RETEZEC(strlen(jmenozaklad)+1+9);  //+9 kv˘li p¯etvo¯enÌ na 5. p·d
+  strcpy(navrat,jmenozaklad); PREVED_NA_MALA_PISMENA(navrat);
+  UPRAV_DLOUHE_SLOVO_PRO_IQPOKYD(navrat);
+  vzor=ROZPOZNEJ_VZOR_PODSTATNEHO_JMENA_PODLE_KONCOVKY(navrat,rod,1);
+  strcpy(g_slovozaklad,navrat);
+  SKLONUJ_PODSTATNA_JMENA(vzor,5,1);
+  if (OREZ_FRONTU_NA_1_SLOVO(1) == 0) {
+    NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  strcpy(navrat,g_slovavefronte);
+  ODUPRAV_DLOUHE_SLOVO_PRO_IQPOKYD(navrat);
+  for (pozice=0; navrat[pozice] != 0; pozice++) {
+    if (VRAT_MALE_PISMENO(jmenozaklad[pozice]) == VRAT_MALE_PISMENO(navrat[pozice])) {
+                //pokud je to Ë·st slova, kter· nenÌ upraven· 5. p·dem
+      navrat[pozice]=jmenozaklad[pozice];  //p¯evede se to na p¯ÌpadnÈ velkÈ pÌsmeno
+     }
+   }
+  return(navrat);
+ }
+
+void VYGENERUJ_TVAR_DELANY(char *odkud) {
+// "odkud" m˘ûe b˝t jedno i vÌce slov - slovesn˝ch podstatn˝ch jmen (dÏl·nÌ)
+
+char *slova=NULL,*vysledek=NULL;
+WORD poziceslova,pozice;
+  slova=ALOKUJ_RETEZEC(DELKA_FRONTY);
+  vysledek=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+  vysledek[0]=0;
+  strcpy(slova,odkud);
+  strcpy(g_slovavefronte,slova);
+  for (poziceslova=1; OREZ_FRONTU_NA_1_SLOVO(poziceslova) == 1; poziceslova++) {
+    pozice=strlen(g_slovavefronte)-2;
+    switch(g_slovavefronte[pozice]) {
+      case 'Ú': g_slovavefronte[pozice]='n'; break;
+      case 'ù': g_slovavefronte[pozice]='t'; break;
+     }
+    if (g_slovavefronte[pozice-1] == '·') g_slovavefronte[pozice-1]='a';
+    g_slovavefronte[pozice+1]='˝';
+
+    PRIDEJ_DO_PRECHODNE_FRONTY(vysledek,g_slovavefronte);
+
+    strcpy(g_slovavefronte,slova);
+   }
+  strcpy(g_slovavefronte,vysledek);
+
+  UVOLNI(vysledek); UVOLNI(slova);
+ }
+
+void NAHRAD_CAST_CASTI(char *cast, char *cim) {
+int pozice1,pozice2,delkacasti=strlen(cast);
+char *slovavefronte2=NULL;
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+  for (pozice1=0,pozice2=0; g_slovavefronte[pozice1] != 0; pozice1++,pozice2++) {
+    if (strncmp(g_slovavefronte+pozice1,cast,delkacasti) == 0) {
+      slovavefronte2[pozice2]=0; strcat(slovavefronte2,cim); pozice2+=strlen(cim);
+      pozice1+=delkacasti;
+     }
+    slovavefronte2[pozice2]=g_slovavefronte[pozice1];
+    if (g_slovavefronte[pozice1] == 0) break;
+        //kdyby to tu nebylo, kazila by se funkce v pripade, ze nahrazovana
+        //cast by byla na konci retezce
+   }
+  slovavefronte2[pozice2]=0;
+  strcpy(g_slovavefronte,slovavefronte2);
+
+  UVOLNI(slovavefronte2);
+ }
+
+void NAHRAD_ZACATEK_ZACATKEM(char *cast, char *cim) {
+int pozice1,pozice2,delkacasti=strlen(cast);
+BYTE noveslovo=1;
+char *slovavefronte2=NULL;
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+  for (pozice1=0,pozice2=0; g_slovavefronte[pozice1] != 0; pozice1++,pozice2++) {
+    if (noveslovo == 1 && strncmp(g_slovavefronte+pozice1,cast,delkacasti) == 0) {
+      slovavefronte2[pozice2]=0; strcat(slovavefronte2,cim); pozice2+=strlen(cim);
+      pozice1+=delkacasti;
+      noveslovo=0;
+     }
+    slovavefronte2[pozice2]=g_slovavefronte[pozice1];
+    if (g_slovavefronte[pozice1] == ',') noveslovo=1;
+   }
+  slovavefronte2[pozice2]=0;
+  strcpy(g_slovavefronte,slovavefronte2);
+
+  UVOLNI(slovavefronte2);
+ }
+
+void PRIDEJ_ZA_KAZDE_SLOVO_JEDNOTLIVA_SLOVA(char *kam, char *cim) {
+// PODMINKA!
+// Promenne "kam" a "cim" musi obsahovat stejny pocet slov!
+
+char *slovavefronte2=NULL;
+int pozice1,pozice2,pozice3;
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+  for (pozice1=0,pozice2=0,pozice3=0; kam[pozice1] != 0; pozice1++,pozice3++) {
+    if (kam[pozice1] == ',') {
+      for (; cim[pozice2] != ','; pozice2++,pozice3++) {
+        slovavefronte2[pozice3]=cim[pozice2];
+       }
+      pozice2++;		//posunuti se za carku (",")
+     }
+    slovavefronte2[pozice3]=kam[pozice1];
+   }
+  slovavefronte2[pozice3]=0;
+  strcat(slovavefronte2,cim+pozice2);		//doplneni posledniho slova
+  strcpy(kam,slovavefronte2);
+
+  UVOLNI(slovavefronte2);
+ }
+
+void SKLONUJ_VSECHNY_CISLOVKY(char *slovavefronte2,char *koncovka,WORD cislovka,BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost) {
+int pozice;
+  strcpy(slovavefronte2,g_slovavefronte);
+  for (pozice=1; ; pozice++) {        //vysklonuje vsechna slova
+    VYMAZ_FRONTU(); SKLONUJ_CISLOVKY_ZAKLADNI(1,1,1,zivotnost,cislovka,0);
+    if (OREZ_FRONTU_NA_1_SLOVO(pozice) == 0)
+                              //dulezite pro sklonovani fronty
+     break;
+    strcpy(g_slovozaklad,g_slovavefronte); strcat(g_slovozaklad,koncovka);
+    VYMAZ_FRONTU(); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);
+    PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+   }
+  strcpy(g_slovavefronte,slovavefronte2);
+ }
+
+void PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(BYTE rod,BYTE cislo,BYTE zivotnost) {
+  ZNOVA:
+  switch(cislo) {
+    case 1: switch(rod) {
+      case 1: PRIDEJ_DO_FRONTY(); break;
+      case 2: PRIDEJ_NA_KONEC("a"); PRIDEJ_DO_FRONTY(); break;
+      case 3: PRIDEJ_NA_KONEC("o"); PRIDEJ_DO_FRONTY(); break;
+      default: rod=3; goto ZNOVA;         //st¯ednÌ rod
+     } break;
+    case 2: switch(rod) {
+      case 1: if (zivotnost == 1) PRIDEJ_NA_KONEC("i");
+              else PRIDEJ_NA_KONEC("y");
+              PRIDEJ_DO_FRONTY();
+              break;
+      case 2: PRIDEJ_NA_KONEC("y"); PRIDEJ_DO_FRONTY(); break;
+      case 3: PRIDEJ_NA_KONEC("a"); PRIDEJ_DO_FRONTY();
+              OREZ_O_SAMOHLASKU(g_slovo);//docasna funkce (dokud nebude spisovnost)
+              PRIDEJ_NA_KONEC("y"); PRIDEJ_DO_FRONTY(); //nespisovne
+              break;
+      default: rod=3; goto ZNOVA;         //st¯ednÌ rod
+     } break;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+ }
+
+void DOPLN_POMOCNE_SLOVESO(BYTE osoba,BYTE cislo,BYTE cas,BYTE vid,BYTE zapor) {
+  if (cas == 1) {                    //minul˝ Ëas
+    if (cislo == 1) {
+      if (osoba == 1) POMOCNE_SLOVESO(_jsem_,zapor);
+      if (osoba == 2) POMOCNE_SLOVESO(_jsi_,zapor);
+     }
+    else {
+      if (osoba == 1) POMOCNE_SLOVESO(_jsme_,zapor);
+      if (osoba == 2) POMOCNE_SLOVESO(_jste_,zapor);
+     }
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) return;
+
+    switch(cislo) {
+      case 1: switch(osoba) {
+        case 1: POMOCNE_SLOVESO(_budu_,zapor); break;
+        case 2: POMOCNE_SLOVESO(_budes_,zapor); break;
+        case 3: POMOCNE_SLOVESO(_bude_,zapor); break;
+       } break;
+      case 2: switch(osoba) {
+        case 1: POMOCNE_SLOVESO(_budeme_,zapor); break;
+        case 2: POMOCNE_SLOVESO(_budete_,zapor); break;
+        case 3: POMOCNE_SLOVESO(_budou_,zapor); break;
+       } break;
+     }
+   }
+ }
+
+void PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(BYTE osoba,BYTE cislo,BYTE zapor) {
+  ZJEMNI_KONCOVKU_SLOVESA_1();
+  ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,0);
+
+  switch(MALI_KONCOVKA_SLABIKU(g_slovo)) {
+    case 0:
+      if (osoba == 2 && cislo == 1) PRIDEJ_NA_KONEC("i");
+      else if (osoba == 1 && cislo == 2) PRIDEJ_NA_KONEC("eme");
+      else if (osoba == 2 && cislo == 2) PRIDEJ_NA_KONEC("ete");
+      else return;
+      break;
+    case 1:
+      if (osoba == 2 && cislo == 1);
+      else if (osoba == 1 && cislo == 2) PRIDEJ_NA_KONEC("me");
+      else if (osoba == 2 && cislo == 2) PRIDEJ_NA_KONEC("te");
+      else return;
+      break;
+    case 2:
+      if (osoba == 2 && cislo == 1) {
+        PRIDEJ_DO_FRONTY(); PRIDEJ_NA_KONEC("i"); PRIDEJ_DO_FRONTY();
+       }
+      else if (osoba == 1 && cislo == 2) {
+        PRIDEJ_NA_KONEC("me"); PRIDEJ_DO_FRONTY();
+        OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("eme");
+       }
+      else if (osoba == 2 && cislo == 2) {
+        PRIDEJ_NA_KONEC("te"); PRIDEJ_DO_FRONTY();
+        OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("ete");
+       }
+   }
+  if (zapor == 1) PRIDEJ_NA_ZACATEK("ne");
+
+  PRIDEJ_DO_FRONTY();
+ }
+
+void *ALOKUJ_PAMET(DWORD velikost) {
+void *pointer=NULL;
+  debug_pocetalokovani++;
+  ZNOVU:
+  if ((pointer=malloc(velikost)) == NULL) {
+    NAHLAS_CHYBU(NULL,0,_MALO_PAMETI_,_STORNO_); goto ZNOVU;
+   }
+  return(pointer);
+ }
+
+char *ALOKUJ_RETEZEC(DWORD velikost) {
+char *pointer=NULL;
+  pointer=(char *)ALOKUJ_PAMET(velikost);
+  return(pointer);
+ }
+
+char **ALOKUJ_POINTERY(DWORD velikost) {
+char **pointer=NULL;
+  pointer=(char **)ALOKUJ_PAMET(velikost);
+  return(pointer);
+ }
+
+void *PREALOKUJ_PAMET(void *pointer,DWORD velikost) {
+  //POZOR! Pamet se nezkopiruje!
+  // (To je rozdil od nasledujici funkce REALOKUJ_PAMET.)
+void *navrat=NULL;
+
+  UVOLNI(pointer);
+  ZNOVA:
+  navrat=ALOKUJ_PAMET(velikost);
+  if (navrat == NULL) {
+    NAHLAS_CHYBU(NULL,0,_MALO_PAMETI_,_STORNO_); goto ZNOVA;
+   }
+  return(navrat);
+ }
+
+void *REALOKUJ_PAMET(void *pointer,DWORD velikost) {
+void *novy=NULL;
+  if (pointer == NULL) {
+    NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! NULLovy pointer!");
+   }
+  ZNOVU:
+  if ((novy=realloc(pointer,velikost)) == NULL) {
+    NAHLAS_CHYBU(NULL,0,_MALO_PAMETI_,_STORNO_); goto ZNOVU;
+   }
+  return(novy);
+ }
+
+void UVOLNI_X(void *pointer) {
+  if (pointer == NULL) {
+    NAHLAS_CHYBU("InternÌ chyba programu: Pokus o uvolnÏnÌ dosud nealokovanÈ pamÏti.\r\n\r\nProsÌm nahlaö tuto chybu autorovi programu, m· velk˝ z·jem se o nÌ dozvÏdÏt.\r\nDÏkuji.",0,_JINA_CHYBA_,_UKONCIT_);
+   }
+  if (debug_pocetalokovani == 0) {
+#if FINALNI_VERZE == 0
+    NAHLAS_CHYBU("InternÌ chyba programu: Pokus o uvolnÏnÌ vÌce blok˘ pamÏti, neû jÌ bylo v˘bec alokov·no.\r\n\r\nProsÌm nahlaö tuto chybu autorovi programu, m· velk˝ z·jem se o nÌ dozvÏdÏt.\r\nDÏkuji.",0,_JINA_CHYBA_,_UKONCIT_);
+#endif
+   }
+  debug_pocetalokovani--;
+  free(pointer);
+ }

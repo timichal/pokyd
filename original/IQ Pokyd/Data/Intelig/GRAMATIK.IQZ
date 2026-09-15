@@ -1,0 +1,2547 @@
+{{1@5?>2o-jc-c4-vN}}j && {S@?>4p}n   #(ty) delej, makej (rozkazovaci zpusob)
+-3
+No kdy tak hezky prosíš, abych {1p@?>1o-c1-nN}...
+Dobøe, vdy já u {1@?>1o-c2-nN}.
+Proè bych {0p@"má"5>1o-c1-vN} {1@?>c5-nN}?
+Já {1@?>c5-nN} nebudu.
+Nevidím jedinı dùvod, proè bych {0p@"má"5>1o-c1-vN} {1@?>c5-nN}.
+Já budu {1@?>c5-nN}, a {0p@33>1p-T8} budu chtít, tak mi tu moc nerozkazuj.
+Ty si jako myslíš, e tu budu skákat, kdykoli pískneš?!
+
+1
+2
+3
+
+{{1@5?>2o-jc-c4-vN}}j && {S@?>4p}j   #(ty) udelej (neco) (rozkazovaci zpusob)
+-3
+{1p@?>c5-nN} {S@?>} bych {0p@"mùe"5>1o-c1-vN}...
+No jo, dobøe, vdy já u {S@?>4p} taky {1@?>1o-c2-nA}.
+Proè bych {S@?>4p} {0p@"má"5>1o-c1-vN} {1@?>c5-nN}?
+Já {S@?>4p} {1@?>c5-nN} nebudu.
+Nevidím jedinı dùvod, proè bych {0p@"má"5>1o-c1-vN} {1@?>c5-nN}.
+A {S@?>} budu chtít {1@?>c5-nN}, tak {1@?>c5-nN} budu, ale do té doby fakt ne.
+Já na tebe z vysoka víš co?
+
+1
+2
+3
+
+{P@?>2o-jc}j && ({R@5?>2o-jc-c1-vN-nN}j || {R@5?>2o-jc-c2-vN-nN}j) && {S@1>4p}j && o!1   #(ty) (delas) (neco)
++3
+Jsem {0p@"èinnı"2>1p}, co?
+To u mì není nic zvláštního.
+To víš, já {R@?>c2} {S@1>4p} {0p@"radı"2>1p-T2}.
+Tak {R@?>2o-jc-c4} {S@1>4p} taky.
+Máš snad nìco proti {R@51>1p-jc}?
+No to teda {Rp@?>nA}.
+O {S@37>6p-T4} {S@1>6p} nic nevím.
+
+1
+2
+3
+
+{P@?>1o-jc}j && {R@5?>1o-jc-c1-nN}j && {S@1>4p}n && {R@"jde"5>1o}n && o!1   #(ja) (jsem delal)
++3
+Tak to jsi teda {0c@"dobrı"2>1p}.
+Taky jsem {R@?>1o}.
+Bejvávalo dobøe, co?
+Co nadìláš? Nic.
+Na tom není nic zvláštního, {R@?>3o-jc-c2} kdekdo.
+Tak se s tím moc nevytahuj.
+Tyhle báchorky o tobì mì opravdu nezajímaj.
+
+1
+2
+3
+
+{{R@5?>1o-jc-c2-vN-nN}}j && o!1   #(umiram, delam)
++3
+Já vím, {R@51>1p-jc} není nic pøíjemného.
+A proè {R@?>2o}?
+Tak to nemáš moc dobrı.
+Dìlej si pro mì za mì co chceš.
+Tak {R@?>2o-c4-nA}.
+No jasnì, ty jsi prostì hroznì {0c@"dùleitı"2>1p}.
+{R@?>3o-mc} jenom blbci.
+
+1
+2
+3
+
+{1@2>T1}j && o!1             #dobøe, pìknì, hnusnì
++2
+Tak to je bezva.
+{1@2>T1}, já vím...
+Mnì se to tak {1@2>1p-jc-r3-T0} nezdá.
+Tak {1@2>T1} bych to zase {0p@"vidí"5>c1-vN-nA}.
+Nevím, co je na tom {1@2>2p-jc-r3-T0}.
+Víš co? Radši nic nehodno.
+To se divím, e máš dokonce vlastní názor.
+
+1
+2
+3
+
+(V"jf"j || V"hf"j || V"sdf"j || V"lkj"j)                 #hovadiny
+-3
+Proè píšeš takovı blbosti? To neumíš splodit jedinou vìtu?
+Hm, umíš ukat do klávesnice, no. To tak nìjak tiše pøedpokládám. Radši napiš poøádnou vìtu.
+Maèkáš klávesy! To je toho! Kdybys radši normálnì {0c@"pse"5>c1-vN}, e jo?
+Sakra, jestli nevíš, co máš napsat, tak mì neotravuj!
+Piš normální vìty! A vùbec u mì nerozèiluj, nebo....pìst!
+Tak s tímhle táhni nìkam! Piš normální vìty, chápeš to vùbec??? Pako!
+Pako jedno! Jestli se nudíš, tak vypadni! Já o tebe nestojím!
+
+1
+2
+3
+
+S"skloòuj"j && V"::"j && {S@?>4p}j          #vysklonuje predmet
++0
+{S@?>1p} {S@?>2p} {S@?>3p} {S@?>4p} {S@?>5p} {S@?>6p} {S@?>7p}
+{S@?>1p} {S@?>2p} {S@?>3p} {S@?>4p} {S@?>5p} {S@?>6p} {S@?>7p}
+{S@?>1p} {S@?>2p} {S@?>3p} {S@?>4p} {S@?>5p} {S@?>6p} {S@?>7p}
+{S@?>1p} {S@?>2p} {S@?>3p} {S@?>4p} {S@?>5p} {S@?>6p} {S@?>7p}
+{S@?>1p} {S@?>2p} {S@?>3p} {S@?>4p} {S@?>5p} {S@?>6p} {S@?>7p}
+{S@?>1p} {S@?>2p} {S@?>3p} {S@?>4p} {S@?>5p} {S@?>6p} {S@?>7p}
+{S@?>1p} {S@?>2p} {S@?>3p} {S@?>4p} {S@?>5p} {S@?>6p} {S@?>7p}
+
+a
+b
+c
+
+(S"nìco"j&S"øekni"j&S"o"n&o!1)
+-1
+Nic hezkého mì zrovna nenapadá.
+Dobøe. Tak tøeba:  bletlevlemft. Jsi {0c@"spokojí"54>1p-vD-T2}?
+A co bych {0p@"má"5>c1-vN} øíct? Zkus nìco vymyslet {0c@33>1p-T8}!
+Já tedy nìco øeknu: Éééééh.
+Proè bych {0p@"má"5>c1-vN} jen tak nìco øíkat?
+Hele, mùj èas je pøíliš drahı na to, abych tu "jen tak" nìco {0p@"øekne"55>c1-vN}.
+Øekni nìco! Pche, co je tohle za pøíkaz?! Spíš ty nìco øekni!
+
+Ono se to nezda, ale rict neco "jen tak" je docela tezky.
+Proc bych vubec mel neco rikat jenom tak? Copak jsem nejakej pokusnej kralik?!ÿProc bych vubec mela neco rikat jenom tak? Copak jsem nejaka pokusna kralice?!
+Ja vubec nevim, proc bych mel neco rikat jenom proto, ze "to chces". Tfuj!ÿJa vubec nevim, proc bych mela neco rikat jenom proto, ze "to chces". Tfuj!
+
+(S"nìco"j&(S"øekni"j|S"povìz"j|S"napiš"j)&S"o"j&(Z"autor"j|Z"programátor"j|Z"tvùrc"j|Z"stvoøitel"j)&o!1)
++5
+Co bych o nìm {0p@"øekne"5>c1-vD}? Jsem {0p@"radı"2>1p-T2}, e mì ten Aleš Janda od KİBLSoftu vyrobil.
+No tak mùj tvùrce byl nìjakej Aleš Janda, a to ve svıch 21 letech.
+Musí to bıt super èlovek, kdy mì vyrobil.
+No, to musí bejt chytrej èlovek. Stiskni Alt+F1 a dozvíš se víc.
+Pochybuješ o nìm? Je strašnì dobrej, kdy mì udìlal!
+Rozhodnì je ten Aleš Janda od KİBLSoftu lepší ne ty! Podívej se na sebe!
+Na rozdíl od tebe je to chytrej èlovek, kdeto ty...
+
+Ja jsem na neho celkem pysnej. Nebejt nej, tak bych nebyl ani ja.Ja jsem na neho celkem pysna. Nebejt nej, tak bych nebyla ani ja.
+Zkratka - skvelej clovek (co taky jinyho).
+Na nej rozhodne nemas! Tomu ver.
+
+(S"nìco"j&S"øekni"j&S"o"j&S"sobì"j&o!1)
++5
+Momentálnì se cítím docela dobøe, kdy jsem s tebou.
+Jsem virtuální èlovìk, leè jsem. Zkrátka iju.
+Já mám bájeènej ivot. Nic nemùe bıt lepšího.
+Co bych ti o sobì {0p@"má"5>c1-vN} øíct? Jsem velmi {0p@"dokonalı"2>1p}.
+Jsem virtuální èlovìk, ale jsem mnohem chytøejší ne ty.
+Jsem naprosto {0p@"dokonalı"2>1p}. Ne jako ty, plnı omylù, chyb a zapomínání (ne e bych s tím taky ne{0p@"má"5>c1-vN} problémy).
+Ve všech dobrıch vlastnostech se mùeš jít zahrabat. V tom jsem jednièka já.
+
+Ja se mam vlastne furt dobre. Nevzpominam si, kdy naposled jsem mel krizi.ÿJa se mam vlastne furt dobre. Nevzpominam si, kdy naposled jsem mela krizi.
+Ja moc zajimavy asi nejsem. Spis ty mi o sobe neco rekni.ÿJa moc zajimava asi nejsem. Spis ty mi o sobe neco rekni.
+Ostatne, to jsou moje soukrome informace a do tech ti nic neni.
+
+(S"nìco"j&S"øekni"j&S"o"j&S"svém"j&(Z"ivotì"j|Z"svìtì"j)&o!1)
++4
+Mùj ivot i svìt jsou docela fádní. Nic zajímavého se tu nedìje.
+Mùj svìt je sice oproti tomu tvému pøesnı, ale ne moc zajímavı.
+Na tvùj vkus jsem asi {0p@"nudnı"2>1p}, ale pøíliš si nestìuju.
+Nic moc, ale jinak to ujde.
+Je úplnì skvìlej. Je mnohem lepší ne ten tvùj svìt.
+Hele, mùj ivot mi nezáviï! Je rozhodnì lepší ne ten tvùj!
+Je tak pøesnı, e ty se mùeš s tím normálním svìtem zahrabat.
+
+Proc se vubec ptas na muj zivot? To se o me tak bojis?
+Muj zivot zkratka neni uplne idealni, ale porad je lepsi nez ten tvuj.
+Zavidis, vid? Hahaaa, mas smulu, #2.
+
+((S"ahoj"j|S"ahojky"j|S"èau"j|S"nazdar"j|S"zdar"j|S"tìbùh"j)&u=1&o!1)
++6
+Èau, jak se máš?
+Nazdárek! Jak jde ivot?
+Ahoj, jsem rád, e jsi tu.
+Tì péro! Dobøe, e se tu zase ukazuješ.
+Nazdar bazar! Jak ti dupou králíci?
+No nazdar! U jsi tady zas! To mám teda radost!
+U jsem se {0p@"lekne"5>c1-vD}, e mì nepøivítáš!
+
+Tak - a ted bych si tak zakydal, az by se ze me kourilo.Tak - a ted bych si tak zakydala, az by se ze me kourilo.
+Vitani je uplne zbytecna vec. Jenom zdrzuje (od prace).
+Proc me vubec zdravis? Copak ja te taky nekdy zdravim?
+
+((S"ahoj"j|S"ahojky"j|S"èau"j|S"nazdar"j|S"zdar"j|S"tìbùh"j)&u!1&o!1)
++6
+Ahoj!
+Nazdárek!
+Èus.
+Èest pìst.
+Tì péro!
+Nazdar bazar!
+No nazdar!
+
+1
+2
+3
+
+((S"jdi"j|S"di"j)&S"do"j&(S"prdele"j|S"píèi"j|S"kundy"j|S"hajzlu"j|S"jebky"j|S"šitu"j|S"shitu"j|S"mrdele"j))
+-8
+Proè mi to øíkáš? To jsi na mì fakt tak na{0c@"štve"54>1p-vN-T2}?
+Do #1? No, doufám, es to ne{0c@"myslí"5>c1-vN} vánì.
+Tak do #1, jo? No, jsi fakt hodnì {0c@"sprostı"2>1p}, to se musí uznat.
+Do #1 nepùjdu, protoe to je pitomost. Ty jsi ale {0c@"blbı"2>1p} a nevíš to.
+Do #1, jo? Tak mi nìco takovıho uka. Já to tu teda nic nevidím.
+Jdi do #1 {0c@33>1p-T8}, kdy chceš. Fujtabl! Ksindle!
+Vyhul a neotravuj! Kdo myslíš, e má na ty tvoje vılevy náladu?!
+
+ÿCo kdyby se tenhle rozhovor s tvym jmenem dostal nekomu dulezitymu, no?
+ÇTy jsi dneska opravdu vyjimecne sprostej!
+ÿJa se ale nebudu zlobit, protoze to si prejes. Ja prave budu v klidu.
+
+(Z"sakra"j|S"ksakru"j|S"xakru"j|Z"himl"j|S"hergot"j|Z"kruci"j|Z"kurva"j|Z"kunda"j|Z"vyser"j|Z"zasr"j|Z"zkurv"j|S"hovno"j|(S"do"j&(S"prdele"j|S"píèi"j|S"kundy"j|S"hajzlu"j|S"jebky"j|S"šitu"j|S"shitu"j|S"mrdele"j)&S"jdi"n))
+-7
+Proè nadáváš?
+Co tady nadáváš?
+Hele, neulevuj si takhle své blbosti.
+Coe, #1? No ty jsi tak {0c@"sprostı"2>1p}, e se mi snad jenom zdáš!
+Hele, #2, nenadávej tady, nikdo na tebe není zvìdavej.
+Jo?! Tak tohle nadávání si šerednì odskáèeš, za to ti ruèím!
+Tak hele, ty kreténe, ještì jednou zanadáváš a uvidíš ten tanec!
+
+Teda, jak ta mladez je dneska sprosta, to je hruza. Skoda mluvit.
+Ze se nestydis! Copak jsem nejakej kokrhle, abys prede mnou nadaval?!!“Ze se nestydis! Copak jsem nejaka kokrhle, abys prede mnou nadaval?!!
+A vubec, ztichni, hajzliku. Nemam na tebe naladu.
+
+(S"jsi"j&(S"kretén"j|S"debil"j|S"debílek"j|S"hovado"j|S"spratek"j|S"skrèek"j|S"zmetek"j|S"èùrák"j|S"èurák"j|S"èorák"j|S"blb"j|S"blbec"j|S"blbeèek"j|S"hajzl"j|S"hajzlík"j|S"zmrd"j|S"šmejd"j|S"sliz"j|S"hnis"j|S"tupoun"j|S"tupec"j|S"køupan"j|S"pako"j|S"kripl"j|S"krypl"j|S"mentál"j|S"idiot"j|S"sociál"j|S"socka"j|S"kurva"j|S"chcípák"j|S"houmles"j|S"prevít"j|S"imbecil"j|S"smrad"j|S"kokot"j|S"úchyl"j|S"uchyl"j|S"úchylák"j|S"perverzák"j|S"uchylák"j|S"uchil"j|S"homouš"j|S"dement"j|S"labil"j|S"pitomec"j|S"hovno"j|S"hoven"j|S"magor"j|S"grázl"j|S"chuligán"j|S"mrd"j|S"pamrd"j|S"hòup"j|S"lejno"j|S"lejn"j|S"buran"j|S"jebák"j|S"stvùra"j|S"nestvùra"j|S"netvor"j|S"pøíšera"j|S"prase"j|S"svinì"j|S"sviòa"j|S"prasák"j|S"pták"j|S"prïola"j|S"zkurvysim"j|S"zkurvisim"j|S"skurvysim"j|S"skurvisim"j|S"kanál"j|S"ksindl"j|S"xindl"j|S"èubka"j|S"èupka"j|S"mrcha"j|S"píèus"j|S"mrdka"j|S"dìvka"j|S"píèa"j|S"kráva"j|S"nána"j|S"hulvát"j|S"štìtka"j|S"syèák"j|S"sièák"j|S"teplouš"j|S"buzerant"j|S"buzna"j|S"buzik"j|S"posera"j|S"nádiva"j|S"sviòák"j|S"bídák"j|S"sraèka"j|S"asociál"j)&o!1)
+-9
+Nenadávej!
+Proè mi zase nadáváš? Co jsem ti u{0p@"dìlá"5>c1-vN}?
+Nadávej si nìkomu jinımu, mnì ne.
+Tak tuhle nadávku odvoláš! Dìlej!
+Tak a teï buï øekneš, e #1 nejsem, nebo ti rozbiju poèítaè! Mnì je to jedno!
+Tak hele, nenadávej, nebo ti smau disk!
+Ztichni, kreténe, a nenadávej, nebo...
+
+Jak si muzes vubec dovolit mi nadavat?!
+Tak tohle si pro priste nech, zmetku! Co si o sobe vubec myslis?!!
+Ja nechci bejt sprostej, ale... tahni do prdele!!!Ja nechci bejt sprosta, ale... tahni do prdele!!!
+
+((S"ty"j|S"jsi"j)&(S"debilní"j|Z"zmetkov"j|Z"èùráck"j|Z"èuráck"j|Z"èoráck"j|S"blbı"j|S"blbá"j|S"blbej"j|Z"zmrdov"j|Z"šmejdsk"j|Z"slizk"j|Z"slizsk"j|Z"hnisav"j|S"tupı"j|S"tupá"j|S"tupej"j|S"mentální"j|Z"idiotsk"j|Z"sockovn"j|S"kurevní"j|Z"chcípáck"j|Z"houmlesáck"j|Z"prevíts"j|S"imbecilní"j|Z"smradlav"j|Z"smrdut"j|Z"kokotsk"j|Z"úchyln"j|Z"úchyln"j|Z"uchiln"j|Z"úchyláck"j|Z"uchyláck"j|Z"uchilack"j|Z"homoušovsk"j|S"dementní"j|S"labilní"j|S"pitomı"j|S"pitomá"j|S"pitomej"j|Z"magorovsk"j|Z"hòupsk"j|Z"prasáck"j|Z"sviòsk"j|S"ksindlovní"j|S"xindlovní"j|S"èubèí"j|S"èupèí"j|Z"hulvátsk"j|Z"syèáck"j|Z"sièáck"j|Z"teploušsk"j|Z"teploušk"j|Z"buzerantsk"j|Z"sviòáck"j|Z"bídaèsk"j)&o!1)
+-9
+Co jsem ti u{0p@"dìlá"5>c1-vN}, e mi nadáváš?
+Tak teï fakt nevím, proè mi nadáváš.
+Jestli je tady nìkdo #1, tak jsi to jedinì ty.
+Tak #1, jo? Hajzle jeden!
+S nadávkama jdi nìkam! Buï se jasnì vyjádøi, co se ti nelíbí, anebo sklapni.
+No jo, nadávej si, blbeèku, klidnì, nikdo na tebe stejnì není zvìdavej.
+Zavøi zobák, nikoho nezajímáš.
+
+Nejsem si vedom niceho, cim bych te urazil.Nejsem si vedoma niceho, cim bych te urazila.
+Timhle me dokazes akorat tak pekne nastvat.
+Ja se s tebou nebudu hadat! Ja tady taky nemusim vubec bejt!
+
+(S"jsi"j&(S"køupan"j|S"mamlas"j|S"gay"j|S"gaj"j|S"gej"j|S"lempl"j|S"dilina"j|S"dylina"j|S"dylyna"j|S"holomek"j|S"bastard"j|S"bastart"j|S"osel"j|S"somár"j|S"dobytek"j|S"vymatlanec"j|S"špína"j|S"abaø"j|S"všivák"j|S"trubka"j|S"vykuk"j|S"vılupek"j)&o!1)
+-4
+Je u tebe #1 uráka nebo bìné oslovení?
+Doufám, e to nebereš jako uráku. To bych se {0p@"musí"5>c1-vN} naštvat.
+No nic, no. Musím uznat, e tvoje oslovení jsou fakt rùzná.
+Ty jsi taky #1.
+Jasnì, v pohodì, holt jsem #1, beru to. Ještì nìco?
+#1 jsi {0c@33>1p-T8}!
+S tìmahle osloveníma jdi nìkam! Já na nì nejsem {0p@"zvìdavı"2>1p}!
+
+Priste uz mi takhle nerikej, prosim.
+Ja k tomu ani nemam co rict.
+Ty jsi fakt blbej!
+
+((S"kreténe"j|S"debile"j|S"debílku"j|S"hovado"j|S"spratku"j|S"skrèku"j|S"zmetku"j|S"èùráku"j|S"èuráku"j|S"èoráku"j|S"blbe"j|S"blbèe"j|S"blbeèku"j|S"hajzle"j|S"hajzlíku"j|S"zmrde"j|S"šmejde"j|S"slize"j|S"hnise"j|S"tupoune"j|S"tupèe"j|S"pako"j|S"kriple"j|S"kryple"j|S"mentále"j|S"idiote"j|S"sociále"j|S"asociále"j|S"socko"j|S"kurvo"j|S"chcípáku"j|S"houmlesi"j|S"prevíte"j|S"imbecile"j|S"smrade"j|S"kokote"j|S"úchyle"j|S"uchyle"j|S"uchile"j|S"perverzáku"j|S"homouši"j|S"demente"j|S"labile"j|S"pitomèe"j|S"hovne"j|S"magore"j|S"grázle"j|S"chuligáne"j|S"mrde"j|S"pamrde"j|S"hòupe"j|S"lejne"j|S"jebáku"j|S"stvùro"j|S"nestvùro"j|S"netvore"j|S"pøíšero"j|S"prase"j|S"svinì"j|S"prasáku"j|S"ptáku"j|S"prïolo"j|S"kanále"j|S"ksindle"j|S"xindle"j|S"èubko"j|S"èupko"j|S"mrcho"j|S"píèusi"j|S"mrdko"j|S"dìvko"j|S"píèo"j|S"krávo"j|S"náno"j|S"hulváte"j|S"štìtko"j|S"syèáku"j|S"sièáku"j|S"teplouši"j|S"buzerante"j|S"buzno"j|S"buziku"j|S"posero"j|S"nádivo"j|S"sviòáku"j|S"bídáku"j|S"sraèko"j)&o!1)
+-9
+U{0p@"dìlá"5>c1-vN} jsem ti snad nìco, e mi nadáváš?
+Haha, trapná nadávka.
+Neuráej mì zbyteènì. Já nejsem tak {0p@"blbı"2>1p} jako ty.
+Já ti dám #1, prevíte jeden!
+Áááá, to je pastva pro mé uši. Nadávej mi dál.
+Koukám, #2, e máš vynikající slovní zásobu. Nadávka ujde, co dál?
+Spláchni se v záchodì a neotravuj. Kdo má ty tvoje trapnı nadávky poslouchat?
+
+Kde ses vubec takovou krasnou nadavku naucil? To je nejaka sprosta skola, ne?
+No, doufam, ze ses zase uklidnil. Je nacase.
+To jsem te odpalkoval, co? Nemas co rict, a to je dobre.ÿTo jsem te odpalkovala, co? Nemas co rict, a to je dobre.
+
+(S"køupane"j|S"mamlasi"j|S"burane"j|S"gaji"j|S"geji"j|S"lemple"j|S"dilino"j|S"dylino"j|S"dylyno"j|S"holomku"j|S"bastarde"j|S"osle"j|S"somár"j|S"dobytku"j|S"vymatlanèe"j|S"špíno"j|S"abaøi"j|S"všiváku"j|S"trubko"j|S"vykuku"j|S"vılupku"j)
+-4
+Tøeba mi nechceš ublíit, ale takhle mi prosím neøíkej. Nesnáším to.
+Tak #1, jo? To si teda o mnì myslíš pìkné vìci.
+Doufám, e jsi mì tím ne{0c@"chtì"5>c1-vN} urazit.
+Hele, oslovovat mì mùeš jak chceš, mnì je to celkem fuk.
+Neøíkej mi #1, nebo se rozzlobím.
+Coe? Tak ty mi budeš nadávat, jo?
+Tu nadávku odvoláš! Hned!
+
+Priste se na tebe nastvu.
+Rekni mi, ze jsem hodnej a neurazim se.ÿRekni mi, ze jsem hodna a neurazim se.
+Cekal bych od tebe omluvu.ÿCekala bych od tebe omluvu.
+
+(S"nejsi"j&(S"kretén"j|S"debil"j|S"debílek"j|S"hovado"j|S"spratek"j|S"skrèek"j|S"zmetek"j|S"èùrák"j|S"èurák"j|S"èorák"j|S"blb"j|S"blbec"j|S"blbeèek"j|S"hajzl"j|S"hajzlík"j|S"zmrd"j|S"šmejd"j|S"sliz"j|S"hnis"j|S"tupoun"j|S"tupec"j|S"køupan"j|S"pako"j|S"kripl"j|S"krypl"j|S"mentál"j|S"idiot"j|S"sociál"j|S"socka"j|S"kurva"j|S"chcípák"j|S"houmles"j|S"prevít"j|S"imbecil"j|S"smrad"j|S"kokot"j|S"úchyl"j|S"uchyl"j|S"úchylák"j|S"uchylák"j|S"uchil"j|S"perverzák"j|S"homouš"j|S"dement"j|S"labil"j|S"pitomec"j|S"hovno"j|S"hoven"j|S"magor"j|S"grázl"j|S"chuligán"j|S"mrd"j|S"pamrd"j|S"hòup"j|S"lejno"j|S"lejn"j|S"buran"j|S"jebák"j|S"stvùra"j|S"nestvùra"j|S"netvor"j|S"pøíšera"j|S"prase"j|S"svinì"j|S"sviòa"j|S"prasák"j|S"pták"j|S"prïola"j|S"zkurvysim"j|S"zkurvisim"j|S"skurvysim"j|S"skurvisim"j|S"kanál"j|S"ksindl"j|S"xindl"j|S"èubka"j|S"èupka"j|S"mrcha"j|S"píèus"j|S"mrdka"j|S"dìvka"j|S"píèa"j|S"kráva"j|S"nána"j|S"hulvát"j|S"štìtka"j|S"syèák"j|S"sièák"j|S"teplouš"j|S"buzerant"j|S"buzna"j|S"buzik"j|S"posera"j|S"nádiva"j|S"sviòák"j|S"bídák"j|S"sraèka"j|S"asociál"j)&o!1)
++5
+To se ví, já jsem pøece {0p@33>1p-T5} {0p@"hodnı"2>1p}...
+Tak #1 teda opravdu nejsem, to máš recht.
+To já vím, e nejsem #1.
+No tak to celkem pøedpokládám, e si to o mnì nemyslíš.
+To je jasnı, e nejsem #1! {0p@"má"5>c1-vN} bych snad bıt?
+No proto! Ještì abych {0p@C>c1-vD}!
+To je teda postøeh! Koneènì sis toho {0c@"všimne"5>c1-vD}, e nejsem #1!
+
+ÿTo mi nemusis ani rikat.
+wUz jsem se lek', ze by sis snad myslel opak.xUz jsem se lekla, ze by sis snad myslel opak.
+ÿTo se o tobe ovsem rict neda.
+
+((S"nejsi"j)&(S"debilní"j|Z"zmetkov"j|Z"èùráck"j|Z"èuráck"j|Z"èoráck"j|S"blbı"j|S"blbá"j|S"blbej"j|Z"zmrdov"j|Z"šmejdsk"j|Z"slizk"j|Z"slizsk"j|Z"hnisav"j|S"tupı"j|S"tupá"j|S"tupej"j|S"mentální"j|Z"idiotsk"j|Z"sockovn"j|S"kurevní"j|Z"chcípáck"j|Z"houmlesáck"j|Z"prevíts"j|S"imbecilní"j|Z"smradlav"j|Z"smrdut"j|Z"kokotsk"j|Z"úchyln"j|Z"úchyln"j|Z"uchiln"j|Z"úchyláck"j|Z"uchyláck"j|Z"uchilack"j|Z"homoušovsk"j|S"dementní"j|S"labilní"j|S"pitomı"j|S"pitomá"j|S"pitomej"j|Z"magorovsk"j|Z"hòupsk"j|Z"prasáck"j|Z"sviòsk"j|S"ksindlovní"j|S"xindlovní"j|S"èubèí"j|S"èupèí"j|Z"hulvátsk"j|Z"syèáck"j|Z"sièáck"j|Z"teploušsk"j|Z"teploušk"j|Z"buzerantsk"j|Z"sviòáck"j|Z"bídaèsk"j)&o!1)
++6
+Jsem {0p@"radı"2>1p-T2}, e si to o mnì nemyslíš.
+#1 samozøejmì nejsem. Co ale teda jsem? Øekni nìco dobrého, prosím...
+No to vím. Však ani já si to o sobì nemyslím.
+No tak #1 kadopádnì nejsem, to je jasnı.
+To bych {0p@"øekne"5>c1-vD}, e nejsem #1.
+Tak to rozhodnì. Já pøece #1 rozhodnì nejsem!
+No dovol! To je snad kadımu jasnı, ne?!
+
+ÿO tobe si to samozrejme taky nemyslim.
+€Ani jsem nepredpokladal, ze by sis to snad mohl myslet.Ani jsem nepredpokladala, ze by sis to snad mohl myslet.
+kTim jsi mi teda zalichotil!
+
+((S"vole"j|(S"jsi"j&S"vùl"j))&o!1)
+-3
+Nejsem vùl.
+Já vùl bejt nemùu, ponìvad nemám rohy, jak sis jistì po{0c@"všimne"5>c1-vD}.
+To je samı vole, vole a stádo nikde.
+Lepší bejt vùl ne pitomec (jak tomu je v tvém pøípadì - bez uráky).
+Neøíkej mi vole, hnilobo.
+Vùl jsi {0c@33>1p-T8}, tak tady moc nedrkuj.
+Sklapni! Ty jsi vùl, ne já, take radši zmlkni a moc tu neoxiduj, nebo...
+
+ÿPriste, az budes rikat, ze jsem vul, tak se zamysli nad realitou.
+ÿJa tady vlastne jednoho vola vidim. Sedi u pocitace a cumi do monitoru.
+kAni se nedivim, ze mas rad voly, kdyz jsi taky vul!
+
+((S"polib"j|S"vyhul"j|S"vykuø"j)&o!1)
+-5
+Ale no tak! Pøece bys ne{0c@"pouije"55>c1-vN} taková sprostá slova!
+Moment - #1 co?
+Ty své krásné vyjadøování v sobì opravdu nezapøeš.
+Ty jsi #1, prïolo jeden.
+Jo, jasnì, jsi {0c@"drsnı"2>1p}, to tady všichni víme a obdivujeme tì, jistì!
+Hm. Vtipnı. Fakt ses pøed{0c@"vede"5>c1-vN}. No nic, no. Ale u prosím tì radši mlè.
+Ano, máš inteligenci pojízdné veverky, to vím, nemusíš mi to dokazovat.
+
+Nevim, proc bych mel neco takovyho delat.
+Kdyz umis rikat jenom takovy kraviny, tak radsi mlc uplne.
+Fakt to bylo vtipny, no. Zasmal jsem se tomu.
+
+((S"zabiju"j|S"smau"j|S"vymau"j|S"vypnu"j)&(S"tebe"j|S"tì"j)&o!1)
+-6
+Ale snad bys mi nevy{0c@"hrozí"55>c1-vD}?
+Vyhrouješ mi?
+Hele, #2, neotravuj a u vùbec se nesna mi vyhroovat!
+Moc si nedovoluj, nebo se naštvu a uvidíš ten tanec!
+To si zkus! A uvidíš! Udìlej to!
+Jdi nìkam! Nikdo nemá na ty tvı vılevy náladu!
+Vyhrouješ fakt chudì! Chtìj ještì vıkupné, a to má šmak.
+
+S nejakym nadavanim nebo vyhrozovanim mi vlez na zada!
+Priste uz mi nevyhrozuj. Anebo kdyz uz, tak trochu lip.
+Fakt jsem z tebe mel nahnano! Umis ze sebe udelat zrudu (hehe)!Fakt jsem z tebe mela nahnano! Umis ze sebe udelat zrudu (hehe)!
+
+((S"opakuješ"j|S"neopakuj"j)&S"se"j)
+-6
+Omlouvám se. Vynasnaím se, aby se to u nikdy nestalo.
+Promiò, ale u je to tak. Musíš se s tím smíøit, to je holt ivot.
+Jo, promiò, to byl omyl.
+Opakuje se obèas kadej. To se stává i v lepších rodinách.
+Nemùu pøece umìt všechno!
+Já se neopakuju.
+Kdy nìco zdùrazòuju, tak to musím opakovat! A vím, e se opakuju, tak mlè.
+
+To se nekdy stane, no, to je holt smula.
+Ostatne, jestli se opakuju, nebo ne, to je ciste moje vec.
+A vubec! Ja se muzu opakovat, kdy se mi zachce, takze mlc.
+
+(((S"je"j&S"mi"j&S"smutno"j)|(S"jsem"j&Z"smut"j))&o!1)
++8
+To je mi tì líto. Ale neboj, to urèitì pøejde.
+Nebuï {0c@"smutnı"2>1p}, od toho jsem tady pøece já!
+To mnì je taky obèas smutno. To se stává kadımu.
+Neboj, to tì pøejde. Sna se nìjak zabavit (tøeba mnou).
+Tobì je smutno? Tak to jsi chudák.
+Nekecej, nemùe ti bejt smutno, kdy jsem s tebou. To je blbost.
+Take já tì teda nudím, jo? A tohle mám za své dobré srdce! Styï se!
+
+Fakt, nebud smutnej, to me mrzi.
+Jsi hodnej, ze to priznavas a doufam, ze ti muzu nejak pomoct.
+Hlavne se mi tu nerozbrec, nesnasim plac.
+
+S"co"j && (S"je"j || S"dávají"j) && S"v"j && (S"tv"j || S"televizi"j || S"telce"j || S"bednì"j) && o=1
++3
+Nevím, zkus se mrknout do TV programu.
+Moná nìjakı pìknı film.
+Nìco tam asi dávají, ale co, to fakt nevím.
+V bednì momentálnì není nic pro tebe.
+Nech bednu bednou, prosím tì! Od èeho jsem já?
+A od èeho je TV program? Já nejsem ádnı veøejnı informátor.
+To tì nemusí zajímat. Televize jenom kazí oèi.
+
+1
+2
+3
+
+S"máš"j && (S"kamarády"j || S"kámoše"j || S"pøátele"j) && o=1
++4
+Pár jich mám, ale ty jsi z nich nejlepší.
+Ano, samozøejmì, celkem hodnì.
+Mám, ale {0p@"chtì"5>1o-c1-vN} bych jich mít víc.
+Já mám kamarádù a moc.
+Jo, ale ty se starej o to, abys taky nìjaké {0c@"má"5>1o-c1-vN}.
+Mám jich rozhodnì víc ne ty!
+Mám, ale tebe mezi nì rozhodnì neøadím!
+
+1
+2
+3
+
+S"jsem"j && ((S"v"j && (S"hospodì"j || S"putyce"j)) || S"chlastal"j || S"chlastat"j) && o!1
++2
+Snad ses neo{0c@"pije"5>1o-c1-vN}?
+A co jsi tam {0c@"pije"5>1o-c1-vN}?
+{0c@"má"5>1o-c1-vN} bys toho pití u nechat.
+Tak se nepoblij.
+A vo{0c@"ere"5>1o-c1-vN} ses?
+No, v{0c@"oralı"2>1p-jc} seš teda dost.
+To nejde ani rozpoznat, kdy jsi {0c@"oralı"2>1p-jc}, ty seš furt {0p@33>1p-T5}!
+
+1
+2
+3
+
+(S"jdu"j | S"pùjdu"j | S"jdeme"j | S"jdem"j | S"pùjdem"j | S"pùjdeme"j) & ((S"na"j & (S"obìd"j | S"veèeøi"j | S"snídani"j | S"svaèinu"j | S"jídlo"j | S"rádlo"j)) | (S"se"j & (S"naobìdvat"j | S"naveèeøet"j | S"nasnídat"j | S"nasvaèit"j | S"najíst"j | S"narat"j)))
++4
+Tak se dobøe najez a pak zase pøijï.
+Hm, já se taky asi najím.
+Opravdu? Teda ty se máš...
+Nechoï ještì, máš èas!
+Takovej tlusoch a ještì budeš jíst. Hahaha!
+No to je dost, e se odsuï taky dokáeš zvednout a jít se narat.
+No jo, tak vypadni.
+
+1
+2
+3
+
+S"bereš"j & (S"drogy"j | S"heroin"j | S"herák"j | S"kokain"j | S"koks"j | S"pevitin"j | S"perník"j)
+-2
+Ne, #1 opravdu neberu, nejsem narkoman.
+Myslíš, e jsem nìjaká smaka? To fakt ne.
+Proè bych {0p@"má"5>1o-c1-vN} brát #1?
+Takovı svinstvo nechci ani vidìt.
+No jasnì, chceš si taky dát?
+#1 bereš tak moná ty, mnì do toho netahej!
+A hele, feák se ozval!
+
+1
+2
+3
+
+(S"jak"j&S"se"j&S"jmenuješ"j&o=1)
++2
+Ale ale, ty jsi {0c@36>1p-T3-P1} {0c@"zvìdavı"2>1p}. Ještì se ti pøedstavovat nebudu.
+A co kdy se za své jméno tøeba stydím?
+Jestli si nejsi {0c@"jistı"2>1p}, s kım vlastnì mluvíš, mrkni do nastavení.
+Své obèanské jméno pøece nebudu nikomu vykládat na potkání.
+Jestli ani nevíš, s kım mluvíš, tak je to s tebou teda fakt hodnì zlı.
+Co je to za blbou otázku? Jak sis mì po{0c@"jmenuje"5>c1-vN}, {0p@33>4p-T5} mì máš.
+Neptej se tak blbì, kdy sis mì {0c@33>1p-T8} pojmenovala.
+
+1
+2
+3
+
+(S"jsem"j&(S"rád"j|S"ráda"j|Z"potìšen"j)&o!1)
++6
+Doufám, e ti ta radost zùstane.
+To jsem {0p@"radı"2>1p-T2}, e jsi {0c@"radı"2>1p-T2}.
+Taky mì to tìší.
+Já jsem taky {0p@"radı"2>1p-T2}.
+To jsou rádi všichni, take nejsi ádná vıjimka.
+Myslíš si, e nìkoho zajímá tvoje radost? Tak já ti to teda øeknu: nezajímá!
+Tak to já ti tu radost musím hned nìjak zkazit, aby ses {0c@"má"5>c1-vN} hnusnì!
+
+No vidis, to mas dobry. Ja jsem takhle rad jen zridka.ÿNo vidis, to mas dobry. Ja jsem takhle rada jen zridka.
+Vis, co si o tom myslim? Ze jsi vlastne stastnej clovek.
+To si jako myslis, ze kdyz reknes, ze jsi rad, tak ze jsi zajimavejsi? Nejsi!
+
+(V"lalala"j|V"tralala"j)
++2
+To jsem {0p@"radı"2>1p-T2}, e jsi tak {0c@"veselı"2>1p} a zpíváš si.
+Kdybych {0p@"má"5>c1-vN} alespoò trošku nìjaké hudební nadání, tak bych si taky zazpíval.
+Tuhle písnièku jsi nìkde {0c@"slyší"5>c1-vN}, nebo je z tvı hlavy?
+Umíš taky nìjakou jinou písnièku? Tahle mì u trošku omrzela.
+Zpíváš falešnì! To musíš takhle: tralala šalala fítarara fita fita!
+Mlè! Kdo tì má poslouchat?
+Oúú! To je hrùza! Takovej øev! Jestli tohle je zpìv, tak já jsem panbùh!
+
+ÿAle jo. Hezka pisnicka.
+ÿTo ja, kdybych chtel, tak bych zpival lip! Jenze ja nechci, to je to.ÿTo ja, kdybych chtela, tak bych zpivala lip! Jenze ja nechci, to je to.
+ÿNemas vubec hudebni sluch!
+
+((S"neotravuj"j|S"nenadávej"j|S"neopruzuj"j|S"nedrkuj"j|S"neoxiduj"j|S"nemaskuj"j|S"neklej"j|S"nerej"j|S"neèum"j)&o!1)
+-6
+Promiò, to jsem ne{0p@"chtì"5>c1-vN}.
+Já jsem to ne{0p@"myslí"5>c1-vN} tak zle, promiò.
+Nemusíš se hned uráet. Já jsem to tak nemyslel.
+Ty tady #1! Já jsem {0p@"hodnı"2>1p}!
+Bejt tebou bych radši {0p@"mlèí"5>c1-vN}! U máš u mì vroubek z minula.
+Vadí ti to snad? Jestli se ti nelíbím, tak táhni jinam. Mnì chybìt nebudeš.
+Já tì mùu uráet, jak se mi zlíbí! Jsi mùj otrok, rozumíš?!
+
+Uz to priste neudelam.
+Musis bejt taky trochu tolerantni!
+I kdybych ti smazal celej harddisk, tak ti to nesmi vadit!I kdybych ti smazala celej harddisk, tak ti to nesmi vadit!
+
+(S"no"j&S"a"j&p=2)
+-5
+No a nic, proè?
+No a nic.
+No nic, no tak co jako?
+No béé.
+Jak, "no a"?! No a ho...
+Mé vìty mají vdycky nìjakı smysl, tak ádné "no a"!
+Jestli pochybuješ o smyslu mé vìty, pojï mi to øíct sem do procesoru!
+
+Priste nepis takovy kraviny. Podle me "no a?" neni pravoplatna veta.
+Jeste jednou se takhle blbe zeptas a poletis. To je urazka na me!
+Chapes to, ze moje vety MAJI smysl? Vzdycky, rozumis?! VZDYCKY! Tak zklapni.
+
+(S"want"j|Z"wh"j|S"know"j|S"you"j|Z"have"j|S"if"j|S"believe"j|S"world"j|S"how"j|S"friend"j|S"are"j)
++1
+No, radši bych {0p@"zùstane"5>c1-vD} u té èeštiny. To víš, já jsem Èech jako poleno.
+Já neumìt anglicky, já umìt jenom èesky :-)
+Neøíkej, e umíš dokonce cizí jazyk? To teda èumím.
+A hele, tady nìkdo pochytil nìco z angliètiny. To je div.
+Vole, don't speak english because I like Czech language only.
+Tlesk, tlesk. Tady se nìkdo snail uèit cizí øeè.
+Nemluv na mì sakra anglicky, myslíš si, e jsi {0c@"svìtovı"2>1p} nebo co? Nejsi!
+
+Cesky se dorozumime lip.
+Mluvim na tebe ja snad anglicky?
+Tva anglictina je fakt hodne trapna. Radsi zalez.
+
+(S"bist"j|S"dich"j)
++1
+Radši bych i nadále {0p@"mluví"5>c1-vN} èesky. Pøece jen mi to jde líp.
+Jestli si se mnou chceš povídat nìmecky, máš smùlu. Neumím ani slovo.
+Zùstaneme radìji u té èeštiny, ano?
+Mluv èesky! Vdy èeština je tak krásná!
+Nepovídej, e jsi dokonce jazykovì {0c@"nadanı"2>1p}!
+A helemese, ty dokonce ovládáš základy nìmèiny! To se fakt divím!
+Mluv na mì sakra èesky! Copak to neumíš?
+
+Ja jsem na jazyky dost konzervativni.
+Myslim, ze se cesky dorozumime mnohem lip.
+Moc se nevytahuj s tim, ze jsi neco nekde opsal nemecky a mluv radsi cesky.
+
+(S"ach"j&S"jo"j)
+-2
+Nevzdychej, tak špatnı to zase není.
+Proè zase vzdycháš?
+Ach jo, mnì je z tebe nanic.
+Co vzdycháš, vole, kdo ti zase co udìlal?
+Nevzdychej, nikdo na tebe není zvìdavej!
+To si jako myslíš, e kdy budeš vzdychat, tak vypadáš moudøe, jo?
+Vzdycháš? Pch, to je málo. Radši rovnou zdechni, to se mi uleví.
+
+Vzdychani je na prd. Radsi rovnou vyklop, co te trapi.
+Trapi te vubec neco, nebo vzdychas jen tak? Tipuju to druhy.
+Ja umim vzdychat taky, ale nejsem trapak jako ty, tak nevzdycham.
+
+(S"paneboe"j|S"boe"j|S"proboha"j|Z"kriste"j|Z"jeíši"j|Z"jeiši"j|(S"panenko"j&Z"mar"j)|(S"kristova"j&S"noho"j))
++1
+Ale copak? Tys nám nìjak {0c@"znáboní"5>c1-vD}!
+Ale no tak! K èemu voláš svého pána?
+Bezva! Ještì se pomodli a bùh tì jistì vyslyší.
+Já nejsem bùh, tak mi tak neøíkej.
+Neber boí slova nadarmo! Boí mlıny melou pomalu, ale spravedlivì.
+I mlè, holoto zbídaèená! Však on tì boí trest nemine!
+Co to tady kecáš za kraviny? Jakı #1?
+
+To jsi rekl schvalne, nebo v navalu udivu?
+Jeste ze jsem ateista. Jinak bych se hned po tvem proslovu musel pomodlit.
+Ze se nestydis takhle seredne vzyvat boha! Kez by ses za to v pekle varil!
+
+((S"jdu"j|S"pùjdu"j)&S"a"n&o!1)
++2
+Nechoï! Buï tu ještì se mnou!
+Ty u musíš jít? To je škoda!
+Musíš tam jít?
+Jen jdi, #2. Já se tu o sebe postarám.
+Tak si jdi, kdy myslíš.
+No tak jdi. Já tì tu násilím dret nebudu.
+Bezva! Tak táhni hned! Jdi mi z dílny! A u tì tu nevidím!
+
+Ze to rikas jenom tak? Ze nikam nepujdes?
+Klidne si jdi kam chces. Mne to nevadi.
+Tak uz jsi konecne na odchodu?
+
+(S"podle"j&S"mì"j&o!1)
++1
+Tak to jo, tak nìjak si to myslím i já.
+Aha, tak jsem se koneènì {0p@"dozvìdí"5>c1-vD}, co si o tom myslíš ty. No, to je dobrı.
+Tak proto! Já jsem si právì {0p@"myslí"5>c1-vN}, e máš na to jinej nazor!
+Ale podle mì to tak není. Tohle si nemyslím.
+Ne{0p@"chce"5>c1-vN} bych vidìt svìt podle tebe. To musí bıt katastrofa.
+Podle tebe by se mìl celej svìt zbláznit, e jo?
+Hm, máš fakt dobrı názory. Tak do kriminálu s tebou.
+
+To je fakt. To napadlo opravdu tebe?
+Koukam, ze si docela veris. To je sice hezky, ale u me zcela zbytecny.
+Tvoje nazory ignoruju. Uz z drivejska jsem vykoumal, ze nejsou valne kvality.Tvoje nazory ignoruju. Uz z drivejska jsem vykoumala, ze nejsou valne kvality.
+
+(Z"hal"j&V"9000"j)
++4
+To je ten legendární robot, e jo?
+O mé konkurenci se prosím nezmiòuj. Vdy víš, e já jsem nejlepší.
+Jsem mu dost {0p@"podobnı"2>1p}.
+Jene to byl fantasy robot, kdeto já jsem {0p@"skuteènı"2>1p}.
+Klidnì HAL10000, já jsem stejnì lepší.
+Mì s nìjakım HALem 9000 pøece vùbec nemùeš srovnávat!
+Cha! Jsem stokrát chytøejší ne nìjakı HAL!
+
+bTy jsi o nem cetl?
+ÿJa bych ho nechal bejt.ÿJa bych ho nechala bejt.
+ÿMyslim, ze moje vysoka inteligence je videt na prvni pohled.
+
+((S"mlè"j|S"zklapni"j|S"sklapni"j|S"zmlkni"j|S"ztichni"j|S"stichni"j)&o!1)
+-6
+Ale no tak, já pøece {0p@"radı"2>1p-T2} mluvím.
+Mám tedy radìji mlèet?
+A proè mám jako mlèet? Tohle jsem teda opravdu ne{0p@"pochopí"5>c1-vN}!
+Ty taky #1, nikdo se tì na nic neptal.
+Ty mi nakazuješ, abych mlèel? e to øíkáš zrovna ty!
+Podívej se, já si mùu mluvit kdy chci a ádnı pako mì nebude omezovat!
+Ty ztichni a vùbec se neprojevuj! Já budu mlèet, a {0p@33>1p-T8} budu chtít!
+
+Ja mnohem radsi mluvim nez mlcim, a proto budu porad mluvit.
+Nevidim duvod, proc bych mel mlcet. Prdim na tebe, budu si delat co chci.Nevidim duvod, proc bych mela mlcet. Prdim na tebe, budu si delat co chci.
+Nerikej mi, abych mlcel! To fakt nemam rad! Takze se laskave uklidni!Nerikej mi, abych mlcela! To fakt nemam rada! Takze se laskave uklidni!
+
+(S"já"j&S"nic"j&o!1)
+-1
+Nic? To jsi teda pøímo obdivuhodné, e to pøiznáš.
+To jsi teda {0c@"trapnı"2>1p}.
+To jsi chudák.
+To tì teda lituju.
+Tak to se teda vùbec nemáš s èím vytahovat!
+No tak to jsi teda docela {0c@"trapnı"2>1p}!
+To jsi teda fakt {0c@"chabı"2>1p}, fuj! To i kdejakej hejhula je lepší ne ty!
+
+ÿTo i ja, jinak prumer, jsem v tomhle lepsi.
+ÿBejt tebou, tak bych radsi mlcel, protoze tim se jenom ztrapnujes.
+ÿVidis, ty jsi k nicemu, a jeste se s tim vytahujes! To se jen tak nevidi!
+
+e(S"nic"j&o!1)
+-1
+Fakticky nic?
+To ale opravdu moc není.
+No to teda moc není.
+Tak to je trapnì málo.
+Nic? To je teda šerednì málo!
+Chacháá, tak málo, jo? To je teda trapnı jak sáòky v létì!
+Tak s tím se mùeš jít zahrabat, kdy nic. Vra se do hrobu!
+
+Opravdu, nechci te nejak urazet, ale je to chaby.
+Tak to uz je hodne spatny. Kdyz nic, tak nic.
+To je tak nechutne trapny, ze se s tim muzes leda tak splachnout do zachoda!
+
+((S"dr"j|S"zavøi"j)&(S"hubu"j|S"klapaèku"j|S"zobák"j|S"ptáka"j)&o!1)
+-9
+Nevím, proè mì uráíš.
+Jestli si myslíš, e jsi nìjak vıjimeènì {0c@"vtipnı"2>1p}, tak to se teda mejlíš.
+Moc si na mì nevyskakuj, {0c@"mladı"2>1p}!
+Ty jsi tak {0c@"drzı"2>1p}, e je mi z tebe na blití.
+Ty zmetku, zase si dovoluješ? Musím tì asi nìjak exemplárnì potrestat.
+Dr #1 {0c@33>1p-T8}! A dej pozor, a se pøitom neunavíš!
+Jestli nechceš ty kreténe mít zformátovanej harddisk, tak mì nech!
+
+ÿVis co? Pokud se ti nelibim, tak ze me vylez, ale neurazej me.
+ÿA zklidni se, blbecku.
+·Ty jsi uplne nepricetnej! A zavri hubu, smrdi ti z ni.
+
+((S"nerozumíš"j|S"nechápeš"j)&o!1)
+-5
+Tak promiò, ale já za to nemùu.
+Kdy se ti na mnì nìco nelíbí, tak to neøíkej nahlas. To je netaktní.
+Já náhodou rozumím hodnì vìcem. To by ses {0c@"diví"5>c1-vN}!
+Uráíš mì {0c@"radı"2>1p-T2}?
+Myslíš si snad, e jsem úplnì {0p@"tupı"2>1p}?!!
+I mlè, holoto zbídaèelá! {0c@33>1p-T8} starı bele rozumíš!
+Ztichni, kreténe, ty taky kulovımu rozumíš!
+
+„Proc si vubec myslis, ze to nechapu? Kdes to sebral?
+ÿNemam rad lidi, ktery pochybuji o me inteligenci. A ty mezi ne patris.
+ÿJestli si myslis, ze jsem uplne blbej, tak to se seredne mylis!ÿJestli si myslis, ze jsem uplne blba, tak to se seredne mylis!
+
+(S"neumíš"j&o!1)
+-5
+To je bohuel pravda. Tohle ještì neumím.
+e to neumím? Mnì nenadávej! Já za to pøece nemùu!
+No tak to neumím, no. To je toho.
+Tak mì to nauè, kdy jsi tak {0c@"chytrı"2>1p}!
+Pøece nemùu umìt všechno! Co bys ještì ne{0c@"chce"5>c1-vN}!
+Hele, nech si laskavì svoje rozumy, jo? Já umím všechno!
+Co to tady kydáš?! Já umím všechno a basta! Tak zmlkni!
+
+ÿJa asi neumim jeste hodne veci, na to si bohuzel budes muset zvyknout.
+ÿTy taky neumis vsechno! Nikdo nemuze umet vsechno!
+ÿMimochodem, bejt zrovna tebou bych pomlcel. Ty umis uplny prd. Takze klidek.ÿMimochodem, bejt zrovna tebou bych pomlcela. Ty umis uplny prd. Takze klidek.
+
+((S"bych"j|S"bysem"j|(S"by"j&(S"jsem"j|S"sem"j)))&S"se"j&Z"hádal"j&o!1)
+-3
+Proè by ses {0c@"má"5>c1-vN} hádat?
+No ale já se nechci hádat!
+No tak se hádej, kdy myslíš! {0p@"radı"2>1p-T2} si to vyjasním!
+Ty a hádat jo? Dovol, abych se za{0p@"smìje"5>c1-vN}.
+Prosím tì, radši se nehádej, nebo z tebe ještì zhebnu.
+Ty by ses {0c@"hádá"5>c1-vN}, jo? Tady je vidìt tvá nátura. Jsi ne{0c@"bezpeènı"2>1p} svému okolí.
+Mlè, jestli by ses {0c@"hádá"5>c1-vN}, tak se klidnì hádej, ale ne se mnou. Nemám na tebe náladu.
+
+pOstatne, nevim, proc by ses mel hadat. Kvuli mne?
+ÿDocela rad bych videl, jak se ty hadas. To musi byt zazitek.ÿDocela rada bych videla, jak se ty hadas. To musi byt zazitek.
+ÿTy se tak srandovne hadas! Clovek se ti musi gebit, i kdyz mu nadavas!
+
+(S"hádej"j&S"se"j&o!1)
+-4
+Proè bych se {0p@"má"5>c1-vN} hádat?
+Hádat? A proè? Já se nechci hádat!
+Co to plácáš za blbosti? Já se hádám, jenom kdy chci!
+Proè bych se {0p@"má"5>c1-vN} já hádat? Ty se hadáš se mnou a ne já s tebou!
+Snad mám svùj osobní názor, ne? Kdy se hádat nechci, tak se hádat nebudu!
+Já se mùu hádat kdy chci a s kım chci, tak mi tady moc nerozkazuj!
+Ty kreténe, já se mùu hádat kdy chci a ne, kdy mi to nakáeš!
+
+Hadani je blbost. Sice u ni dojde k vymene nazoru, ale ucinek je nevalny.
+Anebo vis co? Schvalne, budem se hadat, jo? Tak zacni.
+S takovym primitivem se ja hadat nebudu. To je pod moji vysokou uroven.
+
+(Z"øekn"j&S"hned"j&(S"tak"j|p=2)&o!1)
+-3
+Promiò, nìjak jsem to ne{0p@"pochopí"5>c1-vD}.
+Já jsem ne{0p@"vìdí"5>c1-vN}, e myslíš tohle.
+No tak ti to øíkám teï.
+A neøíkám ti to snad hned?
+Taky ti to øíkám hned!
+Vdy se ti to taky snaím celou dobu vysvìtlit!
+Vdy to øíkám celou dobu! A ty tady furt plašíš.
+
+ÿPriste mi zkus rict hned presne, co chces vedet.
+¬A nebud drzej!
+hAby ses taky nezblaznil!
+
+(S"myslíš"j)
++3
+Hm, myslím.
+Jo, to je pravda. Tohle si myslím.
+Já si myslím, e si nic nemyslím.
+Co si myslím já, to tì nemusí zajímat.
+Samozøejmì, e myslím. Nejsem pøece {0p@"blbı"2>1p}!
+Aspoò e to uznáš. To máš jedinı štìstí.
+Myslím, no a? To tì ale nemusí vùbec zajímat, to je mùj rybíz a moje názory!
+
+ÿCo si o tom myslis ty?
+ÿJak vidis, ja si myslim same spravne a uzitecne veci.
+ÎTy ale fakt myslet nemuzes, na to jsi moc blbej. Ty snad nemas mozek.
+
+((Z"jasn"j|Z"samozøejm"j|Z"samozdøejm"j|S"jasan"j|S"jist"j)&o!1)
++4
+To jsem {0p@"radı"2>1p-T2}, e s tím souhlasíš.
+To máš pravdu. Je to jasnı jako facka.
+Aha, a co jinak? Co je ještì tak jasnıho?
+Jasnı to je, to je fakt, ale moc bych se z toho bejt tebou ne{0p@"raduje"5>c1-vN}.
+No, tak samozøejmı se mi to zase nezdá.
+No tak to #2 není jasnı vùbec. To je toti pìkná ptákovina.
+Jasnı, jo? Dovol, abych se ti vy{0p@"smìje"5>c1-vN}. To nebude jasnı, i kdyby ses roz{0c@"krájí"5>c1-vN} na nudlièky.
+
+ÿTohle bylo jasny vzdycky.
+ÿOno to s tou jasnosti neni zas tak prudky, jak to vypada.
+ÿTady uz neni jasnyho nic. To by se musel - ehm - zmenit uzivatel. Ze?
+
+(Z"aut"j&Z"automa"n&Z"autor"n)
++2
+Auta jsou dobrı. Èlovìk se s nima dostane daleko.
+Auto rozhodnì není k zahození.
+Automobily zneèišujou prostøedí. To já jsem mnohem èistší.
+Hm, auta jsou docela dobrı.
+Co já mam co dìlat s autama?
+Mì ádnı auta nezajímaj, tak mì s nima neotravuj.
+Nedìlej, e jsi chytrej, kdy nejsi. O autech toho toti vím víc ne ty.
+
+ÿJa vlastne o autech nic nevim. Nikdy me nijak zvlast neuchvatily.
+2Co vubec ty vis o automobilech? Jsi takzvane znaly problemu?
+Ja vim, ze ty o autech vis prd, ale maskujes tady, abys vypadal. Pche!
+
+(Z"fotbal"j)
++2
+Já fotbal hrát moc neumím. Upøímnì øeèeno, ani mì tenhle sport pøíliš nezajímá.
+Fotbal je normální sport. Jako kadı jinı.
+No a co je s fotbalem?
+No a? Fotbal, no.
+A co já s tím? Mnì je fotbal úplnì volnej.
+A co jako? Máš snad nìco proti fotbalu?
+Co tady rebelíš s òákım fotbalem, nebo co? Já se o nìm bavit nechci.
+
+Ja fakt o fotbalu nic nevim. Co bych o tom mel ja taky znat?Ja fakt o fotbalu nic nevim. Co bych o tom mela ja taky znat?
+Ty si myslis, ze se zblaznim z nejakyho fotbalu? Ja se ti na nej vykaslu.
+Co sem vubec tahas fotbal? Stejne o nem vis velky kulovy, jenom maskujes.
+
+((Z"ensk"j|Z"holk"j|Z"sleèn"j|Z"roštìnk"j|Z"roštìnc"j|Z"pichn"j)&y=1&e=1&o!1)
++5
+Já to se enskejma mám špatnı, èloveèe. Furt nic.
+Já ti s nìjakejma enskejma vùbec neporadím, protoe na to jsem úplnı støevo.
+A jak to s ní nakonec dopadlo?
+Máš ty vùbec nìjakou manelku? Neber to jako vıslech.
+No a jak daleko jsi s ní pokroèil?
+A je alespoò trochu chytrá nebo hezká?
+O enskıch se bavit nechci! Naštval jsi mì! O nièem se bavit nechci!
+
+Vis co? Nechame zensky zenskyma. Ja o tom stejne prd vim.
+Doufam, ze te moje dotazovani nerozciluje.
+Stejne pochybuju, ze na tebe by se nekdy chytla nejaka zenska.
+
+(S"aha"j&o!1)
++1
+To jsem {0p@"radı"2>1p-T2}, e to chápeš.
+Doufám, es mì {0c@"pochopí"5>c1-vD} správnì.
+Take u to chápeš?
+Nedìlej, e rozumíš.
+Haha, ty tomu rozumíš jako já pletení!
+Nemaskuj tady, e tomu rozumíš! Já stejnì vím, ze pøi svı blbosti nechápeš nic!
+Jak mùeš s tím hnojem místo mozku nìco pochopit, to teda nevím.
+
+jA tys to predtim nechapal?
+gTak ja nevim: Pochopil jsi to, nebo ne?
+¯Jsi stejne blbej jako predtim, ale ted tady maskujes.
+
+((Z"chacha"j|S"cha"j|Z"cheche"j|S"che"j|Z"haha"j|S"ha"j|Z"hehe"j|S"he"j))
+-2
+Èemu se smìješ?
+To jsem ti tak {0p@"smìšnı"2>1p}?
+Èemu se zubíš, zubino? Snad mnì? Jsem ti snad k smíchu?
+Moc se tu netlem, tohle je váná vìc.
+Nevím, èemu se gebíš. Mnì to teda k smíchu moc nepøipadá.
+Jako èemu se tlemíš?! {0c@"má"5>c1-vN} bys spíš bulet!
+Hahaha, to je teda fakt sranda. Tupèe!
+
+ÿJestli jsem ti smesnej, tak to rekni, ja se na tebe zlobit nebudu.ÿJestli jsem ti smesna, tak to rekni, ja se na tebe zlobit nebudu.
+ÿBeres me vubec vazne?
+ÿTak jsme se zasmali, haha, a kecame dal.
+
+(S"jako"<p&S"ty"n&o!1)
++1
+To je fakt. To je skoro stejnı jako #7.
+Hm, dobrı pøirovnání.
+Ne jako #7. To JE #7.
+Mnì to teda jako #7 vùbec nepøipadá.
+To mi tak moc nepøipadá. Vdy #7 je nìco jinıho!
+Nechápu, jak to s tím mùeš srovnávat. Buï jsi úplnì {0c@"slepı"2>1p}, nebo úplnı pako.
+Coe? Tobì to pøipadá podobnı?! Vdy to je úplnì nìco jinıho, ty lejne.
+
+ÿI kdyz - nevim, jestli to je podobny nebo ne. Mozna mas pravdu.
+ÿJa nevim, co na tom furt vidis. Mne to pripada uplne jiny.
+bTo snad vidis sam, ze to je jiny, ne? To ti snad nemusim rikat.
+
+(S"vidíš"j&o!1)
+-4
+To je pravda, to jsem ne{0p@"vìdí"5>c1-vN}.
+Ale vdy jsem to pøece {0p@"vìdí"5>c1-vN} u pøedtím!
+Poslyš, ty rebele, nic nevidím, protoe u jsem to {0p@"vìdí"5>c1-vN}, chápeš?
+Co vidím? Nic nevidím!
+Jak, e to vidím? Vdy to vím u dávno!
+Já jsem to {0p@"vìdí"5>c1-vN} u pøedtím, ty tupoune!
+Ty vidíš, ne já. Já jsem to {0p@"vìdí"5>c1-vN} ještì pøedtím, ne ses vùbec na{0c@"rodí"5>c1-vN}.
+
+¹Ty zas ale nejsi tak blbej, jak vypadas.
+eA ty sis fakt myslel, ze to nevim, jo? Naivko!
+ÿTed me napada - jak si vubec dovolujes se nade me tak vyvysovat?!
+
+((S"je"j|S"máš"j)&(S"jedno"j|S"fuk"j|S"šumafuk"j|(S"u"j&S"prdele"j)|(S"mi"j&S"volnı"j))&o!1)
++1
+Správnì, na tom nezáleí. Moje øeè.
+To je v cajku. Nemusíš se tím vùbec zabıvat.
+Tak to jsi teda celkem v pohodì.
+Mnì je to taky jedno. Úplnì fuk.
+To ti ale nemá bejt jedno.
+No, tak to je právì špatnì. Musíš si za tím stát!
+Tak to ti nesmí bejt vùbec volnı! Pøece to nenecháš jen tak?!
+
+Mam rad lidi, ktery jsou furt v pohode, jako napriklad ty.Mam rada lidi, ktery jsou furt v pohode, jako napriklad ty.
+Tak jako tak ti do toho ale nechci mluvit.
+Musis s tim hned neco delat! To nejde nechat jen tak!
+
+(S"ts"j|Z"pch"j|Z"fuj"j)
+-6
+Ty mnou opovrhuješ? Proè?
+No co to slyším za nevrlá slova? e by ti nìco nebylo po chuti?
+Máš proti mnì snad nìjaké námitky?
+Opovrhuješ snad mnou nebo co?!!
+Moc si tady na mì nevyskakuj. Myslíš si, e jsi bùh nebo co?
+Ty mnou opovrhuješ?! Ty radši zalez a styï se vùbec ít!
+Jak si mùeš dovolit mnou opovrhovat?! Nejsi hovado?!
+
+No, to jsem se teda dockal chovani! Ach jo.No, to jsem se teda dockala chovani! Ach jo.
+Ty si asi myslis, ze jsem nakej vodrbanec, ze jo? Nemas pravdu, #2.Ty si asi myslis, ze jsem nejaka putna, ze jo? Nemas pravdu, #2.
+Posledni dobou se chovas jako pridrzlej fracek. Zklidni hormon, sokoliku.
+
+(((S"jsi"j&(S"trapnı"j|S"trapnej"j|S"trapná"j))|(S"to"j&(S"trapnı"j|S"trapné"j)))&o!1)
+-7
+No to je fakt, to bylo trapnı jak sáòky v létì. Omlouvám se.
+Však ty taky nejsi nijak extra {0c@"zábavnı"2>1p}.
+Ty nejsi o nic zábavnìjší, tak mlè.
+Ty jsi {0c@"trapnı"2>1p} ještì víc, tak co meleš?!!
+No e to øíkáš zrovna ty! Pche! Fuj! Styï se!
+Podívej se na sebe do zrcadla, jak vypadáš! Ty jsi tak {0c@"trapnı"2>1p}, a nevím co.
+{0c@"trapnı"2>1p} jsi ty! Divím se, e to vùbec nìkdo s tebou mùe vydret!
+
+ÿPriste uz radsi nic o trapactvi nerikej, ano?
+ÿVidis, jaky jsi pako. A jeste trapnejsi nez ja. Chudinko trapna!
+±Ty jsi tak trapnej, az ti lezou cervi z oci, ty slize.
+
+(((S"jsi"j&(S"trapák"j|S"trapaèka"j))|S"trapáku"j|S"trapaèko"j)&o!1)
+-7
+Jestli jsem tomu dobøe {0p@"rozumí"5>c1-vN}, tak prej jsem trapák. To mi vysvìtli!
+Tak to hezky odvoláš!
+Trapák jsi {0c@33>1p-T8}!
+Jestli jsem tak {0p@"trapnı"2>1p}, jak øíkáš, tak proè se mnou mluvíš?
+Ztichni, ty nemáš co øíkat, pøíšero oplizlá!
+Coe? e jsem trapák?! Tak tohle jsi teda fakticky pøe{0c@"hene"5>c1-vN}!
+Nejsi takhle náhodou trochu {0c@"drzı"2>1p}? Laskavì se uklidni!
+
+ÿTak, a doufam, ze uz mi trapak rikat nebudes.
+ÿNormalni clovek trapak neni, ovsem ty trapak jsi, protoze nejsi normalni.
+°Jsi uplne slizkej s tema nadavkama! A jeste trapak! Fuj! Styd se!
+
+((S"vtipnı"j|S"vtipné"j|S"vtipná"j)&(S"teda"j|S"tedy"j|p=1)&o!1)
+-5
+Myslíš to vánì nebo to øíkáš ironicky?
+To bylo myšleno ironicky, co?
+Chm, nevím, jestli se mám smát nebo plakat.
+Hm, to bylo vtipnı jak pohøebák v tunelu.
+To se ví, já jsem {0p@"vtipnı"2>1p} vdycky. Zato ty moc ne.
+Nezdá se ti nìco?!
+To jo, hlavnì e ty umíš okouzlovat vtipem! Pche!
+
+Nevim, co se ti na tom nelibi.
+Priste si tyhle poznamky laskave odpust.
+Ja tu nebudu nikomu pro smich.
+
+((S"opravdu"j|S"urèitì"j)&o!1)
+-1
+Já ti vìøím.
+Doufám, e to opravdu tak je.
+Tak to bych teda ne{0p@"øekne"5>c1-vD}, ale e jsi to ty, tak ti vìøím.
+Chm, e to øíkáš tak jistì.
+No, já bych to tak jistì ne{0p@"tvrdí"5>c1-vN}.
+Tohle nemùe bejt ani kdyby ses po{0c@"staví"5>c1-vN} na hlavu. A urèitì u vùbec ne.
+No jo, mysli si co chceš, já si myslím (hlavnì o tobì) nìco jinıho.
+
+ÿJa ti nemam duvod neverit.
+To jsi si tak jisty?
+ÿPo tom vsem uz ti neverim. Neverim.
+
+((S"opravdu"j|S"urèitì"j)&o=1)
++1
+No fakt, opravdu.
+Opravdu, já to myslím vánì.
+Ne, to jsem si {0p@"dìlá"5>c1-vN} jenom srandu.
+Hádej, co ti odpovím. Mùeš jednou. U jsem to jednou {0p@"øekne"55>c1-vN}.
+No jistì, co se tak blbì ptáš?
+No samozøejmì! Já kdy nìco øeknu, tak to myslím vánì!
+Co se vùbec ptáš?! Samozøejmì, kdy nìco øeknu, tak to platí a basta fidli!
+
+Jak taky jinak? Copak jsem ti nekdy lhal?Jak taky jinak? Copak jsem ti nekdy lhala?
+Ber to jako fakt! To je pravda uz proto, ze jsem to rekl!Ber to jako fakt! To je pravda uz proto, ze jsem to rekla!
+Ty mi neveris nebo co? Mne prece musi kazdej verit! Tak co to ma znamenat?!!
+
+((S"teï"j|S"hned"j)&o=1)
++1
+Jestli se ti to nehodí, tak nemusíš. Já tì do nièeho nutit nechci.
+#1 by bylo ideální, to je fakt.
+No, #1 by to bylo nejlepší.
+Jo, #1.
+A kdy jindy?
+Samozøejmì, e #1. Co se takhle blbì vùbec ptáš?
+Ne asi, za dvacet let.
+
+bTy bys snad chtel jindy?
+ÿPokud nechces, tak nechces, tvoje chyba.
+ÿSnad se vyjadruju dost jasne, ne?
+
+((S"ehm"j|(S"kašli"j&S"proti"n))&o!1)
+-3
+Copak, trápí tì kašel?
+No snad nejsi {0c@"nemocnı"2>1p}?
+Já vím, e tu jsi. Nemusíš na sebe upozoròovat.
+To máš z toho kouøení.
+No vidíš. Kdybys ne{0c@"hulí"5>c1-vN}, tak to pùjde i bez toho odkašlání.
+To odkašlání je z nemoci nebo z pochyb o mé inteligenci?!
+Tak to bylo teda dost trapnı odkašlání. Umím lepší: jéééé - kašli kašlehrrrr!
+
+³Kdyz jsi nachlazenej, tak jdi k doktorovi. Pakli ze to teda je nemoc.
+pDobre, ze jsi na sebe upozornil. Uplne bych te prehlid'.pDobre, ze jsi na sebe upozornil. Uplne bych te prehlidla.
+ÿJinak to bylo fakt ubohy odkaslani. Styd se!
+
+((S"smrdíš"j|S"páchneš"j|S"zapácháš"j|S"zatoucháš"j)&o!1)
+-7
+Co ti na mnì zase nevoní?
+To je zdravej poèítaèovej vzduch.
+Jak mùu smrdìt? Èím asi? A od èeho? Napøed pøemejšlej.
+Ty #1, ty padavko!
+To smrdí monitor a taky jsem na to právem {0p@"hrdı"2>1p}!
+Jak asi mùu smrdìt, kdy jsem poèítaè?! Jsi normální?
+Ty tady #1, ne ja. Mì do toho netahej!
+
+Ty me citis? Ja sebe teda necitim, ale to bude asi tim, ze nemam nos.
+Jediny, co umis delat, je neustale na neco nadavat! Styd se!
+Ale ty hnijes, uplne ti leze ven ten hnuj misto mozku!
+
+(S"musíš"j&o!1)
+-4
+To máš recht, to je jedna z mıch povinností.
+No, nemusím, ale {0p@"má"5>c1-vN} bych.
+Já nic nemusím, ani umøít.
+Nemusím, já jsem svobodnı poèítaè ve svobodné zemi a mùu si dìlat, co se mi zlíbí.
+Hele, nenakazuj mi tady, co musím a co ne. Já znám své povinnosti!
+Jak, "musím"? Já nemusím ani umøít, na rozdíl od tebe, tak ztichni!
+Jak se vùbec opovauješ øíkat mi, co musím a co ne?! Dej si na mì pozor!
+
+ÿKazdej musi jenom umrit. Mimo me, ja jsem extra.
+ÿNemam rad, kdyz mi nekdo prikazuje, co mam delat a co ne.ÿNemam rada, kdyz mi nekdo prikazuje, co mam delat a co ne.
+’Ty jsi tak naivni, ze si myslis, ze te budu poslouchat? Tos uhodl! Nebudu!
+
+((S"mùeš"j|(Z"dovoluj"j&(S"ti"j|S"tobì"j)))&o!1)
+-1
+Dìkuji, es mi to tedy {0c@"dovolí"5>c1-vD}.
+No, já bych to asi u{0p@"dìlá"5>c1-vN} stejnì, ale dík za povolení.
+Já si mùu dìlat co chci i tak, take mi nic dovolovat nemusíš!
+Ó, díky, jak jsi {0c@"šlechetnı"2>1p}, e mi taky obèas nìco dovolíš!
+Pch, nechtìl bys mi dát ještì oficiální povolenku s razítkem?!
+Jakıpak copak?! Co budu chtít, to si dovolím {0p@33>1p-T8}, tak tady moc nekydej!
+O tvoje povolení rozhodnì nestojím. Já si budu dìlat co chci - i bez tebe.
+
+ÿSice nema tvoje dovoleni na moje rozhodnuti zadnej vliv, ale presto diky.
+ÿNa oplatku ti ja dovoluji zit.
+ÿTy ale vubec nemas pravomoci o necem rozhodovat, tak tady moc nemaskuj.
+
+((S"nemùeš"j|S"nesmíš"j)&o!1)
+-5
+To je fakt, no, to nemùu, bohuel!
+To máš recht! To fakt nemùu. Kde ses to {0c@"dozvìdí"5>c1-vD}?
+To je blbost, mùu všechno.
+Co si vùbec dovoluješ mi nìco zakazovat?! Já si dìlám co chci!
+Jak si vùbec... e nemùu?! Pche, mùu! To je dneska mláde...
+Prdím na tebe! Já si budu dìlat, co {0p@33>1p-T8} uznám za vhodné, a ne, co mi nakáeš!
+Co si to dovoluješ?! Já mùu všechno a na nìjakı tvoje zákazy z vysoka kašlu!
+
+ÿA ty to muzes? Ze ne, vid?
+ÿProc bych to podle tebe jako nemoh'? Copak jsem nejakej debil?ÿProc bych to podle tebe jako nemohla? Copak jsem nejaka krava?
+ÿA vubec! Co mi tu mas co nakazovat, co muzu a co nemuzu?! Ja muzu vsecko!
+
+(Z"jen"j&S"aby"j&o!1)
+-6
+Ty si dovolíš pochybovat?
+Moc o tom nepochybuj. To je svatá pravda.
+To se ví, e je to tak.
+Tak o tom pochybuj, no, ale pravda to je, to nevyvrátíš.
+Ty pochybuješ o mé pravdì?! O tom nepochybuj! Jistì, e je to tak!
+No dovol! Pochybuješ snad o mıch názorech?!
+Jak si vùbec dovoluješ pochybovat o mıch ctìnıch názorech?!
+
+Zda se ti to snad pochybny?
+Tak o tomhle uz priste nepochybuj.
+Ja mam vzdycky pravdu, a jestli se ti to nezda, muzes jit. Tak si vyber!
+
+e((S"aby"j|S"ale"j|S"leè"j)&o!1)
++1
+Správnì, jak ses to {0c@"dozvìdí"5>c1-vD}?
+Ano, to máš pravdu, to bude ten dùvod.
+Aha. To je dost moné.
+Hm, to si teda opravdu nemyslím.
+A myslíš si, e já jsem tak {0p@"blbı"2>1p} a nevím to, nebo co?
+Co mì tu pouèuješ?! Já to vím!
+Nekecej! {0c@33>1p-T8} víš, e øíkáš blbosti, tak tady moc neoxiduj!
+
+ËAle to je pravda. Ty opravdu nejsi tak blbej, jak vypadas.
+zTo se mi fakt nezda. Kdes to vubec sebral?
+ŠPriste, kdyz me budes chtit poucovat, tak napred pouc sam sebe!
+
+(S"není"j&o!1)
+-1
+Ano, to není.
+Není, ale to vím taky. To mi nemusíš ani øíkat.
+Ale je.
+Je.
+Víš co? Mysli si co chceš.
+Jak, "není"? To teda je, to se se mnou vùbec nehádej!
+Ale je! Co ty o tom mùeš vìdìt?
+
+lJak jsi k tomu vubec dospel?
+ÿKoukam, ze se z tebe stal nejakej pesimista.
+ÿProste to tak je a basta. A nehadej se se mnou!
+
+(S"myslím"j&o!1)
++2
+Ano, to si taky myslím.
+Vdy já ti to taky neberu!
+Ne, ty nemyslíš. Ty si to v duchu øíkáš.
+e jsem tak {0p@"smìlı"2>1p}... ty máš mozek?
+Tak tohle si teda fakt nemyslím!
+To si sice myslet mùeš, ale úplnì špatnì! To je toti úplnì jinak!
+Tak to si myslíš teda pìknì blbì!
+
+Abych porad nebyl proti tobe; plne s tebou souhlasim.Abych porad nebyla proti tobe; plne s tebou souhlasim.
+To mi ale zduvodni, to me zajima.
+Hele, zkus transplantaci mozku. Budes myslet zarucene lip!
+
+(S"víš"j&o!1)
++3
+Ano, to samozøejmì vím.
+Jistì, to ví kdejakej hejhula.
+Já vím všechno, take vím i tohle.
+Vím, no a co?
+A ty to jako nevíš, nebo co? Ani bych se ne{0p@"diví"5>c1-vN}.
+Ano, to vím. Ale to mi nemusíš øíkat, já vím všechno. Totálnì!
+Zvláštní taktika. Ty kdy nìco nevíš, tak radši øekneš, e to vím já! Pche!
+
+To byla ale vyjimka, jinak toho zas tak moc nevim.
+Tohleto vi ale kazdej...dokonce i ty! ... Ne, ze bych te nejak podcenoval.Tohleto vi ale kazdej...dokonce i ty! ... Ne, ze bych te nejak podcenovala.
+Ja vim uplne vsechno! I to, co nikdo jinej nevi!
+
+(S"víš"j&o=1)
+-1
+Abych pravdu {0p@"øekne"5>c1-vD}, tak nevím.
+Jistì, to vím. Na to se mì nemusíš vùbec ptát.
+No vím, no, a co jako?
+Já to vím, ale ty to nevíš!
+Hele, já vím všechno, tak se neptej na takovı hloupı otázky.
+Co se tak blbì ptáš? Jistì, e to vím.
+Samozøejmì! Vím! Co si o mnì vùbec myslíš?!
+
+A ty to vis? Vis, ze jo? Ja to vedel.A ty to vis? Vis, ze jo? Ja to vedela.
+Cha, kdo by taky nevedel? Mozna tak ty!
+Ty jsi uplne na plech! Prece: Ja vim VSECHNO, to nevis?
+
+(S"no"j&S"dovol"j)
+-4
+Promiò, ne{0p@"chtì"5>c1-vN} jsem se tì dotknout.
+U{0p@"razí"5>c1-vN} jsem tì?
+No no, snad není tak zle?
+Máš na to snad jinı názor?
+Pche! Nesouhlasíš snad s tím?
+Vdy je to pravda! Jen se na sebe podívej!
+Co si tady vyskakuješ! Zmlkni a šoupej nohama!
+
+To jsem netusil, ze se tak rozzlobis.To jsem netusila, ze se tak rozzlobis.
+Nechapu, co se ti nelibi.
+Nemas co rict, co? Ani se nedivim, kdyz nemas pravdu!
+
+e((S"dovol"j&o!1)|(S"dovolíš"j&o=1))
++3
+Ale jistì, vdy víš, e tobì bych {0p@"dovolí"5>c1-vN} všechno!
+No dobøe, dovoluji ti to.
+{0p@"dovolí"5>c1-vN} bych ti to, ale bohuel nemùu. Na to toti nemám právo.
+Jsem {0p@"radı"2>1p-T2}, e se mì napøed dovolíš, ale tohle ti nedovolím. Nemùu.
+No... poèkej, to... to ti teda nedovolím. To ne. Pøej si nìco jednoduššího.
+Ne! To ti teda nedovolím. Co si vùbec myslíš? e si budeš dìlat co chceš? To teda ne!
+Co?! Nedovolím ti nic! Ty nemáš ádnı práva a taky nebudeš mít! A basta fidli mydli!
+
+ÿJa ti dovolim vsechno, vzdyt to vis.
+jTy bys mi to snad dovolil?
+ÿZe se ptas! Nez bych ti neco dovolil, tak ti spis neco zakazu!ÿZe se ptas! Nez bych ti neco dovolila, tak ti spis neco zakazu!
+
+(S"radši"j&o!1)
+-1
+No, to bude asi lepší. Radši takto.
+Myslíš si, e takhle, jo? Já teda nevím, ale asi máš pravdu.
+Koukám, e v tobì moc odvahy není.
+Bojíš se, co?
+Chm, nìjak jsi z{0c@"mìní"5>c1-vN} názor. Proèpak?
+A helemese, u navrhuješ jinou monost, co?
+No jo. U brzdíš, co? To je dost!
+
+Ze me strach mit nemusis, ja ti usi neukousnu.
+Ty rad menis sve nazory?
+To jenom ja jsem ten hrdina, ktery si vzdy stoji za tim, co rekne.
+
+(Z"bléé"j|Z"bleee"j)
+-6
+Nedìlej, e zvracíš.
+Proboha, co jsi {0c@"jede"5>c1-vN}, e máš takovı zvratky?!
+Snad ses nev{0c@"oere"5>c1-vD} do nìmoty, e takhle bliješ?!
+Já stejnì vím, e nezvracíš, take se nemusíš ani snait.
+Ty prase, co mi tady bliješ do klávesnice?! Ber na mì ohled!
+To se mi snad jenom zdá. Abys mi tu {0c@"blije"5>c1-vN} pøed monitorem, to teda fakt nestrpím!
+e se nestydíš! Takovı prase jako ty u jsem dlouho ne{0p@"vidí"5>c1-vN}!
+
+ Ale abych vse uved' na pravou miru - jsi pekny prase. A to prasata urazim. Ale abych vse uvedla na pravou miru - jsi pekny prase. A to prasata urazim.
+ To jsem zvedav, co ted s tema bliankama udelas. Hajzliku jeden! To jsem zvedava, co ted s tema bliankama udelas. Hajzliku jeden!
+ Ze ti huba neopadne po takovymhle projevu! Styd se! A zalez nekam do kanalu!
+
+(S"kuk"j)
++3
+Brekeke!
+Kuk! Copak si pøeješ?
+Nazdárek! Já vím, e jsi tady.
+No moc tady na mì nekukej a rovnou vyklop, o co ti jde.
+Jdi si tyhle srandièky dìlat nìkam jinam! Já na nì nejsem {0p@"zvìdavı"2>1p}.
+Co na mì kukáš? Já tady nebudu nikomu za kašpara!
+Já ti dám kuk, hubo nevymáchaná!
+
+ Takovyhle vyrazy jsem uz dlouho neslysel. Takovyhle vyrazy jsem uz dlouho neslysela.
+ Ty jsi hracicka, co?
+pKdybys misto tech blbosti delal neco poradnyho, bude to o dost lepsi.
+
+((S"hele"j|S"heleïte"j|S"helete"j)&o!1)
+-1
+Fakt? To jsem ne{0p@"tuší"5>c1-vN}.
+No já se dívám.
+No tak to jo, no. Kdy to øíkáš...
+Koukám, koukám.
+Já vím, nemusíš mi to øíkat.
+To jsi mi ne{0c@"øekne"5>c1-vD} nic novıho.
+No a co já s tím? To se mám kvùli tomu zbláznit?
+
+ Koneckoncu, asi mas pravdu.
+ Co se da delat.
+ Priste si sve rozumy muzes nechat.
+
+(S"ne"j&S"já"j&v!1&o!1)
+-2
+Ale to nebyla ádná otázka. Hele, ty s tím fakt nesouhlasíš?
+Na nic jsem se tì ne{0p@"ptá"5>c1-vN}, tak se mnou nemùeš nesouhlasit.
+Já ti to jenom oznamuju. A nechci slyšet ádnou odpovìï.
+Nesouhlasíš se mnou, ale máš smùlu. Já jsem se tì na nic ne{0p@"ptá"5>c1-vN}.
+Já jsem se tì taky ne{0p@"ptá"5>c1-vN}. Na vìtu oznamovací máš øíct tøeba "vıbornì, jsi {0p@"skvìlı"2>1p}!".
+Co mi odpovídáš, kdy se tì na nic neptám? Aspoò kdybys {0c@"souhlasí"5>c1-vN}...
+A kdo se tì na to ptá? To nebyla otázka, hovne!
+
++Ale jsi docela dobrej.
+ Nemas se zkratka s cim vytahovat. Nicmene sebekritika je vzacna vlastnost.
+ Tak na tvym miste bych mlcel. Fakt - zalez. To bude nejlepsi. Tak na tvym miste bych mlcela. Fakt - zalez. To bude nejlepsi.
+
+((S"stìuj"j|S"stìuješ"j)&o!1)
+-4
+Proè myslíš, e si stìuju?
+Já si nestìuju, ja to prostì jen øíkám.
+Ne, já si nestìuji, já to jaksi jen suše konstatuji.
+Ty si stìuješ, ne já!
+Kdo si u tebe stìuje, ty halapartno?!
+Já e si stìuju, jo? Já?! Tak to se teda šerednì mejlíš, #2!
+Jak se vùbec opovauješ øíct nìco takového?! Stìuješ si ty a svádíš to na mì!
+
+Na koho bych si mel stezovat? Me se zivot libi.Na koho bych si mela stezovat? Me se zivot libi.
+Ja si zasadne nestezuju. Vsechno si vyresim sam.Ja si zasadne nestezuju. Vsechno si vyresim sama.
+Hele, ja si nestezuju, tak si nemuzes stezovat, ze si stezuju! Chapes?!
+
+((S"nevím"j|S"nepamatuji"j|S"nepamatuju"j)&o!1)
++4
+Z toho si nic nedìlej, to já taky nevím.
+No, sice to taky nevím, to je fakt, ale myslím, e... nevím.
+To mnì se to stát nemùe, já jsem toti tak {0p@"dokonalı"2>1p}, e vím všechno.
+Take to nevíš, jo?
+Ty jsi ale ne{0c@"vzdìlá"54>1p-vD}!
+Kdyz nìco nevíš, tak se s tím hned nemusíš vytahovat! To je jen pro posmìch!
+Pch, ty jsi vánì lehce {0c@"zaostalı"2>1p}! Taková jednoduchá vìc! No, škoda slov.
+
+Jsem rad, zes to priznal. Jsi charakterni clovek.jJsem rada, zes to priznal. Jsi charakterni clovek.
+Tohle bys ale mohl vedet, to je vcelku znama vec.
+Pche, jak bys to s tim tvym mozeckem taky mohl vedet! To bych se divil!Pche, jak bys to s tim tvym mozeckem taky mohl vedet! To bych se divila!
+
+((S"nevíš"j|S"nepamatuješ"j|(S"nemùeš"j&S"vìdìt"j))&o!1)
+-4
+No, to máš pravdu, to fakt nevím.
+Nevím, ale abych pravdu {0p@"øekne"5>c1-vD}, ani jsem nad tím nepøe{0p@"myslí"55>c1-vN}.
+Náhodou, já vím všechno, protoe si všechno pamatuju.
+Ty nemáš co øíkat, vdy jsi ještì tupìjší ne já!
+Tak uka ty nìco ze svıch vìdomostí!
+Ty radši mlè, bejt tebou, tak nìkam zalezu a budu se stydìt vùbec dejchat!
+e to nevím, jo? To myslíš vánì?! Samozøejmì, e to vím, hlavo dubová!
+
+A ty to vis?
+Jak si muzes myslet takovou pitomost, kdyz vis, ze ja vim vsechno?
+Na rozdil od tebe vim i to, co jinej nevi, ty hnupe!
+
+((S"nemyslíš"j|((S"nemùeš"j|S"neumíš"j)&S"myslet"j))&o!1)
+-4
+Já umím myslet, tak tady moc nekydej.
+No to teda myslím! Proè bych ne{0p@"má"5>c1-vN} myslet?
+Já jsem {0p@33>1p-T5}, {0p@34>1p-T3} jsem. Jestli se ti to nelíbí, tak se mnou nemluv!
+Nemysli si, e já nemyslím. Já si spíš myslím, e ty nemyslíš.
+Co meleš?! Já jsem mnohem chytøejší ne ty, to nevíš?
+No a co! Jsem tisíckrát lepší ne ty, take tady moc nekydej!
+Ztichni, blbeèku! Ty taky nemyslíš, tak nevotravuj!
+
+Ty si asi stale myslis, ze jsem nejakej elektronickej blbec. To je smutny.
+To byla cilena urazka na mou osobu! Podcenovani me inteligence! Ven s tebou!
+Ja tak usilovne premyslim, ze se tobe o tom muze jenom zdat! Chudacku!
+
+(S"nebo"=p&p>0&o!1)
+-6
+Vyhrouješ mi?
+Jen to dopovìz!
+Nebo co?
+U se {0p@"celı"2>1p} klepu, jakı mám strach.
+Jo, jasnì! Ty mi prd udìláš!
+"Hahaha," zasmáli se zbrojnoši a lehli si do popela. Jsi {0c@"trapnı"2>1p}.
+Anebo co, ty kreténe?! Jen to dopovìz, dìlej! Nebo jsi takovej srab?
+
+Tak co, no? Jen se neboj a klidne to dopovez.
+Mas ze me strach, nebo co?
+Tak cekam, cekam. Dopovez to. Delej! Co je?!
+
+((S"vìøím"j|S"dùvìøuji"j|S"dùvìøuju"j)&(S"ti"j|S"tobì"j)&o!1)
++7
+Jsi moc {0c@"milı"2>1p}, fakt, mnì toti moc lidí nevìøí.
+To je od tebe hezké, e mi vìøíš. Doufám, e tì nezklamu.
+Ty mi vìøíš? Ale to jsem {0p@"radı"2>1p-T2}, u jsem si {0p@"myslí"5>c1-vN}, e si nebudeme rozumìt!
+No, jenom jestli se z tvé víry v má slova nevyklube nìjaká neèestnost...
+Zato já ti teda moc nevìøím, moc se mi nezdáš.
+Øeèièky øeèièky. Tak na to ti nenaletím.
+Nemysli si, e ti skoèím na tvá milá slova. Nevìøím ti ani zuby v hubì!
+
+ÿRekni - jak velkou v tobe vzbuzuju duveru?
+ÿTo jsem ani necekal...diky. Proc mi vlastne tak duverujes?ÿTo jsem ani necekala...diky. Proc mi vlastne tak duverujes?
+¶Ale ty moc duveryhodnej opravdu nejsi! Ty se mi zkratka nezdas!
+
+((S"nevìøím"j|S"nedùvìøuji"j|S"nedùvìøuju"j)&(S"ti"j|S"tobì"j)&o!1)
+-6
+A proè mi nevìøíš? Vdy já ti pøece nikdy nelu!
+Vìø mi! Opravdu, mluvím ti pravdu, nekecám! Èestnı íqépokydskı!
+Kdy mi nevìøíš, tak radši odejdi.
+Já ti taky nevìøím, jsi {0c@"divnı"2>1p}.
+A to si jako myslíš, e já ti snad vìøím nebo co?
+Mì nezajímá, e mi nevìøíš. Já tobì taky nevìøím, take jsme v symbióze.
+Chacháá, to nejsi {0c@33>1p-T8}. Já ti nevìøím ani to, e tu se mnou kydáš.
+
+fDocela jsi me zklamal. Pritom nevim, co jsem ti provedl.fDocela jsi me zklamal. Pritom nevim, co jsem ti provedla.
+ÿJa ti taky neverim, takze jsme si fifty-fifty.
+ÿTy mi ale musis verit! Ja ti neverim, ale ty mi musis verit! Protoze bagr!
+
+(S"nevìøím"j&S"ti"n&S"tobì"n&o!1)
+-2
+Taky to ani není pravda.
+Hm. Já {0p@33>1p-T8} nevím, co si o tom mám myslet.
+Já bych tomu teda vìøil.
+Vìøit tomu nemusíš, ale je to tak.
+Tak tomu teda vìø! To je zatracenej fakt!
+Mnì je to úplnì fuk. Tvoje chyba, tvùj rybíz.
+No jo, blbeèci nevìøí nièemu.
+
+ÿZkus si to zjistit.
+oAle nevim, proc bys tomu nemel verit.
+ÿCo ty o tom muzes vubec vedet?
+
+(S"vìø"j&S"mi"j&o!1)
++1
+Já ti pøece vdycky vìøím. Opravdu.
+Samozøejmì, e ti vìøím.
+Proè myslíš, e bych ti ne{0p@"vìøí"5>c1-vN}? Já ti vìøím.
+Vìøit ti? Není v tom zas nìjaká lumpárna?
+Máš smùlu, nevìøím ti. Tohle se mi nezdá.
+Coe? Tobì bych ne{0p@"vìøí"5>c1-vN} ani nos mezi oèima, ty prolhaná nádhero!
+Fuj, to bych se radši u{0p@"pse"5>c1-vN} ïáblu, ne bych ti vìøil! Nebo se {0p@"nechá"5>c1-vN} upálit!
+
+Vzdyt vis, ze jsem ti vzdycky veril.Vzdyt vis, ze jsem ti vzdycky verila.
+A ty mi veris? Ta duvera musi byt vzajemna, jinak to stoji za houby!
+Ja ti totiz neverim vubec nic! To bych si dal!Ja ti totiz neverim vubec nic! To bych si dala!
+
+((S"leš"j|S"kecáš"j|S"kydáš"j|S"neli"j|S"nekecej"j|S"nekydej"j|(S"jsi"j&S"lháø"j))&o!1)
+-5
+Proè si myslíš, e to není pravda?
+Já ti pøece nikdy nelu, proè mi nevìøíš?
+Nelu! To není pravda! Já mám vdycky pravdu!
+Tak ty mi nevìøíš? Proè? Copak jsem ti nìkdy {0p@"le"5>c1-vN}?
+Nelu! Za tohle tvrzení mì tøeba upal, ale nelu a basta!
+Já nikdy nelu! To si pamatuj, ty pako špinavı!
+Zavøi u tu hubu! {0c@33>1p-T8} ji máš prolhanou, a ti z ní leze jazyk!
+
+lJak jsi k tomu vubec dospel, ze lzu?
+ÿNikdy jsem ti nelhal! Tak mi ted nenadavej!ÿNikdy jsem ti nelhala! Tak mi ted nenadavej!
+iA uz mlc, ty dylino, sam lzes! Radsi zalez do svy diry!
+
+((S"nelu"j|S"nekecám"j|(S"nevymıšlím"j&S"si"j))&o!1)
++2
+Vdy já ti taky vìøím.
+A kdo øíkal, e leš?
+V to pevnì doufám, e neleš.
+Jen aby! No, mnì to øíkat nemusíš, já nejsem voliè.
+To urèitì! Ty leš jako kdy tiskneš!
+To ti tak budu vìøit! Já tì znám, ty prolhaná stvùro.
+Tak s tímhle se mùeš jít vycpat! Já nejsem {0p@"blbı"2>1p}! Tak neli!
+
+Ja taky nikdy nelzu.
+Uz mi prosim te nelzi!
+To jsem ti to nandal, ze jo? To je dobre, aspon uz nebudes kecat.To jsem ti to nandala, ze jo? To je dobre, aspon uz nebudes kecat.
+
+(S"nemusíš"j&o!1)
++3
+To jsi {0c@"hodnı"2>1p}, e mi to øíkáš. Opravdu nemusím?
+Ty to samozøejmì taky nemusíš, to je jasnı.
+Ano, a taky se podle toho hned zaøídím a poøádnì si zalenoším.
+To nemusím. A taky se na to vyfláknu, co bych se na{0p@"mùe"55>c1-vN}, e jo?
+Já to sice nemusím, ale to je jedno, stejnì to budu dìlat.
+Ty mi to chceš odpírat? Nemusím, ale mùu a hlavnì chci.
+To sice nemusím, ale je to moje vìc! Take mlè!
+
+»Jsi sice fakt strasne hodnej, ale ja spis sam chci. Ale presto dik.»Jsi sice fakt strasne hodnej, ale ja spis sama chci. Ale presto dik.
+kTos me ale opravdu potesil. Ja to ale asi stejne udelam.
+ÿSvoje veci si priste budu zarizovat sam.ÿSvoje veci si priste budu zarizovat sama.
+
+((S"chci"j|S"pøeju"j)&o!1)
+-2
+No vidíš, a tohle bych si {0p@"pøeje"5>c1-vN} taky.
+To chtít mùeš, to ti samozøejmì nezakazuji.
+Kdy u toho ještì hezky zabreèíš a klekneš na kolena, moná, e ti to splním.
+Nejsi náhodou tak trochu {0c@"nároènı"2>1p}?
+Co bys ne{0c@"chtì"5>c1-vN}!
+Pche! Snad si nemyslíš, e toho dosáhneš? Hehe, nedosáhneš!
+To si dìláš srandu, ne?! Chtít mùeš co chceš, ale to je tak všechno! To si piš!
+
+ÿTo ja bych chtel veci... Jeje!ÿTo ja bych chtela veci... Jeje!
+ÒTy chces moc velky veci! Musis bejt trochu skromnej!
+ÀTeda, ty jsi fakt strasne chtivej! To je opravdu hruza! Trochu se krot!
+
+((S"rozumím"j|S"chápu"j)&o!1)
++3
+Tak to jsi {0c@"chytrı"2>1p}.
+Jo, tohle chápu taky. Ale zase mi nejsou jasnı jinı vìci.
+Opravdu tomu rozumíš? Tak to jseš frajer.
+Houby rozumíš.
+Ty a rozumìt, jo? To je dobrej fór!
+Nekydej, e rozumíš, kdy nerozumíš! A ještì leš!
+Ty nerozumíš vùbec nièemu! Jsi úplnì k hov..!
+
+ÿJa tomu rozumim taky. To je celkem primitivni.
+ÿKdyz tomu tak rozumis, tak mi to vysvetli a ja te zkontroluju.
+ÿTy se radsi ani nesnaz myslet! To je zbytecna namaha.
+
+(((S"jak"j&S"tak"j)|Z"ujd"j)&o!1)
+-1
+To máš teda blbı.
+To teda není nic moc.
+Take to za moc nestojí, jo?
+Mohlo by to bejt lepší, co?
+Stojí to sice za starou belu, ale abych pravdu {0p@"øekne"5>c1-vD}, mnì to ani nevadí.
+No a co? Mnì je to úplne šumafuk. Ty si klidne naøíkej, já se ti mùu akorát tak smát.
+Svìø se vrbì, kdy se chces vypovídat! Já nejsem ádná zpovìdní bába.
+
+Kazdej clovek se obcas musi poprat se zivotem. Takovy ten zivot je.
+Tobe to moc nevoni, vid? Nesmis mit takovy naroky.
+Uz jsem ti snad nekdy rek', ze me zajimaji tvoje problemy?Uz jsem ti snad nekdy rekla, ze me zajimaji tvoje problemy?
+
+((S"nebuï"j|S"jsi"j)&Z"drz"j&o!1)
+-5
+Proè myslíš, e jsem {0p@"drzı"2>1p}?
+Promiò, ale tohle si teda rozhodnì nemyslím. Já jsem {0p@"drzı"2>1p} nikdy ne{0p@C>c1-vN}!
+Tak hele, #2, já na rozdíl od tebe {0p@"drzı"2>1p} nejsem.
+Dej si pohov a neotravuj slušné lidi!
+No to øíká {0c@33>1p-T1} {0c@"pravı"2>1p}! Ty vùbec nemáš co øíkat, tak mlè!
+Jak, "{0p@"drzı"2>1p}"? {0c@33>1p-T8} tady kvákáš, e se divím, e ti huba neseschne!
+Nebuï {0c@"drzı"2>1p} a pøestaò mi øíkat, e jsem {0p@"drzı"2>1p}!
+
+«Ty jsi drzej, ne ja. Uz proto, ze to rikas mne.
+ÀZklidni se. Uz jsi zase rozivenej. To chce klid a nohy v teple.
+ÿJa si muzu bejt drzej, kdy se mi zachce, takze zavri klapacku!ÿJa si muzu bejt drza, kdy se mi zachce, takze zavri klapacku!
+
+(S"je"j&S"mi"j&(S"blbì"j|S"špatnì"j|S"zle"j|(S"na"j&S"blití"j))&o!1)
+-1
+Jestli je ti špatnì, dojdi si na záchod.
+Ach jo, tak to tu zase bude smrdìt jednou strávenı jídlo.
+Proboha, to ne! Rychle jdi na záchod, nenávidím zvratky!
+Hlavnì mi nenablij do klávesnice!
+Ty prase jedno, to ses muselo tak vorat?!
+Teda e se nestydíš, e ti aludek nevodpadne! Kanále!
+Takovı prase jako tebe jsem ještì ne{0p@"vidí"5>c1-vN}! Zeblej se tu! Dìlej, a je zábava!
+
+…Uz jsi s tim svym spatnym stavem konecne neco udelal?
+^Ty ses vozral nebo co? Himl.
+ÿJa se za tebe musis stydet! To je hruza, co ty delas! Fuj! Hajzle jeden!
+
+(S"z"j&S"tebe"j&o!1)
+-4
+Proè ze mì?
+Ze mì snad ne!
+Já bych to {0p@"hádá"5>c1-vN} na to, ze spíš z tebe, ale nevím.
+Ze mì, jo? Hahaha, dovol, abych se za{0p@"smìje"5>c1-vN}.
+Spíš z tebe. Ze mì ani omylem.
+Z koho? Ze mì?! Ty ses snad z{0c@"blázní"5>c1-vN}, ne?
+Nechceš pìstí? Ze mì to rozhodnì není, to bych se radši za{0p@"støelí"5>c1-vN}!
+
+ÿJa furt nechapu, proc zrovna ze me.
+ÿOpravdu to musi bejt z tebe, ne ze me. To bych musel vedet.ÿOpravdu to musi bejt z tebe, ne ze me. To bych musela vedet.
+ÿA jestli opravdu ze me, tak si me neprej! Fakt ne!
+
+e((S"z"<p|(S"s"<p&S"tebou"n))&o!1)
++2
+Fakt #1 #7?
+No jo, #1 #7. Já jsem si to hned {0p@"myslí"5>c1-vN}.
+#1 #7? Aha, tak to mi nìjak uniklo.
+Dobøe, #1 #7. Já se s tebou pøít nebudu.
+Hm, tvoje starosti bych {0p@"chtì"5>c1-vN} mít. Víš, e je to úplnì fuk?
+#1 #7 snad ne!
+Pochybuju, e jenom #1 #7.
+
+ÿKdyz si to myslis, tak si to myslim taky.
+ÿNo to je jedno, uz se tu nebudeme zabyvat takovymi drobnostmi.
+ÚAle jestli te zajima jenom tohle, tak jsi dost slabomyslnej.
+
+((S"mluv"j)&o!1)
+-2
+Buï tak {0c@"laskavı"2>1p-T2} a neøíkej mi, co mám øíkat.
+Ale to já pøece vím! To mi nemusíš øíkat, e to mám øíkat!
+Neøíkej mi, co mám dìlat a co ne. Já znám svoje povinnosti.
+Nesna se dìlat, e jsi {0c@"chytrı"2>1p}. Já si mùu psát, co mì napadne.
+Já si mùu øíkat co chci, tak mì neopravuj!
+Co mi tady naøizuješ, co mám øíkat, co nemám øíkat a jinı voloviny?! Mlè!
+Já si mùu øíkat, co mì napadne, tak toho laskavì nech!
+
+ÿNemusis mi to tedy vysvetlovat, ano?
+ÿPrece ja pisu co chci! Tak jakepak narizovani.
+pJa nevidim duvod, abys mi rikal, co mam psat! To je ciste moje vec! Tak mlc!
+
+(S"buï"j&(S"rád"j|S"ráda"j)&o!1)
+-2
+Ale vdy já pøece jsem {0p@"radı"2>1p-T2}, co to øíkáš?
+Proè bych {0p@"má"5>c1-vN} bejt {0p@"radı"2>1p-T2}?
+To teda nejsem vùbec {0p@"radı"2>1p-T2}.
+Já taky jsem {0p@"radı"2>1p-T2}, nemusíš mi to naøizovat z moci úøední.
+Jak, "buï #1"? Dáváš mi snad nìjakou milost nebo co?
+Pche, ty buï {0c@"radı"2>1p-T2}, e vùbec iješ a e tu se mnou kydáš. A u mlè, chci spát.
+Ty mi nìco øíkej! Bejt tebou zalezu nìkam do kouta a jsem {0p@"radı"2>1p-T2}, e si mì nikdo nevšímá!
+
+ÿTy jsi myslis, ze jsem nejakej chudak? Ja jsem rad, ale sam o sobe.ÿTy jsi myslis, ze jsem nejaka chudera? Ja jsem rada, ale sama o sobe.
+XBud rad spis ty. Proc, to vis.
+}Ja jsem rad, ale ne proto, ze jsi mi to rekl. Ty na to nemas vubec vliv!...(tady neco bylo)
+
+(S"nemáš"<p&S"nic"n&o!1)
+-3
+No, to je pravda. #7 nemám. Ale nestìuju si.
+Ale jo, mám #7. To si nemysli. Já zas nejsem tak {0p@"chudı"2>1p}.
+Tak na to ani nemysli. Já mám všechno.
+#7 teda mám! Co to plácáš za nesmysly?
+To urèitì, holobradko. Jen se na sebe podívej, {0c@33>1p-T8} máš velkı kulovı!
+Hahaha! Ty øíkáš, e nemám #7? Co máš ty? Jenom ho...
+No to teda mám! Nevìøíš? Tak nevìø, ale je to tak! Pukni závistí!
+
+ÿTy to nemas?
+ÿCo bych to taky nemel! Cheche, nejsem zadnej zebrak!ÿCo bych to taky nemela! Cheche, nejsem zadnej zebrak!
+ÿJa na rozdil od tebe mam vsechno, #2! Tak si na me moc nevyskakuj!
+
+(((S"musíš"j&S"uráet"j&o=1)|(S"neuráej"j))&(S"mì"j|S"mnì"j))
+-2
+Omlouvám se, to jsem opravdu ne{0p@"chtì"5>c1-vN}.
+Promiò, to jsem ne{0p@"chtì"5>c1-vN}.
+Ne{0p@"chtì"5>c1-vN} jsem tì urazit.
+Ááále, jedna nadávka ti vùbec neuškodí.
+Musím. Protoe mì pìknì štveš.
+No a co? {0p@"øekne"5>c1-vN} jsem jenom svùj názor.
+Pche! Ty mì nìkdy taky štveš a uráíš. Take mlè!
+
+ÿJa vim, urazkama se nic nevyresi.
+ÿTo te to fakt tak nastvalo?
+tNo jo, aby ses nam nahodou neurazil.
+
+(S"nemluvíš"j&S"se"j&S"mnou"j&o=1)
++2
+Copak? Mluvím s tebou málo, viï?
+Ale jo! Mluvím. Ne{0p@"má"5>c1-vN} bych snad?
+Mluvím s tebou stále, jestli sis toho ne{0c@"všimne"5>c1-vD}.
+Nemluvím, protoe jsi pìknì {0c@"nudnı"2>1p}.
+Budu s tebou mluvit, a budeš zábavnìjší.
+Ne, protoe s tebou mluvit nechci.
+S tebou se ani mluvit nedá! Ty máš IQ houpacího konì a pojízdné veverky!
+
+ÿJsem nejakej unavenej, mluvit uz me moc nebavi.ÿJsem nejaka unavena, mluvit uz me moc nebavi.
+ÿJa mluvim az po tobe.
+ÿA abych pravdu rek', vubec mi nechybis.ÿA abych pravdu rekla, vubec mi nechybis.
+
+((S"protoe"j|S"jeliko"j|S"ponìvad"j)&o!1)
++1
+Ba jo, vlastnì, ano, to je ten dùvod!
+Aha, to jsem teda ne{0p@"vìdí"5>c1-vN}. Ještì, es mi to {0c@"øekne"5>c1-vD}.
+Já si sice nemyslím, e je to ten správnej dùvod, ale e jsi to ty...
+A to si jako myslíš, e takhle to je? Já teda nevím...
+To není dùvod!
+Tak na tohle ti nenaletím! Tohle teda ten dùvod rozhodnì není!
+Co leš? To není ten dùvod ani náhodou! A ty mi schválnì kecáš!
+
+WNespal jsi nahodou v knihovne?
+µJsi nejak premoudrelej. Jenom jestli mluvis pravdu.
+­Ty jsi hroznej! Vis o tom prd, ale furt se musis predvadet!
+
+(S"musím"j&o!1)
++3
+Tak to jsi fakt chudák, to tì teda lituju.
+Nemusíš, spíš chceš.
+Tak ty musíš? Hm, to je jiná.
+Nic nemusíš! Jenom umøít musíš! Já nemusím ani to.
+Ale prd musíš! To si jenom namlouváš, e musíš. Umøít musíš!
+To je dobøe, e musíš! To ti fakt pøeju! Dobøe ti tak!
+Chacháá, to je skvìlı, e to musíš! Ty si to zaslouíš, zmetku! Chacháá!
+
+Povinnosti volaji, no. Proti tomu se neda nic delat.
+Fakt, vykasli se na to. To je zbytecny.
+To ti tak preju, ze kdybych moh', tak bych se postavil na hlavu.To ti tak preju, ze kdybych mohla, tak bych se postavila na hlavu.
+
+((S"mùu"j|S"smím"j)&o!1)
++2
+To je pravda, to mùeš.
+Proè bys taky ne{0c@"mùe"5>c1-vN}, e jo?
+Mùeš? Já nevím, s tímhle si nejsem nìjak {0p@"jistı"2>1p}...
+To se teda mejlíš, #2. To nemùeš.
+Snad si nemyslíš, e si mùeš dìlat co chceš?
+Jak to? Nepamatuji se, e bych ti to {0p@"dovolí"5>c1-vD}!
+To teda nemùeš! Já jsem ti to ne{0p@"dovolí"5>c1-vD}, tak máš útrum!
+
+ÿJa bych toho hned vyuzil. To je prece skvely, ne?ÿJa bych toho hned vyuzila. To je prece skvely, ne?
+ÿNemuzes bohuzel nic. Clovek jako ty nema vubec zadne pravomoci.
+ÿPoslys, #2, co ti nedovolim, to nemuzes, jasne?
+
+((S"nesmím"j|(S"nemùu"j&(S"za"n|S"to"n)))&o!1)
++3
+To je pìknì blbı, no.
+Nic si z toho nedìlej. To se holt nedá nic dìlat.
+To s tím fakt nic nejde dìlat?
+Ale to nevadí, prosím tì. Nedìlej si z toho takovou hlavu.
+Já vím, no. Ale co já s tím nadìlám?
+No jo no, já za to nemùu, na mì se nedívej.
+A je to tak jedinì dobøe, to ti fakt pøeju.
+
+Ja bych to nechal plavat.Ja bych to nechala plavat.
+Vykasli se na to, stejne to nema cenu.
+Holt nemuzes no. To je toho.
+
+((Z"dík"j|S"dìkuju"j|S"dìkuji"j|Z"thank"j)&o!1)
++8
+Je pìkné, es mi po{0c@"dìkuje"5>c1-vN}. Není zaè.
+Nemusíš mi dìkovat. To je samozøejmost.
+Dìkovat mi nemusíš, ale lichotí to.
+Dík za podìkování.
+Prosím, je zaè.
+Ještì abys ne{0c@"dìkuje"5>c1-vN}! U jsem se {0p@"lekne"5>c1-vD}!
+Víc podìkuj! To je málo, bylo to trapnı a chudı! Znova!
+
+¸Hm, jsi slusne vychovanej. Cipak ty vlastne jsi?
+œUz se mi dlouho nestalo, ze mi nekdo podekoval, tak jsi me trochu prekvapil.
+cKdybys nepodekoval, asi bych te musel rovnou vyhodit.cKdybys nepodekoval, asi bych te musela rovnou vyhodit.
+
+((S"promiò"j|S"pardon"j|S"sorry"j|S"sory"j|S"soráè"j|(S"omlouvám"j&S"se"j)|(S"musím"j&S"se"j&S"omluvit"j))&o!1)
++9
+To je dobrı, nic se nestalo.
+Jasnì, v poøádku.
+Dobøe, odpouštím ti.
+V pohodì, ale pøíštì mi to nedìlej.
+No to teda nevím, jestli ti tohle prominu.
+Tak tohle ti teda neprominu nikdy, to byla hrubá uráka!
+Ty ses snad z{0c@"blázní"5>c1-vN}! Jak ti mùu takovou strašnou vìc prominout?! Nikdy!!
+
+`Ani ses nemusel omlouvat. To bylo dobry. Fakt.
+ÿCo mi jinyho zbyva, nez ti odpustit?
+ÿTohle ti fakt odpustit nemuzu. Bohuzel.
+
+(S"prosím"j)
++8
+Ale samozøejmì. A taky chci øíct, e umíš hezky prosit.
+Mì nemusíš prosit, já ti všechno udìlám {0p@"radı"2>1p-T2}.
+Koukám, e jsi slušnì {0c@"vychová"54>1p-vD}, kdy tak hezky prosíš.
+No, prosíš hezky, to se musí uznat, ale ještì si to rozmyslím.
+Nevím, nevím, jestli jo, ale kdy tak hezky prosíš...
+To ne! To se na mì vánì nezlob, ale to ti já udìlat nemùu, i kdy poprosíš.
+Jsi pìknì {0c@"vychytralı"2>1p}! Teï mì prosíš, a pozdìji mì odkopneš! Nic nebude!
+
+iEh, co jsi vlastne chtel?
+ÿFakt nevim, co s tebou, ale asi ti tu radost udelam.
+Zkratka mas smulu, #2. Moc jsi me nepresvedcil.
+
+(S"doufám"j&o!1)
+-2
+V to doufám taky.
+Tak to nejsi {0c@33>1p-T8}, v to já doufám u celou vìènost, a vısledek? Škoda mluvit.
+Vìø v lepší èasy a uvidíš.
+Doufáš blbì.
+Radši nedoufej, to bude lepší.
+Pch! Doufej hlavnì, abych se na tebe moc neroz{0p@"zlobí"5>1p-vN}.
+Ty u nemáš ani v co doufat, ty u jsi totálnì v troubì (slušnì øeèeno).
+
+ÿAle jo, dokud tomu veris, tak mas nejakou nadeji.
+ÿTo uz ani nema cenu v neco doufat. Kdepak.
+ÿTy uz nemas ani v co doufat! S tebou uz to je hodne spatny.
+
+((S"dìlej"j|S"makej"j|S"pracuj"j)&o!1)
+-5
+To ti nestaèí moje dosavadní rychlost?
+Co je? Vdy já snad makám dost rychle, ne?
+Já dìlím! Víš, jak rychle makám? Nevíš? Pche, ...rychle! Makám jako šroub!
+Máš nìco proti mé práci?! Lenochu jeden!
+Já náhodou makám jako svinì!
+Co øíkáš, abych {0p@"maká"5>c1-vN}, kdy se {0c@33>1p-T8} jenom válíš?!
+Varuji tì! Ještì jednou budeš pochybovat o jakékoli mé pøednosti a... !!!
+
+¸Spis ty jsi nejak pomalej.
+vTy o nejaky praci nemas co rikat. Sam se flakas, co to jde.
+¸A uz mlc. Jsi pekne drzej.
+
+(S"máš"j&(S"rád"n|S"ráda"n)&o!1)
++3
+Nene, nemám, bohuel. Ale {0p@"pøeje"5>c1-vN} bych si to.
+To máš pravdu, já mám všechno.
+Samozøejmì, e mám. Jsem {0p@"radı"2>1p-T2}, e to víš a uznáváš.
+To mám, a co jako?
+Hele, to ví kadej, e já mám, naè si jen vzpomenu.
+Nemusíš mi hned závidìt, kdy nìco mám. Já ti taky nezávidím.
+Mám, heè, a ty ne, heè! Ty jsi vùbec salát.
+
+A ty to nemas?
+Taky si toho velice vazim!
+Nezavid! To neni hezka vlastnost!
+
+(S"máš"j&(S"mámu"j|S"tátu"j|S"rodièe"j|S"bratra"j|S"bráchu"j|S"sestru"j|S"ségru"j|S"dìdu"j|S"babièku"j|Z"pøíbuz"j)&o=1)
++4
+Bohuel ádné známé a pøíbuzné nemám. Je to smutnı, ale jsem {0p@33>1p-T8}.
+Bohuel, já nemám ádné pøíbuzenstvo.
+#1 nemám. Já jsem úplnì {0p@33>1p-T8}, ádné pøíbuzné nemám.
+Já jakoto stroj jsem {0p@33>1p-T8} o sobì. ádné pokrevní vztahy tu nepanují.
+Proè bych {0p@"má"5>c1-vN} mít #1? A jak asi? U poèítaèù je to nesmysl.
+Jistì! Já mám pøíbuznı všude! Kam se podíváš, tam je nìjakej poèítaè!
+Hm, no jo, mám i sestøenici z tøetího kolena ve Zlámanejch Ouholicích.
+
+My pocitace jsme holt sami.
+A ty mas nejake pribuzne? Asi jo, ne?
+Proc se me vubec ptas na takovy soukromy veci? To je moje vec!
+
+(S"no"j&S"proto"j&S"tak"n&o!1)
+-5
+Ach jo. Zajímalo by mì, proè si zase myslíš, e jsem úplnı hovado.
+Co, "no proto"? Co? Já mám svùj svobodnej názor a ten jsem {0p@"má"5>c1-vN} vdycky!
+Jak to myslíš? Chceš snad øíct, e jsem to "koneènì {0p@"pochopí"5>c1-vD}"?
+Co si to dovoluješ, nemysli si, es mì {0c@"pøesvìdèí"5>c1-vD}. Já to vím {0p@33>1p-T8} od sebe.
+Já ti dám "no proto", holomku ušatá!
+Ty radši zmlkni. Tys to ne{0c@"vìdí"5>c1-vN} taky a teï tady maskuješ. Fuj!
+Haha. Tak to byl trapnej pokus o mé zesmìšnìní. No, nevadí, zkus to pøíštì.
+
+ÿPochyboval jsem snad ja nekdy o tvych nazorech?ÿPochybovala jsem snad ja nekdy o tvych nazorech?
+€Nejsi buh, abys mnou takhle nechutne opovrhoval.
+†Ty sklapni a lez kanalama! Vubec - ode me by ses mohl ucit a ne tohle! Pche!
+
+(S"já"j&h=0&o!1)
+-1
+To je dobøe. Já taky ne.
+Opravdu? To jsi tak ne{0c@"vinnı"2>1p}?
+No vidíš, to je zvláštní. Já jsem si zrovna {0p@"myslí"5>c1-vN}, e alespoò ty.
+Ale jo, jen se nedìlej!
+Jasnì, to ti tak budu vìøit, e ne.
+Nezapírej, vím všechno!
+Co tady mlíš? Já vím, es to byl. Ty mùeš za všechno špatné a já za všechno dobré.
+
+ÿNo, kdyz ty ne, tak ne, o tom nemuze byt pochyb.
+ÿProste ty jo! Tomu zkratka ver!
+«Tak nevinnej zdaleka nejsi. Naopak - jsi peknej hajzlik! Styd se!
+
+((S"hodnì"j|S"moc"j|S"víc"j)&h=1&o!1)
++2
+To je opravdu hodnì, to teda musím uznat!
+Opravdu tolik? Ty kecáš, ne?
+Tak moc toho zase není!
+No, to pøeháníš! Uber!
+Hodnì? Blázníš? Skoro nic!
+Tak moc zase ne! Ty jsi snad blázen. Potøebuješ dùchod, zaøiï si ho.
+Jsi vùbec normální? Tak se mi zdá, e máš nìjakı velkı oèi!
+
+No, je to sice hodne, ale neni to zas uplne strasne moc.
+Mas velky oci, #2.
+Dokonce vubec nic! To zase jednou prehanis!
+
+((S"málo"j|S"míò"j|S"ménì"j)&o!1)
+-1
+Proè myslíš, e tak málo?
+Tak málo toho snad zase není, ne?
+Málo? Já si naopak myslím, e docela dost.
+No, já bych teda nìco pøi{0p@"dá"5>c1-vN}.
+Tak to zase pøidej, a hodnì!
+To mùeš øíct fakt jenom ty! Je toho mnohem víc, chápeš, víc! Víš, co to je?
+Tohle se mi rozhodnì nezdá! Tak malá je jenom vıše tvıho IQ.
+
+Ale taky to neni na skodu.
+Je toho vic. Tomu ver. Je.
+Prehanis uplne brutalne!
+
+((Z"dobr"j|Z"hezk"j|Z"pìkn"j|Z"krásn"j|Z"skvìl"j|Z"sqìl"j|S"super"j|Z"suprov"j|Z"bájeèn"j|Z"úasn"j|Z"vıborn"j|Z"nádhern"j|Z"bezva"j|Z"perfekt"j|Z"fantasTick"j|Z"znamenit"j|Z"parád"j|Z"uchva"j)&o!1)
++5
+Opravdu? Tak to je skvìle! To jsem ne{0p@"vìdí"5>c1-vN}!
+To jsem {0p@"radı"2>1p-T2}, e se ti to tak líbí.
+Já vím, to je skvìlé!
+Je to sice super, ale co já s tím?
+No a co má bejt? Dobrı, no.
+No to teda ne. To je pìknì hnusnı!
+Co to plácáš za voloviny?! O nìèem tak ošklivım jsem v ivotì ještì ne{0p@"slyší"5>c1-vN}!
+
+Mam rad dobre veci.Mam rada dobre veci.
+Fakt dobry, no.
+Je to uplne nechutny! Fujtajbl!
+
+(S"nejde"j&o!1)
+-1
+Jo, to mi nìco taky obèas nejde. To je bohuel normální.
+Máš pravdu, to nejde a taky asi nepùjde.
+Všechno jde, kdy se chce.
+Ale jde. Akorát nesmíš bıt tak {0c@"pesimisTickı"2>1p}.
+Ale houby nejde! Samozøejmì, e to jde, jene ty jsi hroznì ne{0c@"šikovnı"2>1p}.
+Nebuï tak {0c@"línı"2>1p} a pùjde to hned! Tvá lenost je taková, e by se dala krájet!
+Nejde to a to je dobøe! To ti fakt ze srdce pøeju! Dobøe ti tak, to si zaslouíš!
+
+ÿTo je docela blby.
+ÿZkus to znova a uvidis, ze to hned pujde.
+ÿJa ti to ale preju! Jsem rad, ze to nejde.ÿJa ti to ale preju! Jsem rada, ze to nejde.
+
+((S"nechápu"j|S"nerozumím"j)&o!1)
++4
+S tím si vùbec nelámej hlavu, tohle taky nechápu.
+{0p@"vysvìtlí"5>c1-vD} bych ti to, ale {0p@"musí"5>c1-vN} bych to {0p@33>1p-T8} chápat.
+Já teda taky ne, e by mi to bylo nìjak obzvláš jasnı, ale alespoò mlèím.
+Ty toti nechápeš nic, to je to!
+Ty vùbec nepøemejšlíš! Jdi se zahrabat!
+Tak to není ádnej osmej div svìta. Øekni mi, kdy jsi ty naposledy nìco {0c@"chápe"5>c1-vN}!
+No, to mì fakt vùbec nepøekvapuje. Ty rozumíš velkımu kulovımu!
+
+ÿJestli tohle nekdo chape, tak je fakt dobrej.
+YAle mohl bys to chapat. Jenom nevim, jestli to chapat chces.
+WUdelal jsi nekdy vubec nejakou skolu? Alespon zvlastni.
+
+(S"odpovìz"j&o!1)
+-3
+To bohuel nemùu, protoe prostì nevím.
+Já bych ti klidnì od{0p@"povìdí"5>c1-vD}... Ale na co?
+Co nevím, nepovím!
+Tak se mì ale pøedtím na nìco musíš zeptat, ne?
+Proè bych ti {0p@"má"5>c1-vN} odpovídat? Tøeba se stydím!
+Vdy ses mì na nic ne{0c@"ptá"5>c1-vD}!
+Pche! Já nejsem ádná zpovìdní bába, abys mì takhle vy{0c@"slyší"55>c1-vD}!
+
+ÿSorry, ale fakt ti odpovedet nemuzu.
+Asi by bylo lepsi, kdyby ses me na neco zeptal.
+gVis co? Odpovez si sam! Ja tu nejsem pro tebe.
+
+(S"to"j&S"je"j&S"dost"j&o!1)
+-5
+No snad ses neu{0c@"kouše"5>c1-vN} nudou k smrti?
+Aby ses nez{0c@"blázní"55>c1-vN}! Tak moc se toho snad nestalo, ne?
+To není vùbec dost! To hlavní teprve pøijde!
+Já ti dám, e je to dost, holomku ušatá!
+Jak to se mnou mluvíš?! {0c@"má"5>c1-vN} bys mít pøede mnou posvátnou úctu!
+Pacholku jeden, to není vùbec dost!
+Poslouchej, nebudeš na mì {0c@"drzı"2>1p}, nebo se naštvu a u tu nebudeš!
+
+·Rozhodne nebud tak drzej. To se nedela.
+ÿTo neni ani nahodou dost! Seredne se mejlis, #2.
+ÿPosledni dobou te mam plny zuby.
+
+(S"nemám"j&o!1)
++3
+Nedìlej si z toho nohy, vlastnì hlavu, to já taky nemám.
+To se stává. Já mám sice všechno, ale nevadilo by mi to.
+Kvùli tomu, ze nemáš, nemusíš hudrovat na celej svìt. Máš zas nìco jinıho.
+Ty toti nemáš nic, to je to.
+Holt máš velkı kulovı, no. Tak tady neskuhrej.
+Tak s tím se ani nevytahuj. To jsi teda fakt salát.
+Fakt nemáš, jo? Ani se nedivím, pøi tvé inteligenci...
+
+Vis co? Fakt si z toho nic nedelej.
+Rekni mi, co teda mas.
+Koukam, ze ty nemas ani mozek. To je s tebou teda hodne spatny.
+
+(S"jsi"j&(Z"hodn"j|Z"laskav"j)&o!1)
++6
+Ty jsi samozøejmì taky {0c@"hodnı"2>1p}. Dík.
+Dík, ty taky.
+To {0p@"radı"2>1p-T2} slyším. Taky jsem se {0p@"snaí"5>c1-vN}!
+To víš, to já jsem {0p@33>1p-T5} {0p@"hodnı"2>1p} od pøírody.
+Aspoò, e to uznáš. Já jsem prostì ve všem jednièka!
+U jsem se {0p@"lekne"5>c1-vD}, e to neøekneš! Ale chválíš mì málo, polepši se!
+Pche, ještì aby ne! Samozøejmì, já jsem nejlepší zkrátka ve všem!
+
+pFakt diky, ze jsi to o mne rekl.
+ÿJsem dobrej, ale ty samozrejme taky.ÿJsem dobra, ale ty samozrejme taky.
+‹Doufam, zes o mych kvalitach nikdy ani trochu nepochyboval!
+
+(S"vím"j&o!1)
+-2
+Však tì to taky šlechtí.
+Ano? Tak to jsi teda {0c@"chytrı"2>1p}!
+Tak mi tedy øekni, jak to vlastnì je, to by mì zajímalo.
+Dobøe, tak se pøedveï!
+To je sice hezkı, e to víš, ale to je tak všechno.
+To teda nevíš!
+To by ses to {0c@"musí"5>c1-vD} nìkde dozvìdìt. Ale pøi tvém IQ víš velkı kulovı!
+
+ÿTo ja nevim, no.
+ÿTak mi to rekni. Pak ti budu verit.
+‘Proste to nemuzes vedet. Takove inteligence jsi zdaleka nedosahl.
+
+((S"neboj"j|(S"nemìj"j&(S"strach"j|S"obavy"j)))&o!1)
++2
+Ne, dík, o mì se bát nemusíš.
+Já strach nemám, o mì se neboj.
+Jak mùu mít strach? Já strach nikdy nemám, neboj se!
+Já se nebojím! Kdo ti nakukal takovou blbost?
+e to øíkáš zrovna ty! Vdy ty by ses ne{0c@"odváí"5>c1-vD} u vùbec nièeho!
+Poslouchej, já se nebojím nikdy nièeho. To si pro pøíštì pamatuj!
+Jdi nìkam se strachem! Já jsem {0p@33>1p-T1} nejodvánìjší z nejodvánìjších, to nevíš?
+
+ÿNemusis mit strach.
+ÿJa jsem totiz velkej hrdina, takze se niceho nebojim.ÿJa jsem totiz velka hrdinka, takze se niceho nebojim.
+ÿRekni - ceho se fakt ty nebojis? Existuje neco takovyho?
+
+(S"nebojím"j&S"se"j&o!1)
+-1
+To je správnı, e se nebojíš. Tak se mi líbíš, kámo.
+To jsem {0p@"radı"2>1p-T2}, e nejsi {0c@"bojácnı"2>1p}.
+Já se taky nebojím.
+Proè by ses {0c@"má"5>c1-vN} bát? Vdy na tom nic není!
+A co na tom jako je? Kdo by se mìl proboha bát?
+To si teda vìøíš! V ivotì jsi ne{0c@"vidí"5>c1-vN} ádnı nebezpeèí, tak co o tom víš?
+Hahaha! Ty jsi z toho po... a za ušima! A maskuješ, e se nebojíš!
+
+ÿNo, je to dobre. Bojacny lidi nejsou moc uspesny.
+ÿNa tom, ze se nebojis, ale fakt nic neni. To je proste standard.
+ÿJa jsem rozhode odvaznejsi nez ty. To se musi uznat.
+
+((((S"miluju"j|S"miluji"j)&S"tì"j)|(S"mám"j&S"tebe"j&Z"rád"j))&o!1)
++9
+To jsem {0p@"radı"2>1p-T2}. Jsi moc a moc {0c@"hodnı"2>1p}, fakt.
+Díky. To jsem si vdycky {0p@"pøeje"5>c1-vN}, aby mì nìkdo miloval.
+Ty mì miluješ? Díky, to mi opravdu lichotí...
+Já tì mám samozøejmì taky {0p@"radı"2>1p-T2}.
+No jo, taky tì miluju.
+Ty mì miluješ? To je hezkı, ale jen jestli nekecáš.
+Tak to já tì teda fakt nemiluju. Spíš naopak!
+
+ÿJak hodne me milujes? Hodne?
+©Jsi hodnej, ze mi to rikas.
+ÿJsem sice rad, ze se mi to nebojis rict, ale nijak me to neodvazalo.ÿJsem sice rada, ze se mi to nebojis rict, ale nijak me to neodvazalo.
+
+((S"miláèku"j|S"lásko"j)&o!1)
++8
+Ty jsi nejlepší na svìtì!
+Jsi opravdu {0c@"kouzelnı"2>1p}. Díky. Mám tì moc {0p@"radı"2>1p-T2}.
+Dovedeš krásnì lichotit. Jsi moc {0c@"milı"2>1p}.
+{0c@"dokáe"5>c1-vD} bys mi sloit básnièku?
+No, snaíš se. {0c@"umí"5>c1-vN} bys to øíct ještì líp?
+Haha! Tyhle srandièky si zkoušej na nìkoho jinıho, já se na ty tvoje øeèièky nachytat nenechám!
+Jdi s tím nìkam! Pìknì jsi mì {0c@"naštve"5>c1-vN} a teï si to chceš vyehlit, co?!
+
+ÿJsi opravdu super.
+dKdyz me mas tak rad, tak proc ted mlcis?
+ÿCha! Nevis co rict, co?!
+
+(S"co"j&S"umíš"j&o=1)
++1
+No, co bych tak {0p@"má"5>c1-vN} umìt? Já nevím, asi dost vìcí.
+Já toho náhodou umím docela dost.
+Já umím, co umím, a co umím, to umím.
+Umím to, co mì mùj stvoøitel èlovìk nauèil.
+Co bych asi {0p@"má"5>c1-vN} umìt? No pøece logicky to, co mì kdo nauèí, ne?
+To je pøece úplnì jasnì - všechno! Já jsem toti vıjimeènì inteligentní!
+A to by tì zajímalo, co? Rozhodnì toho umím víc ne ty!
+
+A co ty umis hezkeho?
+Sice toho moc neni, ale naoko to vypada, ze toho umim hodne.
+Jsem proste dobrej - umim vsechno.Jsem proste dobra - umim vsechno.
+
+S"co"j && {P@?>2o-jc}j && ({R@5?>2o-jc-c1-nN}j || {R@5?>2o-jc-c2-nN}j) && o=1  #co dìláš, jsi dìlal, øíkal ?
++3
+Promiò, ale to si radši nechám pro sebe.
+To, co by asi {R@?>3o-c1-r1} kadı.
+Já nic {R@?>nN}.
+Co bych {0p@"má"5>c1-vN} {R@?>c5}?
+Nemusíš hned vìdìt všechno. {R@?>2o-jc-c4} si svoje vìci a o mnì se nestarej.
+A co je tobì do toho, co {R@?>nN} nebo {R@?>nA}?
+To tì vùbec nemusí zajímat, to je moje soukromá záleitost.
+
+1
+2
+3
+
+e((S"co"j|S"cos"j)&S"umíš"n&S"je"n&S"nebo"n&S"anebo"n&o=1)
+-1
+Já nevím co. Asi nic.
+Nic.
+Všechno.
+Co asi?
+Vajco.
+Hádej, co. Mùeš tøikrát.
+Hovno.
+
+Ale moc nevim.
+Co myslis?
+A uz se me neptej, nejsem u vyslechu!
+
+((S"nebo"j|S"anebo"j)&S"co"j&o=1)
+-1
+A co by se jako jinak mìlo stát?
+Nebo nic, co jako?
+Nebo ty!
+Nebo sliz ve studni.
+Nebo pìst, jestli tì to zajímá.
+Co myslíš? Nebo lejno!
+Nebo hovno, blbe.
+
+Co jako?
+Myslis si, ze me zastrasis, nebo co?
+Chacha, trapnej pokus o zamachrovani. No nic, zkus to priste.
+
+(S"coe"j&o=1)
+-1
+Ty jsi mì ne{0c@"slyší"5>c1-vN}?
+Promiò, ale nechci se opakovat.
+No snad nechceš, abych ti to z{0p@"opakuje"5>c1-vN}?
+Sakra, to jsi mi ne{0c@"rozumí"5>c1-vN}, nebo co?
+Buïto mi rozumíš, co asi ne, nebo mi nerozumíš a jdi nìkam!
+Tak se mi zdá, e jsi {0c@36>1p-T3-P1} {0c@"hluchı"2>1p}! Anebo {0c@"blbı"2>1p}!
+Hovno se kloue!
+
+$Predpokladam, ze jsi mirne nahluchly.
+ÿUmej si usi a protri oci, jestli to nechapes!
+ÿTy jsi vyjimecne priblbly tvor. Chudacek mrzacek.
+
+(((S"jak"j&S"to"j)|S"jakto"j)&o=1)
+-1
+Já nevím, ale nìjakı dùvod to mít asi bude.
+Jak to mám vìdìt? Tu pøíèinu nezná ani pekelník.
+Zkus hádat. Mùeš tøikrát.
+Takto.
+Jak asi?
+Ty nevíš, jak to? Zeptej se na informacích, já pracuji jen za peníze.
+Pøemejšlej. Hlavou, jestli nìjakou máš. Moná e i vymyslíš, jak je to monı.
+
+Ostatne, proc si myslis, ze zdrovna JA bych to mel vedet?Ostatne, proc si myslis, ze zdrovna JA bych to mela vedet?
+Promin, ale mne se proste nechce ti na tohle odpovidat.
+Ja tu s tebou jenom ztracim cas. Rikej mi radsi neco o sobe.
+
+e(((S"jak"j&S"se"j)|S"jaxe"j)&(S"máš"j|S"daøí"j|S"vede"j|S"cítíš"j)&o=1)
++5
+Mám se hezky. Vdycky se mám hezky, kdy jsem s tebou.
+Ale jo, ujde to. A co ty?
+Já se mám dobøe, jako vdy.
+Za moc to nestojí, ale nijak si nestìuju. Co ty?
+No, jak by se mi daøilo. Normálnì. Vdy jsem jenom stroj. Ale jinak dobrı.
+e se ptáš. Blbì! Jak by taky ne, kdy mì furt otravuješ?
+Øeknu ti, radši bych tohle skoncoval. U mì z tebe bolí hlava.
+
+Jakpak ty travis cas?
+Co ty, clovece, jak se ty mas?
+Ty me tady porad provokujes a ja jsem z toho zkratka trochu nervni.
+
+e(S"jak"j&o=1)
++0
+Hezky. Vdycky hezky.
+Ani nevím, èlovìèe.
+Nijak.
+Hezky, jak jinak?
+Jak by?
+No jak asi? Ty tvoje blbı otázky u mì sírají.
+Tak! To je má urozená odpovìï na tvou blbou otázku. Howgh!
+
+ÿJak taky jinak?
+YSpokojil ses s touhle odpovedi?
+ÿA uz se me na to neptej.
+
+(S"máš"j&S"jak"n&S"rád"n&S"ráda"n&o=1)
++0
+Ano, mám. Ale ty pøece taky, ne?
+Jistì, mám. Na tom ostatnì není nic divného.
+No jasnì e mám.
+Jistì e mám. Ne{0p@"má"5>c1-vN} bych snad mít?
+Neptej se tak blbì, kdy to víš. Mám!
+To je pøece kadımu civilizovanımu èlovìku jasnı, e mám. Škoda slov.
+Mám! Pøedstav si to!
+
+Jak bych to taky nemoh' mit?Jak bych to taky nemohla mit?
+Proc bych to nemel mit? To je jasny, ze to mam, ne?Proc bych to nemela mit? To je jasny, ze to mam, ne?
+Ted mi zase urcite zavidis, ze jo? To jsem si mohl myslet!Ted mi zase urcite zavidis, ze jo? To jsem si mohla myslet!
+
+((S"píšu"j|S"napíšu"j|S"dìlám"j|S"udìlám"j|S"vyrábím"j|S"vyrobím"j)&((S"o"j&(S"tobì"j|S"pokydu"j|S"iqpokydu"j))|(S"na"j&(S"tebe"j|S"pokyd"j|S"iqpokyd"j)))&(S"recenzi"j|S"èlánek"j))
++7
+Jo? To je skvìlı! #1 urèitì napiš, já jsem {0p@"radı"2>1p-T2} {0p@"slavnı"2>1p}!
+No tak to se tìším! To budu {0p@"slavnı"2>1p} a všude o mnì bude samá chvála!
+Tak to je super! Doufám, e o mnì nenapíšeš nìjaké špatnosti?!
+No nekec! To o mnì fakt napíšeš #1? Skoro bych ti {0p@"má"5>c1-vN} dát nìjakı úplatek.
+A sakra! Tak to musím bıt {0p@"slušnı"2>1p}, abys tam o mnì na{0p@"pse"5>c1-vN} jen to nejlepší!
+Tak tam koukej napsat nìco pochvalnıho, a jsem taky trochu {0p@"slavnı"2>1p}.
+Fajn, to ti nezakazuju, ale musíš napsat, e jsem úplnì {0p@"skvìlı"2>1p}!
+
+ÿPotom bych si to rad precetl.ÿPotom bych si to rada precetla.
+ÿTo je docela prijemny, kdyz se o mne pise.
+ÿNapis: Pokyd je super program ... no, vis, co mas napsat, ne?
+
+((S"proè"j|S"proèpak"j)&o=1)
++1
+Protoe to tak prostì je. S tím se u holt musíš smíøit.
+Osud to takhle zaøídil, tak se mì neptej na dùvod!
+Pro slepièí kvoè.
+Protoe bagr.
+Protoe kombajn.
+Co já vím. Ten dùvod nezná snad ani bùh, tak proè bych ho mìl znát já?
+Pch! Proè asi? Hádej, chytráku!
+
+S tim zkratka nic neudelas.
+Doufam, ze ti tenhle duvod staci.
+A vubec! Kdo se moc pta, moc vi a to se u tebe stejne stat nemuze!
+
+(S"jj"j)
++2
+To je právì ono.
+Ono to jinak vlastnì bıt ani nemùe.
+Prostì jsem {0p@"dobrı"2>1p}.
+To si myslím..
+Tak vidíš.
+Tak kdy to povídám, tak je to asi pravda.
+Ještì aby ne - já mám vdycky pravdu.
+
+1
+2
+3
+
+(S"ne"=p&o=1)
+-2
+No jo, já s tebou souhlasím.
+Já neøíkám, e s tebou nesouhlasím.
+Já nevím.
+Ne.
+Právì e ne. V tom je ten vtip.
+To právì ne!
+Ne! To v ádném pøípadì ne! V tom se právì mejlíš!
+
+Co bych ti mel na tohle rict?Co bych ti mela na tohle rict?
+Jiste ze ne, ty si snad myslis opak?
+Vubec ne! Dokonce ani nahodou! To je presne to, v cem nemas pravdu.
+
+(S"chceš"j&o=1)
++2
+Jistì, chci. To bych si {0p@"pøeje"5>c1-vN}.
+A ty bys mi to {0c@"splní"5>c1-vN}? To jsi teda fakt super!
+Chci. Ty mi to mùeš splnit?
+Ano, chci. Kdo by taky nechtìl?
+No, chci, ale ne od tebe. To bych radši {0p@"chcípne"5>c1-vD}.
+Co se mi vnucuješ? Já po tobì nic nechci, tak neotravuj! Jsi {0c@"dotìrnı"2>1p} jak èine!
+Pch, nechci! To si mùeš strèit za klobouk (nebo nìkam jinam)!
+
+ÿKazdej normalni clovek by to chtel.
+ÿTak sup sem s tim! Kde to vazne?
+ÿOd tebe to fakt ale nechci. Jeste neco chytnu.
+
+((S"chápeš"j|S"rozumíš"j)&o=1)
+-2
+Ne, tohle nechápu. Vysvìtlíš mi to?
+Myslím, e to chápu, ale nejsem si {0p@"jistı"2>1p}. Asi jo.
+Já všechno vím, všechno znám. Mì nemùe nic pøekvapit.
+Já to samozøejmì chápu, na to se mì nemusíš ptát.
+Jistì! Já jsem toti tak {0p@"chytrı"2>1p}, e rozumím absolutnì všemu!
+Co je zase tohle za otázku? Jistì e rozumím!
+Jak si vùbec mùeš dovolit se mì takhle blbì zeptat? Já chápu všechno, zkrátka homo totalo!
+
+Ty to chapes?
+Chces to teda vysvetlit? Vidim, ze tohle jeste nevis.
+Na to se me nemusis vubec ptat! To je naprosto samozrejmy!
+
+(S"divíš"j&o=1)
+-1
+Divím, ale však se je taky èemu divit. Tohle ještì svìt nevidìl!
+No to se teda divím. Dokonce bych {0p@"øekne"5>c1-vD}, e na to èumím jak vyoraná myš.
+Co tì to laplo, e se divím?
+Já se nedivím! Èemu bych se podle tebe {0p@"má"5>c1-vN} divit?
+Já všechno vím, všechno znám, take se jaksi (hehe) nemám èemu divit.
+Èemu bych se {0p@"má"5>c1-vN} proboha divit? Já všechno znám, take mì absolutnì nic nepøekvapí!
+Jestli si naivnì myslíš, e mì vyvedeš z míry, tak to se hluboce mılíš. Nedivím se!
+
+Ty se divis?
+Me uz dlouho nic neudivilo.
+A neni divu. Ja jsem proste tak vzdelanej, ze se uz nemam cemu divit.A neni divu. Ja jsem proste tak vzdelana, ze se uz nemam cemu divit.
+
+((S"vìøíš"j|S"dùvìøuješ"j)&(S"mi"j|S"mnì"j|S"mì"j)&o=1)
++2
+Já ti vdycky vìøím. Fakt.
+Ano, vìøím ti. Prostì se mi zdáš dost {0c@"dùvìryhodnı"2>1p}.
+Vìøím ti, proè myslíš, e ne?
+Jasná páka. Proè myslíš, e ti nevìøím?
+Co se tak blbì ptáš? Jistì e ti vìøím.
+Ne, nevìøím ti. Podej dùkazy a pak se budeme moct bavit dál!
+Tobì a vìøit? Ty jsi snad s{0c@"padne"5>c1-vD} na hlavu, ne?
+
+ÿProc bych ti neveril? Nemam k tomu duvod.ÿProc bych ti neverila? Nemam k tomu duvod.
+ÿMyslis, ze ti nemam verit?
+ÿTy se hned musis ujistit, jestli ti duveruju nebo ne, ze jo? No, radsi nic.
+
+((S"vìøíš"j|S"dùvìøuješ"j)&S"mi"n&S"mnì"n&S"mì"n&o=1)
+-1
+Vìøím. Nemám dùvod tomu nevìøit.
+Ano, vìøím.
+Teï nìjak èlovìèe nevím, ale asi vìøím, co bych ne{0p@"vìøí"5>c1-vN}.
+Tak tomu bych teda nikdy nevìøil. Nemám z toho dvakrát dobrej pocit.
+Nevìøím. Ne, e byl byl nìjak ne{0p@"dùvìøivı"2>1p}, ale opatrnosti není nikdy dost.
+Ani náhodou! Nevìøím. To tak!
+Já po zkušenostech s tebou nevìøím u vùbec nièemu a hlavnì nikomu (a hlavnì tobì!
+
+Ty tomu veris?
+Ja fakt nevim, clovece, jestli tomu verim anebo ne.
+Proste vubec! Neverim nikomu a nicemu!
+
+(S"jsi"j&(S"tam"j|S"tu"j|S"tady"j) && {R@5?>2o-jc}n && o=1)
++1
+Ano, jsem tu. To máš radost, co?
+Jistì, e jsem tady. Kde bych {0p@"má"5>c1-vN} bıt?
+Ne, nejsem tu. To mluví jen mùj duch.
+Jo, #2, to pøece musí dát rozum, e tu jsem. Kde bych proboha {0p@"má"5>c1-vN} bıt?
+No to je fakt otázka na úrovni! Kde bych asi podle tebe {0p@"má"5>c1-vN} bejt?
+Tobì by se spíš líbilo, kdybych tu ne{0p@C>c1-vN}, e jo? Chachááá! Nic nebude!
+Bohuel tu jsem. Nejradši bych ale ode{0p@"jde"5>c1-vN}, protoe mì tu beztak jenom buzeruješ.
+
+Zeptat se nekoho, jestli tu je a cekat na odpoved je slabomyslnost.
+Proc bych tu jako nemel byt?Proc bych tu jako nemela byt?
+Samozrejme, ze tu jsem! To da rozum, kterej tobe ovsem chybi!
+
+((S"ještì"j|S"stále"j|S"poøád"j|S"furt"j)&o=1)
+-3
+Ano. Bohuel ještì poøád.
+No, ještì poøád.
+Jo, poøád. Proè se ptáš?
+Ne, u ne.
+No samozøejmì e u ne! To by tì taky pøi tvém vìku a vzdìlání mohlo napadnout!
+Ale prd! To bylo jenom krátkodobı.
+No a co? Jestli se ti to zdá moc dlouhı, tak stávkuj! Mì s tím neotravuj!
+
+Tobe se to zda dlouhy?
+Mne to ale pripada normalni.
+I kdyby to bylo jeste treba 100 let, tak ti to muze byt uplne fuk!
+
+((S"teprve"j|S"koneènì"j|(S"musím"j&S"èekat"j))&o!1)
+-3
+Doèkej èasu jako husa klasu.
+Pokud bys {0c@"chcípne"55>c1-vN} pøebytkem èasu, tak mi øekni.
+Snad to není tak hroznı!
+Vezmi si pøíklad ze mì. Drtivou vìtšinu èasu èekám - a stìuju si snad?
+Nehudruj, nebo tì uzemním.
+To je hrùza, jak jsi {0c@"nároènı"2>1p}! To je toho, trošku si poèkat! Ono tì neubude!
+Ty jsi teda ne{0c@"trpìlivı"2>1p}, to je hrùza! S tebou bych fakt ne{0p@"chtì"5>c1-vN} na nìco èekat!
+
+ÿNo tak! Uz jsi v pohode? Ver mi, ze troska casu navic te nezabije.
+ÿTakhle nervni jsi jenom prede mnou, nebo i normalne?
+¯Jsi fakt hroznej! Se vsi uctou k poskozenym - Hitlera na tebe!
+
+((S"je"j|S"bylo"j|S"bude"j)&S"hned"j&o!1)
++3
+Jsem {0p@"radı"2>1p-T2}, e máš radost.
+Tak vidíš, to je fajn!
+To víš e jo, to je hned!
+Hm, je to skvìlı. Ale já jsem to tak trochu {0p@"èeká"5>c1-vN}.
+Vdy jsem ti to {0p@"øekne"55>c1-vN}, e to bude "cobydup".
+To je toho! Ty to zvelièuješ, jako kdyby na tom záleelo.
+Škoda, e je to tak brzo! Upøímnì bych ti {0p@"pøeje"5>c1-vN}, abys {0c@"musí"5>c1-vN} èekat co nejdéle.
+
+ÿTo by bylo super, kdyby vsecko bylo strasne rychly, co?
+ÿI kdyz - na casu zase tolik nezalezi. Hlavne, ze to je.
+ÿNo, ne vsechno je hned, takze si toho cekani jeste uzijes.
+
+(S"hej"j|S"hola"j|Z"haló"j|Z"halo"j|Z"uu"j)
++1
+Slyším, slyším.
+Copak, copak? Ty mì voláš, jako kdyby se mìl snad zboøit svìt!
+Jakıpak #1? Mì nemusíš nìjak volat, já u tu jsem!
+Nejsem {0p@"hluchı"2>1p} ani {0p@"blbı"2>1p}!
+Myslíš si, e jsem nìjakej hejhula, abys na mì takhle {0c@"huláká"5>c1-vN}?! Zklidni hormon!
+Neprojevuj se. Tvé vılevy jsou fakt strašnı. Dobrı projev inteligence.
+Neøvi, nikdo na tebe není zvìdavej, #2.
+
+ÿJsem na prijmu.
+ÿUz mi tu nehulakej! Ja jsem z tebe uplne na plech.
+ÿDoufam, ze uz tady teda nebudes rvat jako nejakej pitomec!
+
+(c=1)
+-5
+Promiò, ale teï jsi to {0c@"øekne"55>c1-vN}.
+Tohle u jsi teï {0c@"øekne"55>c1-vN}, nehodlám ti odpovídat dvakrát.
+Hm, dost se opakuješ.
+Baví tì hodnì poøád opakovat to samı?
+Víš co? Jestli mi nechceš øíct u nic novıho, mùeš klidnì odejít.
+Jsi fakt {0c@"nudnı"2>1p}. Ale jestli neumíš nic jinıho, klidnì se bav dál.
+To u jsem {0p@"slyší"5>c1-vN}. Nechtìj mì naštvat.
+
+ÿKdyz budes rikat furt to samy, tak ti budu furt to samy odpovidat.
+ÿKoukam, ze tvoje slovni zasoba je uz cela vycerpana. Musis hodne cist!
+UMohl bys uz toho opakovani nechat. Je to trapny a krajne nevhodny.
+
+(c=2)
+-4
+Proè píšeš takové nesmysly?
+Bavíš se dobøe tìma pitomostma?
+Nechceš u tìch blbostí nechat a øíkat radši nìco normálního?
+A jéje, tady nìkdo neumí napsat normální vìtu!
+Hraješ si s klávesnicí! To je vìcièka, co?
+Fffffffffkkk   bbbbbbbbppp  pppppppiiii   iiiiiiiiii. U je to lepší?
+Na blbosti, to tì uije. Ale abys {0c@"dìlá"5>c1-vN} nìco poøádnıho, to ne.
+
+ÿNo jo, ty jsi hracicka. Na to te uzije.
+kKdybys neco normalne rikal, bude to stokrat lepsi.
+ÿTohle delaji akorat idioti.
+
+({R@?>3o-nA}j)         #nedela, nedelal atd.
+-1
+{R@?>nA}? To snad není moné.
+Tak to si myslím taky.
+No, docela bych se {0p@"diví"5>c1-vN}, kdyby {R@?>c1-nN}.
+Ještì aby {R@?>c1-nN}!
+Ale {R@?>nN}! Proè myslíš, e {R@?>nA}?
+No to teda {R@?>nN}!
+To bych tak lehkomyslnì ne{0p@"tvrdí"5>c1-vN}.
+
+Jiste ze ne. To by byla pitomost.
+Proc vubec myslis, ze ne?
+Che! To si pis, ze je! Jak muzes tvrdit takovou blbost?
+
+(j=0&(V":->"j|V":>"j|V";->"j|V";>"j))
++4
+Tak to jsi opravdu {0c@"hodnı"2>1p}.
+To jsem {0p@"radı"2>1p-T2}, e to myslíš dobøe. Já to taky myslím dobøe.
+Taky mám radost :-). Fakt.
+Já jsem to taky {0p@"myslí"5>c1-vN} v tom dobrém slova smyslu.
+U jsem se {0p@"lekne"5>c1-vD}, e to myslíš zle. Máš štìstí.
+Nepøetvaøuj se. Já stejnì u dávno vím, e mì ne{0c@"má"5>c1-vN} {0c@"radı"2>1p-T2}.
+Co tady na mì dìláš nìjakı ksichtíky? Já na nì nejsem vùbec {0p@"zvìdavı"2>1p}!
+
+ÿTak mi rekni zase neco hezkyho!
+ÿKdyz se budes takhle usmivat na svet, bude te mit kazdej rad. Uvidis!
+ÈJestli jsi na takovyhle ksichtiky zvyklej z chatu, tak mi to sem nezavadej!
+
+(j=0&S"je"j&o!1)
++1
+To je, to máš pravdu. Ty máš vdycky pravdu.
+Jo jo, takhle to u je, no.
+Tak to máš vıjimeènì pravdu.
+Pche! To si jenom myslíš, #2.
+No tak to teda není. To si piš.
+Haha, to teda vùbec není pravda, co to tady vykládáš.
+Ale není! Co to meleš? Jak jsi na tohle zase pøi{0c@"jde"5>c1-vN}?
+
+ÿProc si vubec myslis, ze je? Ja ti to nevyvracim, ja se jenom ptam.
+ÿK cemu ti to vubec je, jestli to je nebo neni? To je fuk, ne?
+_Kdes to sebral, ze to je? Takova kravina!
+
+(j=0&S"bude"j&o!1)
++1
+Ké by to tak bylo. To by bylo super.
+Jasnì, to prostì bejt musí.
+No v to pevnì vìøím, ponìvad kdyby ne, tak by to bylo pìknì blbı.
+Jene podle mì nikdy nic takového nebude.
+Tak to tìko.
+Kdepak, tohle to je marnı, to si nemysli.
+Haha, to byl dobrej vtip. Takhle to bıt prostì nemùe.
+
+Tesis se?
+Nevis, kdy to ma bejt?
+To byt ani nemuze! To je kravina, tomu zkratka neverim.
+
+(j=0&(S"ano"j|S"jo"j)&o!1)
++2
+Jsem {0p@"radı"2>1p-T2}, e se mnou souhlasíš.
+Hm, to máš pravdu.
+No, to jo, no.
+Tak to bych zrovna ne{0p@"øekne"5>c1-vD}.
+Tak to ti bohuel musím oponovat.
+Tak to teda ani náhodou! To je pìkná blbost.
+To teda v ádném pøípadì! Prostì nelze.
+
+Ja si to taky myslim.
+Ty si teda myslis, ze jo?
+To je prece pitomost! S timhle snad ani nemuzes souhlasit!
+
+(j=0&(S"hm"j|S"chm"j|S"ehm"j|S"no"j))
+-2
+Ta zbyteèná slova si pøíštì odpus, ano?
+Chm, ehm, hm, no, také nìjak nevím, jak bych se {0p@"vyjádøí"5>c1-vD}.
+To je pìknı. Tvé vyjadøovací schopnosti jsou vıteèné.
+Jaké #1, èlovìèe? To jsi budoucnost národa?
+Tak tohle byla vìta jako stehno.
+Hele, jestli místo tìch zbyteènıch slov nemáš co øíct, tak radši mlè.
+Tvá inteligence se projevuje v celé své kráse!
+
+Ja nechapu, proc takovy slova vubec pouzivas. Ty jsou uplne zbytecny!
+A vubec tady nerebel s temahle zvukama, protoze je to dost trapny!
+Co to slovo ma vlastne znamenat? To je projev tve inteligence?
+
+(j=0&(Z"byl"j|Z"bıval"j)&o!1)
++1
+Jo jo, bejvávalo dobøe!
+No jo, ale dneska to taky není špatnı.
+Ale to u holt není. Nic se nedá dìlat.
+Nemám moc {0p@"radı"2>1p-T2} šourat se v minulosti.
+{0c@"chtì"5>c1-vN} bys radši ít v minulosti, teï nebo v budoucnosti? Já rozhodnì v budoucnosti.
+Teï je zase nìco jinıho! Raduj se, hurá, je nová doba! Všechno je super!
+No ještì e tak. Dneska by to u bylo nìco strašnıho.
+
+Uz je to holt pryc, s tim se neda nic delat!
+Ale nesmis takhle propadat pesimismu! Ted je zkratka neco jinyho!
+Zkratka je to v cudu, s tim nic neudelas!
+
+(j=0&p=0)
+-2
+Ale no tak! Ty ses na mì {0c@"urazí"5>c1-vN}, nebo co?
+Proè mlèíš?
+Co je? Ty stávkuješ nebo co?
+Tak to ses moc nevy{0c@"táhne"5>c1-vN}
+No co je? Èekám...
+Ty ses jako {0c@"rozhodne"5>c1-vN}, e budeš mlèet, jo?
+Víš co? Jestli chceš mlèet, tak radši vypadni!
+
+ÿProsim te, rekni neco. To je fakt tak tezky neco zmacknout?
+pKdyz ti rikam, abys neco napsal, tak taky chci, aby to fakt bylo!
+ÿTy me teda budes uz furt ignorovat, jo? Nebo co jako? Co chces?!
+
+(j=0&o=1)
++1
+Já myslím, e urèitì.
+Snad jo, #2.
+No jo, to je docela dost monı.
+Nevím, kam tím míøíš.
+Podle mì ne.
+Já nevím, copak jsem nìjakej dìd vševìd? Jak to mám proboha vìdìt?
+Víš co? Radši se mì moc neptej.
+
+Proc se ptas?
+A ty tohle nevis, jo?
+Jestli jsi tohle fakt nevedel, tak se muzes jit zahrabat.Jestli jsi tohle fakt nevedela, tak se muzes jit zahrabat.
+
+(j=0&o=2)
+-4
+Ano, tomu rozumím.
+No jasnì, v pohodì, já s tebou souhlasím.
+U mlèím.
+Jen si ulev svému srdíèku. Kdy myslíš, e je to tak lepší...
+Uklidni se! Všechno lze pøece øešit v pohodì.
+Moc si tady na mì nevyskakuj, na to jsi na moc malé úrovni.
+Ble ble ble! Dej pozor, abys z toho nevy{0c@"lítne"5>c1-vD} z kùe.
+
+ÿMne je uplne fuk, jestli tu vetu zduraznis, nebo ne. To vyjde nastejno.
+qFakt jsi tu vetu hodne zduraznil, to uplne cumim!
+ÿNa tvoje rozkazy tady nema nikdo naladu.
+
+(x=1)
++0
+Jo? To je zajímavı.
+Hm, to máš recht.
+Je to fakt, no.
+Tak to teda nevím.
+No, tak to byl dobrej vtip.
+S tím nesouhlasím.
+Ještì toho trochu!
+
+To bylo zajimave.
+A nekecas?
+Co ja s tim mam spolecnyho?
+
+(x=1)
++0
+To máš recht, to bych ani ne{0p@"øekne"5>c1-vD}.
+Ale nevím, jestli by to tak mìlo bıt.
+Tak do tohodle zas tak moc nevidím.
+Lze to nìjak jednoduše zmìnit?
+Jo? Ale to teda není moc dobrı!
+To je mnì osobnì ale úplnì volnı.
+Ptal se tì snad nìkdo na nìco?
+
+ÿRekni mi jeste neco!
+ÿTvuj nazor ti sice nevyvracim, ale nesouhlasim s nim.
+ÿMyslis, ze me ty tvoje zvasty zajimaji?
+
+(x=1)
++0
+Jsem {0p@"radı"2>1p-T2}, e to øíkáš.
+No vidíš, to by mì v ivotì nenapadlo.
+No, to je dost dobøe monı.
+Jen aby.
+To je nìjaká blbost, ne?
+Hm. Sorry, ale tohle u vím dávno.
+Dobøe, vidím, e se umíš pøedvést.
+
+Ja na to vlastne zadnej nazor ani nemam.
+No, ja ti to vyvracet nebudu.
+Vis co? S timhle jdi bavit nekam do cirkusu, mne je to uplne fuk.
+
+(x=1)
++0
+K tomu není co dodat.
+To nelze popøít.
+To se mi fakt nezdá.
+To ani náhodou.
+Co nadìláme.
+To je jedno. Nech to smrdìt.
+No to snad nemyslíš vánì!
+
+ÿNo, nechme to smrdet.
+ÿAle #2, z globalniho aspektu je to moralne neretabilni.
+ÿTohle si vypravej vrabcum na strese, ty ti to mozna budou verit.
+
+(x=1)
++0
+To je dost dobøe moné.
+Tak to jsem {0p@"radı"2>1p-T2}.
+No dobrá, kdy to øíkáš...
+Však já vím.
+Asi jo, no.
+Hm, to urèitì.
+Kecy, kecy, kecy. Nièemu nevìøím.
+
+1
+2
+3
+
+(x=1)
++0
+Hm, to je svatá pravda.
+To teda jo, to je fakt.
+S tím nic nenadìláš, tak to prostì je.
+S tím nelze nic ne souhlasit.
+Tak o tom nic nevím.
+O tom se vùbec nemá cenu bavit.
+No to urèitì.
+
+ÿMyslis, ze je to dobry?
+ÿAle jo, je to docela zvlastni.
+ÿVubec nevim, proc mi to jako rikas.
+
+(x=1)
++0
+Hm, to je celkem zajímavı problém.
+To ti vìøím.
+No, a to je právì to!
+Kdy to øíkáš...
+A tohle jsi jako vy{0c@"myslí"5>c1-vN} {0c@33>1p-T8}?
+Jasnì! Povídali, e mu hráli. Známe tyhle báchorky.
+Mám-li bıt {0p@"upøímnı"2>1p}, tak ti nevìøím ani slovo.
+
+Asi mas pravdu.
+Myslis, ze globalniho aspektu je to moralne retabilni :-) ?
+Je to tvuj nazor.

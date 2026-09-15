@@ -1,0 +1,300 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Mùžete ho použít k vlastní
+   potøebì, ale nesmíte jej ani programy založené na tomto kódu využít komerènì!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - intelig.ft - funkce pro tøídy pro práci se slovy
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+Typ_slova::Typ_slova(void) {       //konstruktor
+ }
+
+Typ_slova::~Typ_slova(void) {       //destruktor
+ }
+
+void Typ_slova::VYTVOR_NOVY(WORD kolik) {
+WORD pozice;
+  pocetslov=kolik;
+
+  Typ_slova();
+
+  if (kolik == 0) kolik=1;
+                //aby se nejaka pamet alokovala a mohlo se pokracovat
+
+  vlastnislovo=ALOKUJ_RETEZEC(DELKA_JEDNODUCHEHO_SLOVA);
+
+  id_slova=(WORD *)ALOKUJ_PAMET(kolik*sizeof(id_slova[0]));
+  vzor=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(vzor[0]));
+  slovnidruh=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(slovnidruh[0]));
+  vnoreni=ALOKUJ_POINTERY(kolik*sizeof(vnoreni[0]));
+  predpona=ALOKUJ_POINTERY(kolik*sizeof(predpona[0]));
+  for (pozice=0; pozice < pocetslov; pozice++) {
+    vnoreni[pozice]=ALOKUJ_RETEZEC(MAX_POCET_VNORENI_PRI_ROZSKLONOVANI+1);
+    predpona[pozice]=ALOKUJ_RETEZEC(MAX_DELKA_PREDPONY+1);
+   }
+
+  pad=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(pad[0]));
+  osoba=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(osoba[0]));
+  cislo=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(cislo[0]));
+  cas=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(cas[0]));
+  rod=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(rod[0]));
+  zivotnost=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(zivotnost[0]));
+  cislopredmetu=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(cislopredmetu[0]));
+  rodpredmetu=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(rodpredmetu[0]));
+  vid=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(vid[0]));
+  tvar=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(tvar[0]));
+  pridavek=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(pridavek[0]));
+
+  zapor=(BYTE *)ALOKUJ_PAMET(kolik*sizeof(zapor[0]));
+ }
+
+void Typ_slova::VYMAZ_OBSAH(void) {
+WORD poziceslova;
+  UVOLNI(vlastnislovo);
+
+  UVOLNI(id_slova);
+  UVOLNI(vzor);
+  UVOLNI(slovnidruh);
+  for (poziceslova=0; poziceslova < pocetslov; poziceslova++) {
+    UVOLNI(vnoreni[poziceslova]);
+    UVOLNI(predpona[poziceslova]);
+   }
+  UVOLNI(vnoreni);
+  UVOLNI(predpona);
+  
+  UVOLNI(pad);
+  UVOLNI(osoba);
+  UVOLNI(cislo);
+  UVOLNI(cas);
+  UVOLNI(rod);
+  UVOLNI(zivotnost);
+  UVOLNI(cislopredmetu);
+  UVOLNI(rodpredmetu);
+  UVOLNI(vid);
+  UVOLNI(tvar);
+  UVOLNI(pridavek);
+
+  UVOLNI(zapor);
+
+  pocetslov=0;
+ }
+
+void Typ_slova::VYMAZ_POSLEDNI_POZICI(void) {
+          //dealokuje poslední pozici a sníží informaci o poètu slov
+
+  pocetslov--;
+
+  UVOLNI(vnoreni[pocetslov]);
+  UVOLNI(predpona[pocetslov]);
+ }
+
+void Typ_slova::VYNULUJ_POCET_SLOV(void) {
+                       //"vymaze" tridu, ale necha alokovane jeji prvky
+  VYMAZ_OBSAH();
+  VYTVOR_NOVY(0);
+ }
+
+void Typ_slova::NASTAV_POCATECNI_HODNOTY(WORD pozice) {
+
+  vlastnislovo[0]=0;
+
+  id_slova[pozice]=0;
+  vzor[pozice]=255;
+  slovnidruh[pozice]=255;
+
+  if (pocetslov != 0) {       //pokud je pocet slov 0, tyto pointery nikam neukazuji
+    vnoreni[pozice][0]=0;
+    predpona[pozice][0]=0;
+   }
+  
+  pad[pozice]=255;
+  osoba[pozice]=255;
+  cislo[pozice]=255;
+  cas[pozice]=255;
+  rod[pozice]=255;
+  zivotnost[pozice]=255;
+  cislopredmetu[pozice]=255;
+  rodpredmetu[pozice]=255;
+  vid[pozice]=255;
+  tvar[pozice]=0;   //tvar je standardne 0, aniz by se udaval v retezci
+  pridavek[pozice]=255;
+
+  zapor[pozice]=255;
+ }
+
+void Typ_slova::PRIPOJ(Typ_slova copripojit) {
+WORD novypocetslov,pripojenypocetslov,poziceslovapuv,poziceslovanova;
+  pripojenypocetslov=copripojit.pocetslov;
+  if (pripojenypocetslov == 0) return;        //neni co pripojovat
+  novypocetslov=pocetslov+pripojenypocetslov;
+
+  id_slova=(WORD *)REALOKUJ_PAMET((char *)id_slova,novypocetslov*sizeof(id_slova[0]));
+  vzor=(BYTE *)REALOKUJ_PAMET((char *)vzor,novypocetslov*sizeof(vzor[0]));
+  slovnidruh=(BYTE *)REALOKUJ_PAMET((char *)slovnidruh,novypocetslov*sizeof(slovnidruh[0]));
+  vnoreni=(char **)REALOKUJ_PAMET((char **)vnoreni,novypocetslov*sizeof(char **));
+  predpona=(char **)REALOKUJ_PAMET((char **)predpona,novypocetslov*sizeof(char **));
+  for (poziceslovanova=pocetslov; poziceslovanova < novypocetslov; poziceslovanova++) {
+    vnoreni[poziceslovanova]=ALOKUJ_RETEZEC(MAX_POCET_VNORENI_PRI_ROZSKLONOVANI+1);
+    predpona[poziceslovanova]=ALOKUJ_RETEZEC(MAX_DELKA_PREDPONY+1);
+   }
+
+  pad=(BYTE *)REALOKUJ_PAMET((char *)pad,novypocetslov*sizeof(pad[0]));
+  osoba=(BYTE *)REALOKUJ_PAMET((char *)osoba,novypocetslov*sizeof(osoba[0]));
+  cislo=(BYTE *)REALOKUJ_PAMET((char *)cislo,novypocetslov*sizeof(cislo[0]));
+  cas=(BYTE *)REALOKUJ_PAMET((char *)cas,novypocetslov*sizeof(cas[0]));
+  rod=(BYTE *)REALOKUJ_PAMET((char *)rod,novypocetslov*sizeof(rod[0]));
+  zivotnost=(BYTE *)REALOKUJ_PAMET((char *)zivotnost,novypocetslov*sizeof(zivotnost[0]));
+  cislopredmetu=(BYTE *)REALOKUJ_PAMET((char *)cislopredmetu,novypocetslov*sizeof(cislopredmetu[0]));
+  rodpredmetu=(BYTE *)REALOKUJ_PAMET((char *)rodpredmetu,novypocetslov*sizeof(rodpredmetu[0]));
+  vid=(BYTE *)REALOKUJ_PAMET((char *)vid,novypocetslov*sizeof(vid[0]));
+  tvar=(BYTE *)REALOKUJ_PAMET((char *)tvar,novypocetslov*sizeof(tvar[0]));
+  pridavek=(BYTE *)REALOKUJ_PAMET((char *)pridavek,novypocetslov*sizeof(pridavek[0]));
+
+  zapor=(BYTE *)REALOKUJ_PAMET((char *)zapor,novypocetslov*sizeof(zapor[0]));
+
+
+  for (poziceslovapuv=0,poziceslovanova=pocetslov; poziceslovapuv < pripojenypocetslov;
+       poziceslovapuv++,poziceslovanova++) {
+    id_slova[poziceslovanova]=copripojit.id_slova[poziceslovapuv];
+    vzor[poziceslovanova]=copripojit.vzor[poziceslovapuv];
+    slovnidruh[poziceslovanova]=copripojit.slovnidruh[poziceslovapuv];
+    strcpy(vnoreni[poziceslovanova],copripojit.vnoreni[poziceslovapuv]);
+    strcpy(predpona[poziceslovanova],copripojit.predpona[poziceslovapuv]);
+  
+    pad[poziceslovanova]=copripojit.pad[poziceslovapuv];
+    osoba[poziceslovanova]=copripojit.osoba[poziceslovapuv];
+    cislo[poziceslovanova]=copripojit.cislo[poziceslovapuv];
+    cas[poziceslovanova]=copripojit.cas[poziceslovapuv];
+    rod[poziceslovanova]=copripojit.rod[poziceslovapuv];
+    zivotnost[poziceslovanova]=copripojit.zivotnost[poziceslovapuv];
+    cislopredmetu[poziceslovanova]=copripojit.cislopredmetu[poziceslovapuv];
+    rodpredmetu[poziceslovanova]=copripojit.rodpredmetu[poziceslovapuv];
+    vid[poziceslovanova]=copripojit.vid[poziceslovapuv];
+    tvar[poziceslovanova]=copripojit.tvar[poziceslovapuv];
+    pridavek[poziceslovanova]=copripojit.pridavek[poziceslovapuv];
+
+    zapor[poziceslovanova]=copripojit.zapor[poziceslovapuv];
+   }
+  pocetslov=novypocetslov;
+ }
+
+void Typ_slova::PRIPOJ_JEDEN_VYZNAM(Typ_slova copripojit,WORD poziceslova) {
+Typ_slova slovo;
+  slovo.VYTVOR_NOVY(1);
+  slovo.VYTAHNI_JEDNO_SLOVO_Z_TYP_SLOVA(copripojit,poziceslova);
+  PRIPOJ(slovo);
+  strcpy(vlastnislovo,copripojit.vlastnislovo);
+  slovo.VYMAZ_OBSAH();
+ }
+
+void Typ_slova::VYTAHNI_JEDNO_SLOVO_Z_TYP_SLOVA(Typ_slova puvslova,WORD poziceslova) {
+   //Tato funkce "vytahne" 1 slovo (vyznam) z puvslova.
+   //Funkce se musi aplikovat na NAPLNENOU tridu Typ_slova!
+   //Vsechna puvodni data se z ciloveho (aplikovaneho) Typ_slova vymazou.
+
+
+  VYMAZ_OBSAH();
+  VYTVOR_NOVY(1);          //1 vyznam
+
+  strcpy(vlastnislovo,puvslova.vlastnislovo);
+
+  id_slova[0]=puvslova.id_slova[poziceslova];
+  vzor[0]=puvslova.vzor[poziceslova];
+  slovnidruh[0]=puvslova.slovnidruh[poziceslova];
+
+  strcpy(vnoreni[0],puvslova.vnoreni[poziceslova]);
+  strcpy(predpona[0],puvslova.predpona[poziceslova]);
+
+  pad[0]=puvslova.pad[poziceslova];
+  osoba[0]=puvslova.osoba[poziceslova];
+  cislo[0]=puvslova.cislo[poziceslova];
+  cas[0]=puvslova.cas[poziceslova];
+  rod[0]=puvslova.rod[poziceslova];
+  zivotnost[0]=puvslova.zivotnost[poziceslova];
+  cislopredmetu[0]=puvslova.cislopredmetu[poziceslova];
+  rodpredmetu[0]=puvslova.rodpredmetu[poziceslova];
+  vid[0]=puvslova.vid[poziceslova];
+  tvar[0]=puvslova.tvar[poziceslova];
+  pridavek[0]=puvslova.pridavek[poziceslova];
+
+  zapor[0]=puvslova.zapor[poziceslova];
+ }
+
+void Typ_slova::ZKOPIRUJ_JEDNO_SLOVO_Z_TYP_SLOVA(Typ_slova zdroj,WORD odkud,WORD kam) {
+   //Tato funkce zkopíruje 1 slovo (význam) z zdroj["odkud"] do "kam".
+   //Pozice "odkud" i "kam" musejí existovat!
+
+  id_slova[kam]=zdroj.id_slova[odkud];
+  vzor[kam]=zdroj.vzor[odkud];
+  slovnidruh[kam]=zdroj.slovnidruh[odkud];
+
+  strcpy(vnoreni[kam],zdroj.vnoreni[odkud]);
+  strcpy(predpona[kam],zdroj.predpona[odkud]);
+
+  pad[kam]=zdroj.pad[odkud];
+  osoba[kam]=zdroj.osoba[odkud];
+  cislo[kam]=zdroj.cislo[odkud];
+  cas[kam]=zdroj.cas[odkud];
+  rod[kam]=zdroj.rod[odkud];
+  zivotnost[kam]=zdroj.zivotnost[odkud];
+  cislopredmetu[kam]=zdroj.cislopredmetu[odkud];
+  rodpredmetu[kam]=zdroj.rodpredmetu[odkud];
+  vid[kam]=zdroj.vid[odkud];
+  tvar[kam]=zdroj.tvar[odkud];
+  pridavek[kam]=zdroj.pridavek[odkud];
+
+  zapor[kam]=zdroj.zapor[odkud];
+ }
+
+void Typ_slova::ZKOPIRUJ_JEDNO_SLOVO_Z_TYP_SLOVA(WORD odkud,WORD kam) {
+   //Tato funkce zkopíruje 1 slovo (význam) z "odkud" do "kam".
+   //Pozice "odkud" i "kam" musejí existovat!
+
+  ZKOPIRUJ_JEDNO_SLOVO_Z_TYP_SLOVA(*this,odkud,kam);
+
+  id_slova[kam]=id_slova[odkud];
+  vzor[kam]=vzor[odkud];
+  slovnidruh[kam]=slovnidruh[odkud];
+
+  strcpy(vnoreni[kam],vnoreni[odkud]);
+  strcpy(predpona[kam],predpona[odkud]);
+
+  pad[kam]=pad[odkud];
+  osoba[kam]=osoba[odkud];
+  cislo[kam]=cislo[odkud];
+  cas[kam]=cas[odkud];
+  rod[kam]=rod[odkud];
+  zivotnost[kam]=zivotnost[odkud];
+  cislopredmetu[kam]=cislopredmetu[odkud];
+  rodpredmetu[kam]=rodpredmetu[odkud];
+  vid[kam]=vid[odkud];
+  tvar[kam]=tvar[odkud];
+  pridavek[kam]=pridavek[odkud];
+
+  zapor[kam]=zapor[odkud];
+ }
+
+void Typ_slova::UPRAV_VZOR(BYTE novyvzor,WORD pozice) {
+  vzor[pozice]=novyvzor;
+  slovnidruh[pozice]=VRAT_SLOVNI_DRUH(novyvzor);
+
+  if (slovnidruh[pozice] == 3) { //pokud to jsou zajmena, maji specificky
+                                 //format vnoreni: "3"+cislo vzoru 1-7
+    vnoreni[pozice][0]='3';
+    vnoreni[pozice][1]=novyvzor-_osobni_+'1';
+    vnoreni[pozice][2]=0;
+   }
+ }
+
+void Struktura_vety::VYNULUJ_HODNOTY(void) {
+  pocetslov=0;
+
+  typ_vety=_veta_oznamovaci_;
+
+  pozicepodmetu=0xFFFF;          //nevyjádøené
+  poziceprisudku=0xFFFF;         //nevyjádøené
+  pozicepredmetu=0xFFFF;         //nevyjádøené
+ }

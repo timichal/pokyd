@@ -1,0 +1,107 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Mùžete ho použít k vlastní
+   potøebì, ale nesmíte jej ani programy založené na tomto kódu využít komerènì!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - iqpwav.pr - soubor s funkcemi ve tøídì pro IQPokydWav
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+DWORD IQPokydWav::CTI_CISLO(BYTE kolik,char *retezec) {
+DWORD zatim,vysledek=0;
+BYTE pozice;
+  for(pozice=0; pozice < kolik; pozice++) {
+    zatim=(BYTE)retezec[pozice];
+    zatim<<=pozice<<3;
+    vysledek+=zatim;
+   }
+  return(vysledek);
+ }
+
+void IQPokydWav::PIS_CISLO(DWORD cislo,int NA_KOLIK_MIST,char *retezec) {
+int pozice;
+  for (pozice=0; pozice < NA_KOLIK_MIST; pozice++) {
+    retezec[pozice]=(BYTE)cislo; cislo>>=8;
+   }
+ }
+
+void IQPokydWav::VYTVOR_PRVNI(void) {
+FILE *fr=NULL;
+DWORD delkasouboru;
+
+  aktualnipocetzvuku=0;
+
+  if ((fr=OTEVRI_SOUBOR("tuknuti.wav","rb")) == NULL) return;
+  fseek(fr,0,SEEK_END); delkasouboru=ftell(fr); fseek(fr,0,SEEK_SET);
+  zvuky[0]=ALOKUJ_RETEZEC(delkasouboru);
+  if (fread(zvuky[0],delkasouboru,1,fr) != 1) { UVOLNI(zvuky[0]); fclose(fr); return; }
+  fclose(fr);
+
+  aktualnipocetzvuku=1;
+ }
+
+void IQPokydWav::VYTVOR_DALSI(WORD ktery) {
+double zrychleni;
+DWORD puvodnidelka,novadelka,pozice;
+
+  puvodnidelka=CTI_CISLO(4,zvuky[0]+40);
+  zrychleni=ktery; zrychleni/=10; zrychleni+=1;
+  novadelka=(DWORD)(puvodnidelka/zrychleni);
+  zvuky[ktery]=ALOKUJ_RETEZEC(novadelka+44);
+
+  memcpy(zvuky[ktery],zvuky[0],44);     //zkopirovani hlavicky
+  for (pozice=0; pozice < novadelka; pozice++) {
+    zvuky[ktery][pozice+44]=zvuky[0][(DWORD)(pozice*zrychleni)+44];
+   }
+  PIS_CISLO(novadelka,4,zvuky[ktery]+40);
+
+  aktualnipocetzvuku++;
+ }
+
+void IQPokydWav::DOVYTVOR_VSECHNY_ZVUKY_TUKNUTI(void) {
+WORD pozice;
+
+  if (aktualnipocetzvuku == 0) return;  //nepodarilo se nacist soubor
+
+  if (CTI_CISLO(1,zvuky[0]+34) != 8) return;       //8 bitu
+  if (CTI_CISLO(1,zvuky[0]+22) != 1) return;       //mono
+  if (strncmp(zvuky[0]+36,"data",4) != 0) return;  //hlavicka 44 bajtu
+
+  for (pozice=1; pozice < MAX_POCET_ZVUKU_TUKNUTI; pozice++) {
+    VYTVOR_DALSI(pozice);
+    aktualnipocetzvuku=pozice+1;
+    if (g_zavritvlaknoprocesu == 1) return;
+   }
+ }
+
+RozvrzeniVet::RozvrzeniVet() {
+int pozice;
+  for (pozice=0; pozice < 100; pozice++) {
+    vety[pozice]="";
+    puvodcevety[pozice]=0;
+   }
+  pocetzobrazenychvet=0;
+ }
+
+void RozvrzeniVet::PRIDEJ_VETU(char *veta, char puvodce) { 
+/* Takhle vypada rozvrzeni obrazovky:
+
+   Ahoj, jak se mas?       pozice 0
+   Perfektne               pozice 1
+   ...                     ...
+   a co jinak?             pozice 99
+*/
+
+int pozice;
+CStatic *docasne;
+
+  docasne=g_MfcDlghlavniokno.policka[0];
+  for (pozice=1; pozice < 100; pozice++) {
+    vety[pozice-1]=vety[pozice];
+    puvodcevety[pozice-1]=puvodcevety[pozice];
+    g_MfcDlghlavniokno.policka[pozice-1]=g_MfcDlghlavniokno.policka[pozice];
+   }
+  vety[99]=veta; puvodcevety[99]=puvodce; g_MfcDlghlavniokno.policka[99]=docasne;
+ }

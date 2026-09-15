@@ -1,0 +1,2179 @@
+/* Tento zdrojov˝ kÛd je pod licencÌ GNU/GPL. M˘ûete ho pouûÌt k vlastnÌ
+   pot¯ebÏ, ale nesmÌte jej ani programy zaloûenÈ na tomto kÛdu vyuûÌt komerËnÏ!
+
+   Jedn· se o zdrojov˝ kÛd programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleöe Jandy
+*/
+
+/* IQ Pokyd - slovesa.sk - funkce na Ëasov·nÌ jednotliv˝ch vzor˘ sloves
+   Aleö Janda (C) K›BLSoft 2002-2005 (kÛdov·nÌ Windows 1250)
+*/
+
+// nejsou (a v nejbliûöÌ dobÏ nebudou) udÏlanÈ p¯echodnÌky
+
+// "osoba": 1, 2 nebo 3
+// "cislo": 1 (jednotnÈ) nebo 2 (mnoûnÈ)
+// "cas": 1 (minul˝), 2 (p¯Ìtomn˝), 3 (budoucÌ), 4 (rozkazovacÌ zp˘sob),
+//        5 (infinitiv)
+// "rod": 1 (muûsk˝), 2 (ûensk˝), 3 (st¯ednÌ)
+// "vid": 0 (nedokonav˝), 1 (dokonav˝), 2 (dokonav˝, pouze s p¯edloûkou)
+// "zapor": 0 (ne), 1 (p¯id· "ne" a p¯ÌpadnÏ upravÌ tvar)
+// "tvar": 0 (norm·lnÌ sloveso)
+//         1 (slovesnÈ postatnÈ jmÈno - nap¯. "dÏl·nÌ")
+//         2 (p¯echodnÌk - "cas" m˘ûe b˝t 1 nebo 2)
+//         3 (slovesnÈ p¯ÌdavnÈ jmÈno - dÏlajÌcÌ, holÌcÌ)
+//         30 (p¯ÌdavnÈ jmÈno ud·vajÌcÌ povahu vÏci - holicÌ)
+//         4 (slovesnÈ p¯ÌdavnÈ jmÈno - dÏlan˝)
+//         5 (konverze dokonavÈho vidu na nedokonav˝)
+//         6 (vytvo¯enÌ Ëasu "p¯edminulÈho" - trpÌv·, s·zÌv·, dÏl·v·)
+//           - pouze u vzor˘ prosÌ, trpÌ, s·zÌ a dÏl·
+//           - m˘ûe zde b˝t r˘zn· osoba, ËÌslo, Ëas, rod, ûivotnost a z·por
+
+
+BYTE CASUJ_VZOR_NESE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+int pozice;
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nem· "p¯edminul˝" Ëas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    if ((POSLEDNI_ZNAK(g_slovo) == 'm' || POSLEDNI_ZNAK(g_slovo) == 'p')
+      && PREDPOSLEDNI_ZNAK(g_slovo) == 'a') {
+      g_slovo[1]='·';                        //mate -> m·tl, pase -> p·sl
+     }
+    if (POSLEDNI_PISMENA(g_slovo,"¯es") == 1) {           //t¯ese -> t¯·sl
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("·s");
+     }
+    PRIDEJ_NA_KONEC("l");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+    if (cislo == 1 && rod == 1) {
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_DO_FRONTY(); //(on) nes - nespisovnÈ
+     }
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) nesem - nespisovnÈ
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eö");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou"); break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_NESE(1,1,5,1,1,0,0,0);     //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+
+    if (POSLEDNI_PISMENA(g_slovo,"Ìp") == 1) {
+      PRIDEJ_NA_KONEC("ej");                             //podle vzoru "dÏl·"
+     }                                                   //(sk¯Ìpe, hnÌpe)
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+    if (POSLEDNI_PISMENA(g_slovo,"st") == 0) { //konci-li na "st", dalsi "s"
+                                             //se uz pridavat nebude
+      switch(POSLEDNI_ZNAK(g_slovo)) {
+        case 'd': case 't': OREZ_POSLEDNI_ZNAKY(g_slovo,1);   //kr·st, m·st
+                            PRIDEJ_NA_KONEC("s"); break;
+       }
+      PRIDEJ_NA_KONEC("t");
+     }
+    PRIDEJ_DO_FRONTY();
+    if (POSLEDNI_PISMENA(g_slovo,"st") == 0) {    //jenom r˘st, ne r˘sti
+      ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+      PRIDEJ_DO_FRONTY();
+     }
+
+    strcpy(g_slovo,g_slovodocasne);
+    pozice=strlen(g_slovo); if (pozice >= 3 && g_slovo[pozice-2] == 'e') {
+      if (TVRDA_SOUHLASKA(g_slovo[pozice-3]) == 1) g_slovo[pozice-2]='˝';
+      else g_slovo[pozice-2]='Ì';       //nÈst -> n˝st, vÈzt -> vÌzt (nespisovnÈ)
+      switch(POSLEDNI_ZNAK(g_slovo)) {
+        case 'd': case 't': OREZ_POSLEDNI_ZNAKY(g_slovo,1);   //kr·st, m·st
+                            PRIDEJ_NA_KONEC("s"); break;
+       }
+      PRIDEJ_NA_KONEC("t");
+      PRIDEJ_DO_FRONTY();
+      ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+      PRIDEJ_DO_FRONTY();
+     }
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                //slovesnÈ podstatnÈ jmÈno
+  CASUJ_VZOR_NESE(3,1,2,1,0,0,zapor,0);    //rekurze - 3.osoba j.Ë. p¯Ìt.Ëasu
+  PRIDEJ_ZA_KAZDE_SLOVO("ÚÌ");
+  return(_staveni_);
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  CASUJ_VZOR_NESE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.Ë. (dÏlajÌ)
+  PRIDEJ_ZA_KAZDE_SLOVO("cÌ");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_NESE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+  strcpy(g_slovo,g_slovodocasne);
+  switch(POSLEDNI_ZNAK(g_slovo)) {
+    case 's': switch(PREDPOSLEDNI_ZNAK(g_slovo)) {
+      case 'a': KONC_ASA:
+                OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("·s·");
+                PRIDEJ_DO_FRONTY(); return(_dela_);
+      default: if (PREDPREDPOSLEDNI_ZNAK(g_slovo) != '¯') {     //nese
+                 OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("·öÌ");
+                 PRIDEJ_DO_FRONTY(); return(_sazi_);
+                }
+               else goto KONC_ASA;                            //t¯ese
+     }
+    case 'd': switch(PREDPOSLEDNI_ZNAK(g_slovo)) {
+      case 'a':                                               //krade
+                OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("·d·");
+                PRIDEJ_DO_FRONTY(); return(_dela_);
+      default:                                                //vede
+               OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("·ÔÌ");
+               PRIDEJ_DO_FRONTY(); return(_sazi_);
+     }
+    case 't': if (PREDPOSLEDNI_ZNAK(g_slovo) == 'e') {         //kvete, plete
+                OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("Èt·");
+                PRIDEJ_DO_FRONTY();
+
+                strcpy(g_slovo,g_slovozaklad);
+                OREZ_POSLEDNI_ZNAKY(g_slovo,3);  //3, protoze se tvori z tvaru
+                                           //"odkvete", ne "odkvet"
+                if (TVRDA_SOUHLASKA(POSLEDNI_ZNAK(g_slovo)) == 1) PRIDEJ_NA_KONEC("˝t·");
+                else PRIDEJ_NA_KONEC("Ìt·");       //nespisovnÈ (vykvÌt·)
+                PRIDEJ_DO_FRONTY(); return(_dela_);
+               }
+              else return(0);
+    case 'z': if (PREDPOSLEDNI_ZNAK(g_slovo) == 'e') {         //doleze -> dolÈz·
+                OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("Èz·");
+                PRIDEJ_DO_FRONTY();
+
+                strcpy(g_slovo,g_slovozaklad);
+                OREZ_POSLEDNI_ZNAKY(g_slovo,3);  //3, protoze se tvori z tvaru
+                                           //"doleze", ne "dolez"
+                PRIDEJ_NA_KONEC("ejz·");       //nespisovnÈ (dolejz·)
+                PRIDEJ_DO_FRONTY(); return(_dela_);
+               }
+              else return(0);
+    default: return(0);
+   }
+ }
+
+BYTE CASUJ_VZOR_BERE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+int pozice;
+char *slovavefronte2=NULL;
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nem· "p¯edminul˝" Ëas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_ZNAK(g_slovo) == 'm') {                //dme
+      PRIDEJ_NA_KONEC("ul");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+     }
+    else if (POSLEDNI_PISMENA(g_slovo,"jd") == 1) {           //jde, p¯ijde atd.
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      if (rod == 1 && cislo == 1) PRIDEJ_NA_KONEC("öel");
+      else PRIDEJ_NA_KONEC("öl");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+     }
+    else if (POSLEDNI_PISMENA(g_slovo,"öl") == 1) {           //poöle atd.
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      PRIDEJ_NA_KONEC("slal");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+     }
+    else {
+      switch (VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovo))) {  //malÈ pÌsmeno kv˘li bÏ, pÏ
+	      case 'b': case 'p': break;        //jebe -> jebal
+        default: ODSTRAN_E(g_slovo);
+       }
+      PRIDEJ_NA_KONEC("al");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+     }
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) berem - nespisovnÈ
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eö");
+              else PRIDEJ_NA_KONEC("ete");
+              break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou");
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+
+    if (VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne)) == 'b' || VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne) == 'p')) {
+      strcpy(g_slovo,g_slovodocasne);
+      PRIDEJ_NA_KONEC("e");         //pomocn· konstrukce ke zjiötÏnÌ poËtu slabik
+      if (POCET_SLABIK(g_slovo) >= 2) { //vynech·nÌ slov typu "cpe" - (on) cp· neexistuje
+        slovavefronte2=ALOKUJ_RETEZEC(strlen(g_slovavefronte)+1);
+        strcpy(slovavefronte2,g_slovavefronte); VYMAZ_FRONTU();
+        CASUJ_VZOR_DELA(osoba,cislo,2,1,vid,0,0,0);      //rekurze - infinitiv
+        PRIDEJ_NA_ZACATEK_FRONTY(slovavefronte2);
+        UVOLNI(slovavefronte2);
+       }
+     }
+
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_BERE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    if (VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne)) == 'b' || VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne)) == 'p') {
+      strcpy(g_slovo,g_slovodocasne);
+      PRIDEJ_NA_KONEC("e");         //pomocn· konstrukce ke zjiötÏnÌ poËtu slabik
+      if (POCET_SLABIK(g_slovo) >= 2) { //vynech·nÌ slov typu "cpe" - (on) cp· neexistuje
+        strcpy(g_slovo,g_slovodocasne);
+        PRIDEJ_NA_KONEC("ej");
+        PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+        return(1);
+       }
+     }
+
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_PISMENA(g_slovo,"jd") == 1) {        //jde, p¯ijde atd.
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+      PRIDEJ_NA_KONEC("Ìt");
+     }
+    else if (POSLEDNI_PISMENA(g_slovo,"öl") == 1) {           //poöle atd.
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      PRIDEJ_NA_KONEC("slat");
+     }
+    else {
+      ODSTRAN_E(g_slovo); PRIDEJ_NA_KONEC("e");  //pomocnÈ vytvo¯enÌ slova
+                                                 //(kv˘li spoËÌt·nÌ poËtu slabik)
+      if (zapor == 1 || POCET_SLABIK(g_slovo) >= 2) {
+        strcpy(g_slovo,g_slovodocasne);
+        ODSTRAN_E(g_slovo);
+        PRIDEJ_NA_KONEC("at");                    //"sebrat", "nebrat", "kaölat"
+       }                                          // ...
+      else {                                      // ...
+        strcpy(g_slovo,g_slovodocasne);           // ...
+        ODSTRAN_E(g_slovo);                       // ...
+        PRIDEJ_NA_KONEC("·t");                    //ale "br·t", "ötv·t"
+       }
+     }
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  CASUJ_VZOR_BERE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+                         //branÌ, sebr·nÌ, ale nebranÌ ! (na z·poru nez·leûÌ)
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+  switch(POSLEDNI_ZNAK(g_slovo)) {
+    case 'a': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("·");
+              PRIDEJ_NA_KONEC("ÚÌ");
+              break;                                     //sebrat -> sebr·nÌ
+    case '·': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("a");
+              PRIDEJ_NA_KONEC("ÚÌ");
+              break;                                     //br·t -> branÌ
+    case 'Ì': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("i");
+              PRIDEJ_NA_KONEC("ùÌ");
+              break;                                     //najÌt -> najitÌ
+   }
+  PRIDEJ_DO_FRONTY();
+  if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  if (POSLEDNI_ZNAK(g_slovodocasne) == 'ö') {    //kouöe
+    strcpy(g_slovo,g_slovodocasne);
+    ZDRSNI_KONCOVKU_SLOVESA();
+    PRIDEJ_NA_KONEC("ajÌcÌ");                    //"kousajÌcÌ"
+    PRIDEJ_DO_FRONTY();
+   }
+  else {
+    if (VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne)) == 'b' || VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne)) == 'p') {
+      strcpy(g_slovo,g_slovodocasne);
+      PRIDEJ_NA_KONEC("e");         //pomocn· konstrukce ke zjiötÏnÌ poËtu slabik
+      if (POCET_SLABIK(g_slovo) >= 2) { //vynech·nÌ slov typu "cpe" - (on) cp· neexistuje
+        strcpy(g_slovo,g_slovodocasne);
+        PRIDEJ_NA_KONEC("ajÌcÌ");                    //"kousajÌcÌ"
+        PRIDEJ_DO_FRONTY();
+        return(1);
+       }
+     }
+    strcpy(g_slovo,g_slovodocasne);
+    CASUJ_VZOR_BERE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.Ë. (dÏlajÌ)
+    PRIDEJ_ZA_KAZDE_SLOVO("cÌ");
+   }
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_BERE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (PREDPOSLEDNI_ZNAK(g_slovo) == 'e') { //probere -> probÌr·
+    pozice=strlen(g_slovo);
+    if (TVRDA_SOUHLASKA(g_slovo[pozice-3]) == 1) g_slovo[pozice-2]='˝';
+    else g_slovo[pozice-2]='Ì';
+    g_slovo[pozice]='·'; g_slovo[pozice+1]=0;
+
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"jd") == 1) {           //najde, p¯ijde atd.
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("ch·zÌ");
+    PRIDEJ_DO_FRONTY(); return(_sazi_);
+   }
+  else {                               //naötve -> naötv·v·, dupe -> dup·v·
+    PRIDEJ_NA_KONEC("·v·");
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+ }
+
+BYTE CASUJ_VZOR_MAZE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+// Tento vzor kolÌs· mezi origin·lnÌm "maûe" a dÏl· (maz·).
+// Jsou zahrnuty oba dva tvary, p¯iËemû origin·lnÌ "maûe" je jako prim·rnÌ.
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nem· "p¯edminul˝" Ëas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    ZDRSNI_KONCOVKU_SLOVESA();
+    PRIDEJ_NA_KONEC("al");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) {
+                PRIDEJ_NA_KONEC("u");
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lû") == 1) break;
+                switch(POSLEDNI_ZNAK(g_slovodocasne)) {
+                  case 'Ë': case 'ö': case 'û':
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    PRIDEJ_NA_KONEC("i");            //(j·) maûi - kniûnÌ tvar
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("·m");  //maz·m
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("am");  //mazam - nespisovnÈ
+                    break;
+                 }
+               }
+              else {
+                PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lû") == 0) {
+                  ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("·me");      //maz·me
+                  PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                 }
+                PRIDEJ_NA_KONEC("em");            //(my) berem - nespisovnÈ
+               }
+              break;
+      case 2: if (cislo == 1) {
+                PRIDEJ_NA_KONEC("eö");
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lû") == 1) break;
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("·ö");    //maz·ö
+               }
+              else {
+                PRIDEJ_NA_KONEC("ete");
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lû") == 1) break;
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("·te");  //maz·te
+               }
+              break;
+      case 3: if (cislo == 1) {
+                PRIDEJ_NA_KONEC("e");
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lû") == 1) break;
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("·");  //maz·
+               }
+              else {
+                PRIDEJ_NA_KONEC("ou");
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lû") == 1) break;
+                switch(POSLEDNI_ZNAK(g_slovodocasne)) {
+                  case 'Ë': case 'ö': case 'û':
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    PRIDEJ_NA_KONEC("Ì");       //(oni) maûÌ - kniûnÌ tvar
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("ajÌ");  //mazajÌ
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("aj");  //mazaj - nespisovnÈ
+                    break;
+                 }
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_MAZE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+
+    if (POSLEDNI_PISMENA(g_slovodocasne,"lû") == 0) {
+      strcpy(g_slovo,g_slovodocasne);
+      ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("ej");     //kousej, mazej
+      PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+     }
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    ZDRSNI_KONCOVKU_SLOVESA();
+    if (strlen(g_slovo) > 2)
+     PRIDEJ_NA_KONEC("at");                     //mazal
+    else PRIDEJ_NA_KONEC("·t");                 //lh·t
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  CASUJ_VZOR_MAZE(3,1,1,1,0,0,zapor,0);     //rekurze - 3.osoba j.Ë. min.Ëasu
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+  if (POCET_SLABIK(g_slovo) > 0) PRIDEJ_NA_KONEC("·ÚÌ");
+  else PRIDEJ_NA_KONEC("aÚÌ");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  strcpy(g_slovo,g_slovodocasne);
+  ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("ajÌcÌ");
+  PRIDEJ_DO_FRONTY();
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_MAZE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (POSLEDNI_PISMENA(g_slovo,"aû") == 1 || POSLEDNI_PISMENA(g_slovo,"lû") == 1
+   || POSLEDNI_ZNAK(g_slovo) == 'ö') {
+              //smaûe -> smaz·v·, nalûe -> nalh·v·, kouöe,Ëeöe -> kous·v·,Ëes·v·
+
+    CASUJ_VZOR_MAZE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+    OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+    VYMAZ_FRONTU();
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("·v·");
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"·û") == 1         //dok·ûe -> dokazuje
+        || POSLEDNI_PISMENA(g_slovo,"Ìû") == 1) {      //vylÌûe -> vylizuje
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,0);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("zuje");
+    PRIDEJ_DO_FRONTY(); return(_kupuje_);
+   }
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_PECE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+int pozice;
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nem· "p¯edminul˝" Ëas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_ZNAK(g_slovo) == 'û') {             //"m˘ûe"
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      PRIDEJ_NA_KONEC("ohl");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+      if (cislo == 1 && rod == 1) {
+        OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_DO_FRONTY();  //(on) moh - nespisovnÈ
+       }
+     }
+    else if (PREDPOSLEDNI_ZNAK(g_slovo) == 'u') {      //tluËe -> tloukl
+      PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+      goto NORMALNEMINULY;
+     }
+    else {
+      NORMALNEMINULY:
+      ZDRSNI_KONCOVKU_SLOVESA();
+      PRIDEJ_NA_KONEC("l");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+      if (cislo == 1 && rod == 1) {
+        OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_DO_FRONTY();//(on) pek - nespisovnÈ
+       }
+     }
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_ZNAK(g_slovo) == 'û') {             //"m˘ûe"
+      if (osoba == 1 && cislo == 1) {              //"mohu"
+        OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+        PRIDEJ_NA_KONEC("ohu"); PRIDEJ_DO_FRONTY();
+       }
+      if (osoba == 3 && cislo == 2) {              //"mohou"
+        OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+        PRIDEJ_NA_KONEC("ohou"); PRIDEJ_DO_FRONTY();
+       }
+      strcpy(g_slovo,g_slovodocasne);
+     }
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) peËem - nespisovnÈ
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eö");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else {
+                PRIDEJ_NA_KONEC("ou");
+                if (POSLEDNI_ZNAK(g_slovodocasne) != 'û') {
+                  PRIDEJ_DO_FRONTY();
+                  strcpy(g_slovo,g_slovodocasne);
+                  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+                  PRIDEJ_NA_KONEC("kou");                  //pekou - kniûnÏ
+                 }
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_PECE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_ZNAK(g_slovo) == 'û') {
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("z");
+      PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor); //pomoz
+      strcpy(g_slovo,g_slovodocasne);
+      PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor); //pomoû
+                                                            // -nespisovnÈ
+     }
+    else PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    switch(POSLEDNI_ZNAK(g_slovo)) {
+      case 'Ë': OREZ_POSLEDNI_ZNAKY(g_slovo,1);          //peËe -> pÈct
+                PRIDEJ_NA_KONEC("c");
+                PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+                break;
+      case 'û': OREZ_POSLEDNI_ZNAKY(g_slovo,2);          //m˘ûe -> moct
+                PRIDEJ_NA_KONEC("oc");
+                break;
+      default: break;                 //jin˝ znak by na konci snad nemÏl b˝t
+     }
+    PRIDEJ_NA_KONEC("t");                      //pÈct
+    PRIDEJ_DO_FRONTY();
+
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    PRIDEJ_NA_KONEC("i");                      //pÈci - kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    pozice=strlen(g_slovo); if (pozice >= 3 && g_slovo[pozice-2] == 'È') {
+      if (TVRDA_SOUHLASKA(g_slovo[pozice-3]) == 1) g_slovo[pozice-2]='˝';
+      else g_slovo[pozice-2]='Ì';       //pÈct -> pÌct (nespisovnÈ)
+      PRIDEJ_NA_KONEC("t");
+      PRIDEJ_DO_FRONTY();
+     }
+
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  if (POSLEDNI_ZNAK(g_slovodocasne) == 'û') {
+    strcpy(g_slovo,g_slovodocasne);
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,0);
+    PRIDEJ_NA_KONEC("eÚÌ");
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else {
+    CASUJ_VZOR_PECE(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.Ë. p¯Ìt.Ëasu
+    PRIDEJ_ZA_KAZDE_SLOVO("ÚÌ");
+   }
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  if (POSLEDNI_ZNAK(g_slovodocasne) != 'û') {
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    PRIDEJ_NA_KONEC("koucÌ");
+    PRIDEJ_DO_FRONTY();                     //pekoucÌ
+   }
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("oucÌ");
+  PRIDEJ_DO_FRONTY();                     //peËoucÌ
+  if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_PECE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (POSLEDNI_ZNAK(g_slovo) == 'û') {             //pom˘ûe -> pom·h·
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+    PRIDEJ_NA_KONEC("·h·");
+
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  if (JELI_SAMOHLASKA(PREDPOSLEDNI_ZNAK(g_slovo)) == 1) { //zateËe -> zatÈk·
+    PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    PRIDEJ_NA_KONEC("k·");
+
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_UMRE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+// tento vzor m· jinÈ p¯echodnÌky -> ¯ se mÏnÌ na r (v¯e -> vrouc)
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nem· "p¯edminul˝" Ëas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("el");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) berem - nespisovnÈ
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eö");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou");
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_UMRE(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("Ìt");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  CASUJ_VZOR_UMRE(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.Ë. p¯Ìt.Ëasu
+  PRIDEJ_ZA_KAZDE_SLOVO("ÚÌ");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  CASUJ_VZOR_UMRE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.Ë. (dÏlajÌ)
+  PRIDEJ_ZA_KAZDE_SLOVO("cÌ");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_UMRE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (JELI_SOUHLASKA(PREDPOSLEDNI_ZNAK(g_slovo)) == 1 && POSLEDNI_ZNAK(g_slovo) == '¯') {
+                                                            //um¯e -> umÌr·
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("Ìr·");
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_TISKNE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+//u tohoto vzoru se velmi öpatnÏ tvo¯Ì nedokonav˝ vid
+// - funkce tedy u tvo¯enÌ nedokonavÈho vidu vûdy vracÌ nulu (ne˙spÏch)
+//   -> vöechna slova vzoru tiskne musÌ mÌt nedokonav˝ vid zaps·n
+//      jako v˝jimku
+// (zamkne -> zamyk·, ¯Ìzne -> ¯eûe, klekne -> klek· atd.)
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nem· "p¯edminul˝" Ëas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);                     //tiskl
+    if (strlen(g_slovo) > 2) {         //pokud to zrovna nenÌ slovo typu hnul
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+      PRIDEJ_NA_KONEC("l");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+     }
+
+    strcpy(g_slovo,g_slovodocasne);                     //tisknul
+    PRIDEJ_NA_KONEC("ul");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    if (cislo == 1 && rod == 1 && strlen(g_slovodocasne) > 2) {
+      strcpy(g_slovo,g_slovodocasne);
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_DO_FRONTY();//(on) tisk - nespisovnÈ
+     }
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) tisknem - nespisovnÈ
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eö");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou");
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_TISKNE(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("out");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  CASUJ_VZOR_TISKNE(1,1,2,1,0,0,zapor,0);     //rekurze - 1.osoba j.Ë. p¯Ìt.Ëasu
+  PRIDEJ_ZA_KAZDE_SLOVO("ùÌ");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  CASUJ_VZOR_TISKNE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.Ë. (dÏlajÌ)
+  PRIDEJ_ZA_KAZDE_SLOVO("cÌ");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_TISKNE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+
+  strcpy(g_slovo,g_slovodocasne);
+  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+  PRIDEJ_NA_KONEC("l˝");
+  PRIDEJ_NA_ZACATEK_FRONTY();
+
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+                                   //pozn·mka viz v˝öe
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_MINE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+int pozice;
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nem· "p¯edminul˝" Ëas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_PISMENA(g_slovo,"omen") == 1) {     //zapomene, vzpomene atd.
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      PRIDEJ_NA_KONEC("Úel");                      //zapomnÏl, vzpomnÏl atd.
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+      strcpy(g_slovo,g_slovodocasne);
+     }
+    PRIDEJ_NA_KONEC("ul");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) minem - nespisovnÈ
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eö");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou");
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_MINE(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("out");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  CASUJ_VZOR_MINE(1,1,2,1,0,0,zapor,0);     //rekurze - 1.osoba j.Ë. p¯Ìt.Ëasu
+  PRIDEJ_ZA_KAZDE_SLOVO("ùÌ");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  CASUJ_VZOR_MINE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.Ë. (dÏlajÌ)
+  PRIDEJ_ZA_KAZDE_SLOVO("cÌ");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_MINE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (POSLEDNI_PISMENA(g_slovo,"an") == 1) {          //dostane -> dost·v·
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+    PRIDEJ_NA_KONEC("·v·");
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"en") == 1) {        //zapomene -> zapomÌn·
+    pozice=strlen(g_slovo);
+    if (TVRDA_SOUHLASKA(g_slovo[pozice-3]) == 1) g_slovo[pozice-2]='˝';
+    else g_slovo[pozice-2]='Ì';
+    g_slovo[pozice]='·'; g_slovo[pozice+1]=0;
+
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"in") == 1) {        //mine -> mÌjÌ
+    pozice=strlen(g_slovo);
+    if (TVRDA_SOUHLASKA(g_slovo[pozice-3]) == 1) g_slovo[pozice-2]='˝';
+    else g_slovo[pozice-2]='Ì';
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    PRIDEJ_NA_KONEC("jÌ");
+
+    PRIDEJ_DO_FRONTY(); return(_sazi_);
+   }
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_ZACNE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+int pozice;
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nem· "p¯edminul˝" Ëas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    ODSTRAN_E(g_slovo);
+    if (POSLEDNI_ZNAK(g_slovo) != 'a') PRIDEJ_NA_KONEC("a");
+    PRIDEJ_NA_KONEC("l");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ul");                        //zajmul - moûn· nespisovnÈ
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) berem - nespisovnÈ
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eö");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou"); break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_ZACNE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_ZNAK(g_slovo) != 'm'           //kdyû to NENÕ p¯ijme, zajme
+     && PREDPOSLEDNI_ZNAK(g_slovo) != 'a') {    //a NENÕ to dostane atd.
+      strcpy(g_slovo,g_slovodocasne);
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+      ODSTRAN_E(g_slovo);
+      PRIDEJ_NA_KONEC("Ìt");
+      PRIDEJ_DO_FRONTY();
+      ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+      PRIDEJ_DO_FRONTY();
+     }
+
+    if (PREDPOSLEDNI_ZNAK(g_slovo) == 'a') {    //pokud to JE dostane atd.
+      strcpy(g_slovo,g_slovodocasne);
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      if (POCET_SLABIK(g_slovo) > 0 || zapor == 1) PRIDEJ_NA_KONEC("at");
+      else PRIDEJ_NA_KONEC("·t");         //st·t, dostat a nestat (se)
+      PRIDEJ_DO_FRONTY();
+      ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+      PRIDEJ_DO_FRONTY();
+     }
+    else {
+      strcpy(g_slovo,g_slovodocasne);
+      PRIDEJ_NA_KONEC("out");
+      PRIDEJ_DO_FRONTY();
+      ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+      PRIDEJ_DO_FRONTY();
+     }
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  CASUJ_VZOR_ZACNE(1,1,2,1,0,0,zapor,0);     //rekurze - 1.osoba j.Ë. p¯Ìt.Ëasu
+  PRIDEJ_ZA_KAZDE_SLOVO("ùÌ");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  CASUJ_VZOR_ZACNE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.Ë. (dÏlajÌ)
+  PRIDEJ_ZA_KAZDE_SLOVO("cÌ");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_ZACNE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (JELI_SOUHLASKA(POSLEDNI_ZNAK(g_slovo)) == 1 &&
+      JELI_SOUHLASKA(PREDPOSLEDNI_ZNAK(g_slovo)) == 1) {
+         //zaËne -> zaËÌn·, napne -> napÌn·, p¯ijme -> p¯ijÌm·, nadme -> nad˝m·
+    pozice=strlen(g_slovo);
+    g_slovo[pozice]=g_slovo[pozice-1];
+    if (TVRDA_SOUHLASKA(g_slovo[pozice-2]) == 1) g_slovo[pozice-1]='˝';
+    else g_slovo[pozice-1]='Ì';
+    g_slovo[pozice+1]='·'; g_slovo[pozice+2]=0;
+
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_KRYJE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nem· "p¯edminul˝" Ëas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    if (POSLEDNI_ZNAK(g_slovo) == 'a') {                  //vlaje - vl·l
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("·");
+     }
+    else if (POSLEDNI_PISMENA(g_slovo,"¯e") == 1 ||                  //p¯eje
+             POSLEDNI_PISMENA(g_slovo,"Me") == 1) {                  //smÏje
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("·");
+     }
+    PRIDEJ_NA_KONEC("l");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("u");  //spisovnÈ, ale hovorovÈ
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("i");
+               }
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) kryjem - nespisovnÈ
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eö");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else { PRIDEJ_NA_KONEC("ou");          //spisovnÈ, ale hovorovÈ
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("Ì");
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_KRYJE(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    if (POSLEDNI_PISMENA(g_slovo,"¯e") == 1 ||                  //p¯eje
+        POSLEDNI_PISMENA(g_slovo,"Me") == 1) {                  //smÏje
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("·");
+     }
+    else if (POSLEDNI_ZNAK(g_slovo) == 'e') {  //dÏje -> dÌt, leje -> lÌt
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+      if (TVRDA_SOUHLASKA(POSLEDNI_ZNAK(g_slovo)) == 1) PRIDEJ_NA_KONEC("˝");
+      else PRIDEJ_NA_KONEC("Ì");
+     }
+    PRIDEJ_NA_KONEC("t");
+    PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  CASUJ_VZOR_KRYJE(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.Ë. p¯Ìt.Ëasu
+
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+  switch(POSLEDNI_ZNAK(g_slovo)) {
+    case 'a': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("·ÚÌ");
+              PRIDEJ_DO_FRONTY();
+              break;
+    case 'e': OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+              if (POSLEDNI_ZNAK(g_slovo) == 'M') {  //smÏje -> sm·nÌ
+                OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("m·");
+                PRIDEJ_NA_KONEC("ÚÌ"); PRIDEJ_DO_FRONTY();
+               }
+              else {                     //h¯eje -> h¯·tÌ i
+                PRIDEJ_NA_KONEC("·");
+                PRIDEJ_NA_KONEC("ùÌ"); PRIDEJ_DO_FRONTY();
+                OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+                PRIDEJ_NA_KONEC("ÚÌ"); PRIDEJ_DO_FRONTY();
+               }
+              break;
+    default: PRIDEJ_NA_KONEC("ùÌ");                //kryje, myje, lije
+             PRIDEJ_DO_FRONTY();
+             break;
+   }
+  if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ÌcÌ");
+  PRIDEJ_DO_FRONTY();
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_KRYJE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+  strcpy(g_slovo,g_slovodocasne);
+
+  PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+  PRIDEJ_NA_KONEC("v·");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_VZOR_KUPUJE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nem· "p¯edminul˝" Ëas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+    PRIDEJ_NA_KONEC("oval");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("u");  //spisovnÈ, ale hovorovÈ
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("i");
+               }
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) kryjem - nespisovnÈ
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eö");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else { PRIDEJ_NA_KONEC("Ì");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("ou");          //spisovnÈ, ale hovorovÈ
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_KUPUJE(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+    PRIDEJ_NA_KONEC("ovat");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  CASUJ_VZOR_KUPUJE(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.Ë. p¯Ìt.Ëasu
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,3);
+  PRIDEJ_NA_KONEC("ov·ÚÌ");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ÌcÌ");
+  PRIDEJ_DO_FRONTY();
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_KUPUJE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+                         //maloktere g_slovo tohoto vzoru je v dokonavem tvaru
+  strcpy(g_slovo,g_slovodocasne);
+
+  OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+  PRIDEJ_NA_KONEC("ov·v·");                //ubytuje => ubytov·v·
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_VZOR_PROSI(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: goto PREDMINULY;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("il");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("Ìm");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("im");                 //prosim - nespisovnÈ
+               }
+              else PRIDEJ_NA_KONEC("Ìme");
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("Ìö");
+              else PRIDEJ_NA_KONEC("Ìte"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("Ì");
+              else { PRIDEJ_NA_KONEC("Ì");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("ejÌ");
+                PRIDEJ_DO_FRONTY(); OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+                                                //(oni) prosej - nespisovnÈ
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_PROSI(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,0);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+
+    strcpy(g_slovo,g_slovodocasne);
+    switch(POSLEDNI_ZNAK(g_slovo)) {
+      case 's': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("ö"); goto ROZKAZDAL;
+      case 'z': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("û");
+                ROZKAZDAL:
+                PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+                                     //nespisovne (uhas x uhaö, nekaz x nekaû)
+     }
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("i");      //pomocn· konstrukce
+    if (POCET_SLABIK(g_slovo) < 2) {
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+      PRIDEJ_NA_KONEC("Ì");        //k¯tÌt, ctÌt (platÌ vËetnÏ p¯edpon a z·poru)
+     }
+    PRIDEJ_NA_KONEC("t");                          //prosit
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  CASUJ_VZOR_PROSI(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.Ë. p¯Ìt.Ëasu
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+  if (ZJEMNI_KONCOVKU_SLOVESA_2(POSLEDNI_ZNAK(g_slovo)) != POSLEDNI_ZNAK(g_slovo)) {
+                                               //koncovka je b,f,m,p nebo v
+    PRIDEJ_NA_KONEC("eÚÌ");
+    PRIDEJ_DO_FRONTY();
+    if (POSLEDNI_PISMENA(g_slovo,"ouP") == 1) return(1);
+                                //ve slovech konËÌcÌch na "oupÌ" (koupÌ, loupÌ)
+                                //se nezjemÚuje souhl·ska "p" - koupenÌ, loupenÌ
+    OREZ_POSLEDNI_ZNAKY(g_slovo,3);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+               //dale se pokracuje pridanim "eni" za nasledujicim else
+   }
+  else {
+    switch(POSLEDNI_ZNAK(g_slovo)) {
+      case 'ù': if (PREDPOSLEDNI_ZNAK(g_slovo) == 's') {
+                  OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("öù");
+                  PRIDEJ_NA_KONEC("eÚÌ"); PRIDEJ_DO_FRONTY();
+                  OREZ_POSLEDNI_ZNAKY(g_slovo,5); PRIDEJ_NA_KONEC("sù");
+                 }                     //nap¯. mastÌ -> maötÏnÌ, mastÏnÌ
+                else if (JELI_SAMOHLASKA(PREDPOSLEDNI_ZNAK(g_slovo)) == 1) {
+                  OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("c");
+                  PRIDEJ_NA_KONEC("eÚÌ"); PRIDEJ_DO_FRONTY();
+                  OREZ_POSLEDNI_ZNAKY(g_slovo,4); PRIDEJ_NA_KONEC("ù");
+                 }              //nutÌ -> nucenÌ (nutÏnÌ), ale uctÌ -> uctÏnÌ
+                break;
+      case 'Ô': switch(PREDPOSLEDNI_ZNAK(g_slovo)) {
+                  case 'z': OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("ûÔ");
+                            PRIDEJ_NA_KONEC("eÚÌ"); PRIDEJ_DO_FRONTY();
+                            OREZ_POSLEDNI_ZNAKY(g_slovo,5); PRIDEJ_NA_KONEC("zÔ");
+                            break;         //brûdÏnÌ i brzdÏnÌ
+                  case 'û': break; //nemÏnÌ se (oproti tomu, co je v default)
+                  default: OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("z");
+                           PRIDEJ_NA_KONEC("eÚÌ"); PRIDEJ_DO_FRONTY();
+                           OREZ_POSLEDNI_ZNAKY(g_slovo,4); PRIDEJ_NA_KONEC("Ô");
+                           break;         //sezenÌ i sedÏnÌ
+                 }
+                break;
+      case 's': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("ö");
+                PRIDEJ_NA_KONEC("eÚÌ"); PRIDEJ_DO_FRONTY();
+                OREZ_POSLEDNI_ZNAKY(g_slovo,4); PRIDEJ_NA_KONEC("s");
+                break;                     //haöenÌ i hasenÌ
+      case 'z': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("û");
+                PRIDEJ_NA_KONEC("eÚÌ"); PRIDEJ_DO_FRONTY();
+                OREZ_POSLEDNI_ZNAKY(g_slovo,4); PRIDEJ_NA_KONEC("z");
+                break;                     //kaûenÌ i kazenÌ
+     }
+   }
+
+  PRIDEJ_NA_KONEC("eÚÌ");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  if (tvar == 3) {                    //holÌcÌ
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ÌcÌ");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("ejÌcÌ");
+    PRIDEJ_DO_FRONTY();
+   }
+  if (tvar == 30) {                    //holicÌ
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("icÌ");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ÌcÌ");           //nespisovne
+    PRIDEJ_DO_FRONTY();
+   }
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_PROSI(1,1,1,1,0,0,zapor,1);     //rekurze - p¯ÌdavnÈ jm. (dÏlan˝)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+  strcpy(g_slovo,g_slovodocasne);
+
+  switch(POSLEDNI_ZNAK(g_slovo)) {
+    case 's': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("ö"); break; //odporoöuje
+    case 'z': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("û"); break; //pokaûuje
+   }
+  if (POSLEDNI_PISMENA(g_slovo,"sù") == 1) {          //nahuöùuje i nahusùuje
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("öùuje");
+    PRIDEJ_DO_FRONTY();
+
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);                      //nahustÌ => nahusù
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    PRIDEJ_NA_KONEC("uje");
+    PRIDEJ_DO_FRONTY(); return(_kupuje_);
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"zÔ") == 1) {          //zbrûÔuje i zbrzÔuje
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("ûÔuje");
+    PRIDEJ_DO_FRONTY();
+
+    strcpy(g_slovo,g_slovodocasne);
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);;                      //zbrzdÌ => zbrzÔ
+    PRIDEJ_NA_KONEC("uje");
+    PRIDEJ_DO_FRONTY(); return(_kupuje_);
+   }
+  else if (POSLEDNI_ZNAK(g_slovo) == 'ù') {            //rozsvÏcuje (rozsvÏùuje)
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("cuje");
+    PRIDEJ_DO_FRONTY();
+
+    strcpy(g_slovo,g_slovodocasne);
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);                 //rozsvÌtÌ => rozsvÌù
+    PRIDEJ_NA_KONEC("uje");
+    PRIDEJ_DO_FRONTY(); return(_kupuje_);
+   }
+  else if (POSLEDNI_ZNAK(g_slovo) == 'Ô') {             //ochlazuje i ochlaÔuje
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("zuje");
+    PRIDEJ_DO_FRONTY();
+
+    strcpy(g_slovo,g_slovodocasne);
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    PRIDEJ_NA_KONEC("uje");
+    PRIDEJ_DO_FRONTY(); return(_kupuje_);
+   }
+
+  ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+
+  PRIDEJ_NA_KONEC("uje");
+  PRIDEJ_DO_FRONTY(); return(_kupuje_);
+
+  PREDMINULY:                   //"p¯edminul˝" tvar slovesa (dÏl·v·)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("Ìv·");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_VZOR_TRPI(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+//u tohoto vzoru vÏtöina slov nem· tvar nedokonavÈho vidu
+// - funkce tedy u tvo¯enÌ nedokonavÈho vidu vûdy vracÌ nulu (ne˙spÏch)
+//   -> slova vzoru trpÌ, kter· nedokonav˝ vid majÌ, ho musÌ mÌt zaps·n
+//      jako v˝jimku
+// (zavÏsÌ -> zavÏöuje, zabydlÌ -> zabydluje atd.)
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: goto PREDMINULY;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("el");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("Ìm");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("im");                 //trpim - nespisovnÈ
+               }
+              else PRIDEJ_NA_KONEC("Ìme");
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("Ìö");
+              else PRIDEJ_NA_KONEC("Ìte"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("Ì");
+              else { PRIDEJ_NA_KONEC("Ì");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("ejÌ");
+                PRIDEJ_DO_FRONTY(); OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+                                                //(oni) trpÏj - nespisovnÈ
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_TRPI(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("et");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  return(CASUJ_VZOR_PROSI(1,1,6,1,vid,0,zapor,tvar));   //stejnÈ jako u vzoru prosÌ
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  if (tvar == 3) {                    //holÌcÌ
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ÌcÌ");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("ejÌcÌ");
+    PRIDEJ_DO_FRONTY();
+   }
+  if (tvar == 30) {                    //holicÌ
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("icÌ");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ÌcÌ");           //nespisovne
+    PRIDEJ_DO_FRONTY();
+   }
+  return(0);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_TRPI(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+                                   //pozn·mka viz v˝öe
+  return(0);
+
+  PREDMINULY:                   //"p¯edminul˝" tvar slovesa (dÏl·v·)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("Ìv·");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_VZOR_SAZI(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+//u tohoto vzoru vÏtöina slov nem· tvar nedokonavÈho vidu
+// - funkce tedy u tvo¯enÌ nedokonavÈho vidu vûdy vracÌ nulu (ne˙spÏch)
+//   -> slova vzoru s·zÌ, kter· nedokonav˝ vid majÌ, ho musÌ mÌt zaps·n
+//      jako v˝jimku
+// (zatÌm mÏ nenapadla û·dn· v˝jimka)
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: goto PREDMINULY;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("el");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("Ìm");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("im");                 //sazim - nespisovnÈ
+               }
+              else PRIDEJ_NA_KONEC("Ìme");
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("Ìö");
+              else PRIDEJ_NA_KONEC("Ìte"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("Ì");
+              else { PRIDEJ_NA_KONEC("Ì");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("ejÌ");
+                PRIDEJ_DO_FRONTY(); OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+                                                //(oni) s·zej - nespisovnÈ
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_SAZI(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("ej");
+
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("et");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  CASUJ_VZOR_SAZI(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.Ë. p¯Ìt.Ëasu
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+  ZJEMNI_KONCOVKU_SLOVESA_1();
+  PRIDEJ_NA_KONEC("eÚÌ");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  if (tvar == 3) {                    //holÌcÌ
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("ejÌcÌ");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ÌcÌ");
+    PRIDEJ_DO_FRONTY();
+   }
+  if (tvar == 30) {                    //holicÌ
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("icÌ");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("ecÌ");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ÌcÌ");           //nespisovne
+    PRIDEJ_DO_FRONTY();
+   }
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_SAZI(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+                                   //pozn·mka viz v˝öe
+  return(0);
+
+  PREDMINULY:                   //"p¯edminul˝" tvar slovesa (dÏl·v·)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("Ìv·");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_VZOR_DELA(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+// Tento vzor umoûÚuje vytv·¯et slova typu "b˝v·valo" - staËÌ vytvo¯it
+// nedokonav˝ tvar slovesa z jiû nedokonavÈho z·kladnÌho tvaru bez p¯edpony
+// (nap¯. dÏl· => dÏl·v·)
+// Tento vzor je takÈ jedin˝m vzorem, kter˝ m· zcela pravidelnÈ skloÚov·nÌ
+// i tvo¯enÌ r˘zn˝ch tvar˘. (KÈû by takov˝ch vzor˘ bylo vÌc :-) )
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: goto PREDMINULY;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("al");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje p¯Ìsluön˝ tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("·m");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("am");                 //dÏlam - nespisovnÈ
+               }
+              else PRIDEJ_NA_KONEC("·me");
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("·ö");
+              else PRIDEJ_NA_KONEC("·te"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("·");
+              else { PRIDEJ_NA_KONEC("ajÌ");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("aj");                   //dÏlaj - nespisovnÈ
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloÚov·nÌ p¯Ìtomn˝ Ëas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_DELA(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,g_slovodocasne);
+
+    PRIDEJ_NA_KONEC("ej");
+
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("a");         //pomocn· konstrukce ke zjiötÏnÌ poËtu slabik
+    if (POCET_SLABIK(g_slovo) >= 2 || zapor == 1) PRIDEJ_NA_KONEC("t");   //dÏlat, dotkat
+    else { OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("·t"); }  //tk·t
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  CASUJ_VZOR_DELA(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.Ë. p¯Ìt.Ëasu
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  PRIDEJ_NA_KONEC("ÚÌ");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlajÌcÌ)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ajÌcÌ");
+  PRIDEJ_DO_FRONTY();
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesnÈ p¯ÌdavnÈ jmÈno (dÏlan˝)
+  CASUJ_VZOR_DELA(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dÏl·nÌ)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavÈho vidu na nedokonav˝
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("·v·");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+
+  PREDMINULY:                   //"p¯edminul˝" tvar slovesa (dÏl·v·)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("·v·");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_SLOVESO_JE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 6: goto PREDMINULY;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minul˝ Ëas
+    strcpy(g_slovo,"byl");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,0,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //p¯Ìtomn˝ Ëas
+    switch(osoba) {
+      case 1: if (cislo == 1) strcpy(g_slovo,"jsem,sem");  //sem - nespisovnÈ
+              else strcpy(g_slovo,"jsme,sme"); break;      //sme - nespisovnÈ
+      case 2: if (cislo == 1) strcpy(g_slovo,"jsi,jseö,seö,si");//jseö,seö,si - nespisovnÈ
+              else strcpy(g_slovo,"jste,ste"); break;      //ste - nespisovnÈ
+      case 3: if (cislo == 1) strcpy(g_slovo,"je");
+              else strcpy(g_slovo,"jsou,sou"); break;      //sou - nespisovnÈ
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) {
+	  if (osoba == 3 && cislo == 1) strcpy(g_slovavefronte,"nenÌ");
+	  else PRIDEJ_PRED_KAZDE_SLOVO("ne");
+	 }
+   }
+  else if (cas == 3) {                                   //budoucÌ Ëas
+    switch(osoba) {
+      case 1: if (cislo == 1) strcpy(g_slovo,"budu");
+              else strcpy(g_slovo,"budeme,budem"); break;  //budem - nespisovnÈ
+      case 2: if (cislo == 1) strcpy(g_slovo,"budeö");
+              else strcpy(g_slovo,"budete"); break;
+      case 3: if (cislo == 1) strcpy(g_slovo,"bude");
+              else strcpy(g_slovo,"budou"); break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 4) {                                   //rozkazovacÌ zp˘sob
+    strcpy(g_slovo,"buÔ");
+
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,"b˝t,b˝ùi");             //b˝ti - kniûnÌ tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesnÈ podstatnÈ jmÈno
+
+  strcpy(g_slovo,"byùÌ");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //p¯echodnÌk (minul˝ nebo p¯Ìtomn˝)
+  return(0);
+
+  PREDMINULY:                   //"p¯edminul˝" tvar slovesa (b˝v·)
+  strcpy(g_slovo,"b˝v·");
+  PRIDEJ_DO_FRONTY();
+  return(_dela_);
+ }

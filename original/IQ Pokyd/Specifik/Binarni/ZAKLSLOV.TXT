@@ -1,0 +1,85 @@
+IQ Pokyd - popis základního (dosud nerozskloòovaného) slovníku v binární
+           podobì
+Copyright (C) Aleš Janda - KİBLSoft 2002 - 2003
+
+
+Struktura souboru:
+
+
+       obsah dat                poèet bajtù        zakódování
+===============================================================================
+
+ Identifikaèní text souboru     zakonèení \x0      ádné
+------------------------------------------------------------------------------
+ Poèet znakù, které budou náhodnì     1            ádné
+ vyplnìny dále ^ 'I'
+------------------------------------------------------------------------------
+ Náhodné znaky                      viz vıše       ádné
+------------------------------------------------------------------------------
+ Náhodná hodnota, podle které         1            ^'I'
+ se bude soubor kódovat
+ (nahodnykodovaciklic)
+------------------------------------------------------------------------------
+ Signatura zákl. slovníku - ASCII 1   1            (^'K')+nahodnykodovaciklic
+------------------------------------------------------------------------------
+ Hlavní èíslo verze IQ Pokydu         1            (^'K')+nahodnykodovaciklic
+------------------------------------------------------------------------------
+ Vedlejší èíslo verze IQ Pokydu       1            (^'K')+nahodnykodovaciklic
+------------------------------------------------------------------------------
+ Èíslo verze slovníku IQ Pokydu       1            (^'K')+nahodnykodovaciklic
+------------------------------------------------------------------------------
+ Hodnota KODOVACI_ZNAK - viz pozn. 3  1            (^'K')+nahodnykodovaciklic
+------------------------------------------------------------------------------
+ Celkovı poèet slov ve slovníku       3            (^'K')+nahodnykodovaciklic
+------------------------------------------------------------------------------
+ Kontrolní souèet 1 (viz pozn. 1)     1            ádné
+------------------------------------------------------------------------------
+ Kontrolní souèet 2 (viz pozn. 1)     1            ádné
+
+===============================================================================
+
+
+Za hlavièkou se vynulují kontrolní souèty, které se zaènou poèítat znovu.
+
+Dále následují samotná slova. Ta mají takovouto strukturu:
+
+       obsah dat                poèet bajtù     zakódování
+===============================================================================
+
+ Poèet prvních shodnıch znakù        1         ((^nahodnykodovaciklic)+'I')^'Q'
+ s pøedcházejícím slovem
+ (pocetstejnychznaku) - viz pozn. 2
+------------------------------------------------------------------------------
+ Délka slova v bajtech               1         ((^nahodnykodovaciklic)+'I')^'Q'
+------------------------------------------------------------------------------
+ Vlastní slovo - viz pozn. 3                   ((((^nahodnykodovaciklic)+'I')^
+                     delka-pocetstejnychznaku  ^'Q')+pozice)^pocetstejnychznaku
+
+                  (pozice = aktuální pozice bajtu + 2)
+------------------------------------------------------------------------------
+ Informace o slovì - vzor,    zakonèení \x0    ((((^nahodnykodovaciklic)+'I')^
+ popø. vıjimky atd.           (zakódované      ^'Q')+pozice)^pocetstejnychznaku
+ Zakonèeno znakem \x0         ^KODOVACI_ZNAK)
+
+===============================================================================
+
+Na konci souboru je kontrolní souèet 1 a kontrolní souèet 2.
+
+
+
+Poznámky:
+
+ 1) Kontrolní souèet 1 se zjišuje seètením všech pøedcházejících nezabalenıch
+    bajtù.
+    Kontrolní souèet 2 se zjišuje zxorováním a seètením jednotlivıch všech
+    pøedcházejících nezabalenıch bajtù.
+
+ 2) Je-li pocetstejnychznaku == 255, obsahují další 2 bajty kontrolní souèet 1
+    a kontrolní souèet 2. Tyto kontrolní souèty nejsou nijak zakódované.
+    Za nimi následuje další slovo.
+
+ 3) Slovo je jako "nezakódované" povaované slovo, k jeho kadému bajtu je
+    pøiètena a následnì jí vyxorována konstanta KODOVACI_ZNAK, která má mít
+    správnou hodnotu 127 (ta mùe bıt celkem libovolná, ale hodnota nesmí bıt
+    ASCII hodnotou platného písmene!
+

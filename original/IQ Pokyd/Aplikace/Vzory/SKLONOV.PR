@@ -1,0 +1,34 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Mùžete ho použít k vlastní
+   potøebì, ale nesmíte jej ani programy založené na tomto kódu využít komerènì!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - sklonov.pr - definování globálních promìnných potøebných
+   pro skloòování slovních druhù
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+
+char g_slovozaklad[DELKA_JEDNODUCHEHO_SLOVA];
+                                 //základní slovo, podle kterého se skloòuje
+char g_slovodocasne[DELKA_JEDNODUCHEHO_SLOVA];
+                                  //vychází ze "slovozaklad", mírnì upravené
+char g_slovo[DELKA_JEDNODUCHEHO_SLOVA];
+                              //koneèný tvar slova (s pøíslušným pádem atd.)
+char g_slovavefronte[DELKA_FRONTY];
+                                                   //do ní se generují tvary
+char g_pomocnesloveso[DELKA_JEDNODUCHEHO_SLOVA];
+                               //do ní se vygeneruje pom. sloveso (u sloves)
+char g_informaceoslove[DELKA_INFORMACI];
+                             //zde bude u kazdeho slova pozice, popr. tvar atd.
+                             //plati pro zakladni i rozsireny slovnik
+char g_vyjimkysklonovanislova[DELKA_INFORMACI];
+                             //zde budou u kazdeho slova vyjimky sklonovani
+                             //plati pro zakladni slovnik
+char g_vnoreniprirozsklonovani[MAX_POCET_VNORENI_PRI_ROZSKLONOVANI];
+                             //zde jsou v textovem retezci cisla aktualniho
+                             //"vnoreni" pri rozsklonovani slov
+                             //(dela => delany => delanost)
+

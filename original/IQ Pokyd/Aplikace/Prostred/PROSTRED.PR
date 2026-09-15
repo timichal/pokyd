@@ -1,0 +1,45 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Mùžete ho použít k vlastní
+   potøebì, ale nesmíte jej ani programy založené na tomto kódu využít komerènì!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - prostred.pr - globální promìnné pro funkce pro prostøedí WinMFC
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+DWORD g_barvapozadizadavanivety=0x00110009;
+DWORD g_barvatextuhlavnihookna =0x00E0E0E0;
+DWORD g_barvatextucloveka      =0x0057FFFF;
+DWORD g_barvatextupocitace     =0x0057FF57;
+DWORD g_barvahlavickovychtextu =0x00FFFF90;
+DWORD g_barvanapisuIQPokyd     =0x00FFFFFF;
+HBRUSH g_stetecpozadizadavanivety=CreateSolidBrush(g_barvapozadizadavanivety);
+HBRUSH g_stetecbilepozadi=CreateSolidBrush(0x00FFFFFF);
+HBRUSH g_stetecpozadihlavnihookna,g_stetecpozadipodokna;
+HWND g_HWNDhlavickovychtextu[3];
+HBITMAP g_obrazekpozadihlavnihookna=NULL;
+
+HANDLE g_handlevlaknaprocesu,g_handlevlaknaprocent,g_handlevlaknahlasek,g_handlevlaknaefektu;
+BYTE g_bezivlaknoprocesu=0,g_bezivlaknoprocent=0,g_bezivlaknohlasek=0,g_bezivlaknoefektu=0;
+BYTE g_zobrazenahlaska=0,g_akceefektu=0;
+BYTE g_zavritvlaknoprocesu=0,g_zavritvlaknoprocent=0,g_zavritvlaknohlasek=0,g_zavritvlaknoefektu=0;
+BYTE g_praveprovadenaakce,g_nestandardniukonceni=0;
+
+char g_zobrazithlasku[100]="",g_zobrazitnastaveni=0;
+
+HWND g_rodichlasky;
+
+CMfcDlg g_MfcDlghlavniokno;
+
+IQPokydWav g_tuknuti;
+RozvrzeniVet g_poslednich100vet;
+
+CStatic *g_handletext1=NULL,*g_handletext2=NULL,*g_handletext3=NULL;
+HWND g_HWNDpodokna=NULL,g_HWNDhlavnihookna=NULL;
+HINSTANCE g_instanceprogramu;
+CWnd *g_CWndhlavnihookna=NULL;
+HDC g_HDChlavnihookna=NULL;
+
+CString g_zaznamrozhovoru;

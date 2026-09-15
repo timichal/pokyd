@@ -1,0 +1,9 @@
+Signatury binárních souborù IQ Pokydu:
+
+0 - mùže být cokoliv, nepoužito
+1 - základní slovník                      [SLOVNIK.IQP]
+2 - úplný slovník                         [SLOVNIK.TMP]
+3 - gramatika (inteligence)               [IQPOKYD.IQP]
+4 - uložené údaje o(d) uživateli          [PROFIL.IQP]
+5 - binární soubor se záznamy rozhovoru   [NOVEINFO.IQP]
+

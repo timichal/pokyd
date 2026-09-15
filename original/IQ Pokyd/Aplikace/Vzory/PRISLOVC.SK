@@ -1,0 +1,39 @@
+/* Tento zdrojov˝ kÛd je pod licencÌ GNU/GPL. M˘ûete ho pouûÌt k vlastnÌ
+   pot¯ebÏ, ale nesmÌte jej ani programy zaloûenÈ na tomto kÛdu vyuûÌt komerËnÏ!
+
+   Jedn· se o zdrojov˝ kÛd programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleöe Jandy
+*/
+
+/* IQ Pokyd - prislovc.sk - funkce na stupÚov·nÌ jednotliv˝ch vzor˘ p¯ÌslovcÌ
+   Aleö Janda (C) K›BLSoft 2002-2005 (kÛdov·nÌ Windows 1250)
+*/
+
+
+BYTE VYGENERUJ_PRISLOVCE_Z_PRIDAVNEHO_JMENA(void) {
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (POSLEDNI_PISMENA(g_slovo,"ck˝") == 1 || POSLEDNI_PISMENA(g_slovo,"sk˝") == 1 || POSLEDNI_PISMENA(g_slovo,"ezk˝") == 1) {
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("y"); PRIDEJ_DO_FRONTY();
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"ùejöÌ") == 1) {
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("i");
+    PRIDEJ_DO_FRONTY();
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("ö");
+    PRIDEJ_DO_FRONTY();    //nespisovnÈ
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("c");
+    PRIDEJ_DO_FRONTY();    //nespisovnÈ
+   }
+  else if (MEKKA_SOUHLASKA(PREDPOSLEDNI_ZNAK(g_slovo)) != 1) {
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    ZJEMNI_SLOVO_PODSTJM();
+    PRIDEJ_NA_KONEC("e");
+    PRIDEJ_DO_FRONTY();
+   }
+  else return(0);           //neexistuje tvar
+
+  return(1);
+ }

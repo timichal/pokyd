@@ -1,0 +1,69 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Mùžete ho použít k vlastní
+   potøebì, ale nesmíte jej ani programy založené na tomto kódu využít komerènì!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - nastaven.pr - soubor s funkcemi ve tøídì pro nastavení
+   a tøídu IQPokydWav
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+Nastaveni::Nastaveni(void) {
+ }
+Nastaveni::~Nastaveni(void) {
+ }
+void Nastaveni::SPOCITEJ_NALADABODY_Z_NALADY(void) {
+  naladabody=nalada*15+7;
+ }
+void Nastaveni::SPOCITEJ_NALADU_PODLE_NALADABODY(void) {
+  nalada=naladabody/15;
+  if (nalada < 1) nalada=1;
+  if (nalada > 5) nalada=5;
+ }
+void Nastaveni::NASTAV_STANDARDNE(void) {
+  pohlavicloveka=1; pohlavipocitace=1;     //muzi
+  jmenocloveka[0]=0; jmenopocitace[0]=0;
+  charakter=3;   //prumerny
+  nalada=3;      //normalni
+  ukladatrozhovor=1; pouzivatzvuky=1;
+  pouzivatefekty=0; spisovnacestina=0;
+  zobrazovatpopisky=1;
+
+  debug_rychleukoncovani=0;
+  debug_tolerancepravopisu=1;        //uplne tolerovat pravopis
+  debug_pravopisnarekurze=11;        //kontrolovat do stredni hloubky rekurze
+
+  SPOCITEJ_NALADABODY_Z_NALADY();
+
+  emulovatklavesnici=0;
+  klavesniceqwerty=1;
+  standardnikurzor=0;
+ }
+void Nastaveni::ZKOPIRUJ_SEM(Nastaveni zdroj) {
+  pohlavicloveka=zdroj.pohlavicloveka;
+  pohlavipocitace=zdroj.pohlavipocitace;
+  strcpy(jmenocloveka,zdroj.jmenocloveka);
+  strcpy(jmenopocitace,zdroj.jmenopocitace);
+  charakter=zdroj.charakter;
+  nalada=zdroj.nalada;
+  ukladatrozhovor=zdroj.ukladatrozhovor;
+  pouzivatzvuky=zdroj.pouzivatzvuky;
+  pouzivatefekty=zdroj.pouzivatefekty;
+  spisovnacestina=zdroj.spisovnacestina;
+  zobrazovatpopisky=zdroj.zobrazovatpopisky;
+
+  debug_rychleukoncovani=zdroj.debug_rychleukoncovani;
+  debug_tolerancepravopisu=zdroj.debug_tolerancepravopisu;
+  debug_pravopisnarekurze=zdroj.debug_pravopisnarekurze;
+
+  naladabody=zdroj.naladabody;
+
+  emulovatklavesnici=zdroj.emulovatklavesnici;
+  klavesniceqwerty=zdroj.klavesniceqwerty;
+  standardnikurzor=zdroj.standardnikurzor;
+
+  prikaz_nezobrazovatpozadi=zdroj.prikaz_nezobrazovatpozadi;
+  prikaz_readonlymod=zdroj.prikaz_readonlymod;
+ }

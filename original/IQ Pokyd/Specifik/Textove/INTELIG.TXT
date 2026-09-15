@@ -1,0 +1,29 @@
+Struktura textového souboru INTELIG.IQZ:
+
+1.øádek:                podmínka
+2. - 5.øádek (4 øádky): odpovìdi
+6.øádek:                prázdný
+7.øádek:                viz 1.øádek (nebo konec souboru)
+
+Podmínka i odpovìdi mùžou obsahovat zástupná slova. Ta jsou ve tvaru
+{A@[slovo]B>C-D}
+kde:
+ A - èíslo 0 - 9 a znamená identifikaèní èíslo slova. To slouží k urèení,
+     které slovo v odpovìdi se vztahuje k slovu v podmínce. Èíslo v odpovìdi
+     tedy musí být (alespoò jednou) zastoupeno v podmínce.
+     "A" mimo èísel mùže být také:
+                              P: podmìt vìty
+                              R: pøísudek
+                              S: pøedmìt
+     (písmena jsou to víceménì náhodná, nic lepšího mì opravdu nenapadlo)
+     Tato slova nemusí být obsažena v poslední vìtì, ale mùžou i vyplývat
+     z pøedchozího hovoru.
+ [slovo] - slovo v UVOZOVKÁCH, tedy pøesné urèení slova (musí být v základním
+           tvaru). Podle nìj se nalezne èíslo slova v prùbìhu naèítání
+           inteligence. NEPOVINNÝ PARAMETR
+ B - "vnoøení" - tedy standardní atribut hledaného/vytváøeného slova. Je-li
+     tento atribut pouze "?", vnoøení mùže být libovolné, pøípadnì se
+     (v odpovìdi) dìdí z pùvodního slova.
+ C a D - Standardní atribut v textové podobì. Mùže jich být libovolné množství
+     oddìlených pomlèkami (vèetnì žádných)
+

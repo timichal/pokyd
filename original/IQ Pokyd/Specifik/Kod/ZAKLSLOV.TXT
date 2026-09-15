@@ -1,0 +1,15 @@
+IQ Pokyd - popis struktury dat v "g_databazezakladnichslov"
+Copyright (C) Aleš Janda - KÝBLSoft 2002 - 2005
+
+
+Struktura promìnné:
+
+Je to 2rozmìrné textové pole.
+Má tolik øádkù, kolik je slov.
+Každý øádek obsahuje:
+
+[slovo]:[vzor]
+
+kde [slovo] je samotné slovo (ve standardní úpravì pro IQ Pokyd - ch => * atd.),
+za ním následuje dvojteèka a potom 1 binární znak urèující vzor.
+Pozor, na konci tohoto øetìzce nemusí být nula!

@@ -1,0 +1,180 @@
+/* Tento zdrojovı kód je pod licencí GNU/GPL. Mùete ho pouít k vlastní
+   potøebì, ale nesmíte jej ani programy zaloené na tomto kódu vyuít komerènì!
+
+   Jedná se o zdrojovı kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - debug.fu - funkce pro ladìní IQ Pokydu
+   Aleš Janda (C) KİBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+void NAHLAS_CHYBU(char *soubor,int radek,BYTE typchyby,BYTE pokracovani) {
+ //Konstanty viz DEBUG.H
+static BYTE ukoncitprogram=0;
+static char textchyby[10000];
+
+  if (ukoncitprogram == 1) return; //ani nepiš chybu a koukej to ukonèit co nejdøíve
+
+#ifndef BEZ_PROSTREDI
+  g_akceefektu=2;           //efekt zablikani
+#endif
+
+  textchyby[0]=0;
+  if (typchyby == _NESPECIFIKOVANO_) {
+    sprintf(textchyby,""
+           "Bohuel, udìlalo se mi zle a nemùu dál pokraèovat..."
+           "\nProsím, informuj autora programu na e-mailu iqpokyd@kyblsoft.cz:"
+           "\n\nSoubor: %s, øádek: %d"
+           "\nPoslední vìta: %s"
+           "\nVerze programu: IQ Pokyd 0.15, "VYDANI_VERZE_PROGRAMU". vydání"
+           "\n\nDìkuji za upozornìní a za chybu programu se omlouvám."
+           "\nTeï mi nezbıvá nic jiného ne se ukonèit :-(",soubor,radek,g_aktualnivetacloveka);
+   }
+  else if (typchyby == _NENALEZEN_ZAKLADNI_SLOVNIK_ || typchyby == _NENALEZEN_SOUBOR_S_INTELIGENCI_) {
+    if (typchyby == _NENALEZEN_ZAKLADNI_SLOVNIK_) {
+      strcpy(textchyby,"Chyba: Nebyl nalezen soubor "JMENO_ZAKLADNIHO_SLOVNIKU". ");
+     }
+    else {
+      strcpy(textchyby,"Chyba: Nebyl nalezen soubor "JMENO_SOUBORU_S_INTELIGENCI". ");
+     }
+    strcat(textchyby,""
+           "Tento soubor nutnì potøebuji ke svému chodu."
+           "\n\nCo s tím: Ujisti se, zda takovı soubor v adresáøi s IQ Pokydem existuje. "
+           "\nDÙLEITÉ: Pokud mì spouštíš pøímo z archivu, je to chyba. Napøed rozbal "
+           "všechny soubory v archivu a potom mì z nového umístìní spus znova.\n"
+           "Pokud poøád nevíš, jdi na \"http://iqpokyd.kyblsoft.cz\" a stáhni si mì znova.");
+   }
+  else if (typchyby == _SPATNY_ZAKLADNI_SLOVNIK_ || typchyby == _SPATNY_UPLNY_SLOVNIK_ || typchyby == _SPATNY_SOUBOR_S_INTELIGENCI_) {
+    if (typchyby == _SPATNY_UPLNY_SLOVNIK_) {
+      strcpy(textchyby,"Chyba: Soubor "JMENO_UPLNEHO_SLOVNIKU" je narušen."
+                       "\n\nCo s tím: Nic. Jde o soubor, kterı se generuje automaticky, take ho jednoduše vygeneruji znova."
+                       "\nSpíš je otázka, proè je tento soubor narušen. Pravdìpodobnì pøi døívìjším pokusu o zápis došlo k chybì. "
+                       "Zkontroluj tedy, jestli je na disku s IQ Pokydem dost místa (asi 17 MB)."
+                       "\n\nGenerování bude nìjakou chvíli trvat.");
+     }
+    else {
+      if (typchyby == _SPATNY_ZAKLADNI_SLOVNIK_)
+       strcpy(textchyby,"Chyba: Soubor "JMENO_ZAKLADNIHO_SLOVNIKU" je narušen.");
+      else
+       strcpy(textchyby,"Chyba: Soubor "JMENO_SOUBORU_S_INTELIGENCI" je narušen.");
+
+      strcat(textchyby," Chyba nejspíš nastala pøi kopírování programu."
+                       " Tento soubor však nutnì potøebuji ke svému chodu."
+                       "\n\nCo s tím: Øešením je zkopírovat tento soubor znova. Pokud u nemáš "
+                       "pøístup ke zdroji, ze kterého IQ Pokyd máš, stáhni si ho z internetu. "
+                       "Najdeš ho na adrese \"http://iqpokyd.kyblsoft.cz\".");
+     }
+   }
+  else if (typchyby == _CHYBA_ZAPISU_) {
+    strcpy(textchyby,""
+           "Chyba: na disk, odkud je spouštìn IQ Pokyd, nelze zapisovat."
+           "\n\nCo s tím: Nejspíš to bude tím, e mì spouštíš napø. z cédéèka nebo jiného "
+           "nepøepisovatelného disku. Staèí tedy celı adresáø s IQ Pokydem nakopírovat "
+           "na pevnı èi jinı pøepisovatelnı disk a spustit znova."
+           "\nDruhá monost je, e na disku, ze kterého mì spouštíš, u není ádné volné "
+           "místo. V tom pøípadì je øešení nasnadì: vyma ze zmínìného disku nìjaké programy "
+           "èi jiná data nebo je pøesuò na jinı disk, pøípadnì na jinı disk pøesuò celı "
+           "IQ Pokyd."
+           "\nAnebo je ještì tøetí monost, e IQ Pokyd je v oblasti na disku, která má "
+           "v uivatelskıch právech zakázán zápis. V tom pøípadì nezbıvá nic jiného, "
+           "ne celı adresáø pøesunout do jiného místa èi na jinı disk a spustit mì odtamtuï.");
+   }
+  else if (typchyby == _MALO_PAMETI_) {
+    strcpy(textchyby,""
+           "Chyba: program IQ Pokyd má ke svému bìhu málo volné pamìti."
+           "\n\nCo s tím: Nìjakou pamì uvolni. Jak? Zavøi všechny ostatní programy "
+           "nebo zvìtši velikost stránkovací (virtuální) pamìti."
+           "\nPøípadnì je také moné, e virtuální pamìti je teoreticky dost, "
+           "ale na disku s odkládacím souborem je málo místa. Potom uvolni "
+           "nìjaké místo na tomto disku, pøípadnì pøiøaï pro virtuální pamì "
+           "další disk."
+           "\n\nPokud nic nepomùe nebo to nelze provést, máš holt smùlu.");
+   }
+  else if (typchyby == _NEDEALOKOVANY_VSECHNY_BLOKY_) {
+    sprintf(textchyby,""
+           "Chyba: Program IQ Pokyd pøi svém bìhu neuvolnil nìkteré pamìové "
+           "bloky. To má za následek postupnı nárùst spotøebovávané pamìti "
+           "bìhem programu; pamì se prostì \"zahlcuje\". "
+           "Poèet neuvolnìnıch pamìovıch blokù: %lu"
+           "\n\nTy s tím nìco tìko udìláš, ale napiš prosím o téhle chybì "
+           "autorovi programu, má velkı zájem se dozvìdìt, e se nìco takového "
+           "stalo. Dìkuji.",debug_pocetalokovani);
+   }
+  else if (typchyby == _JINA_CHYBA_) {
+    strcpy(textchyby,soubor);
+   }
+
+  if (pokracovani == _UKONCIT_) {
+#ifndef BEZ_PROSTREDI
+    g_zavritvlaknoprocesu=1; g_zavritvlaknoprocent=1; g_zavritvlaknoefektu=1;
+                                  //tohleto nejak moc nepomaha
+#endif
+   }
+
+#if IQPOKYDWINMFC == 1 || BEZ_PROSTREDI == 1
+  switch(pokracovani) {
+    case _UKONCIT_: MessageBox(g_HWNDhlavnihookna,textchyby,"*** IQ Pokyd - hlášení o chybì ***",MB_ICONINFORMATION | MB_SYSTEMMODAL);
+                    ukoncitprogram=1; Sleep(200);  //zavreni vlaken
+                    raise(SIGABRT);
+    case _STORNO_: strcat(textchyby,"\r\n\r\nMám zkusit znovu? (Tlaèítkem \"Storno\" ukonèíš program.)");
+                   if (MessageBox(g_HWNDhlavnihookna,textchyby,"*** IQ Pokyd - problémek ***",MB_ICONINFORMATION | MB_SYSTEMMODAL | MB_OKCANCEL) == IDCANCEL) {
+                    ukoncitprogram=1; Sleep(200);  //zavreni vlaken
+                    raise(SIGABRT);
+                    }
+                   break;
+    case _POKRACOVAT_: MessageBox(g_HWNDhlavnihookna,textchyby,"*** IQ Pokyd - upozornìní ***",MB_ICONINFORMATION | MB_SYSTEMMODAL);
+                       break;
+   }
+#else
+  printf("\n"); NAPIS_V_LATIN2(textchyby);
+  getch(); return;
+
+  if (pokracovani == _STORNO_) {
+    NAPIS_TEXT_V_LATIN_2("\nEnter: pokraèovat (zkusit znova)"
+           "\nEsc:   ukonèit program\n");
+    GETCH: switch(getch()) {
+      case '\r': break;
+      case 0x1B: ukoncitprogram=1; exit(0);
+      default: goto GETCH;
+     }
+   }
+  else {
+    NAPIS_TEXT_V_LATIN_2("\nStiskni cokoliv pro ukonèení.\n");
+    getch();
+    ukoncitprogram=1; exit(0);
+   }
+#endif
+ }
+
+void ZKONTROLUJ_SPRAVNOST_UPLNEHO_SLOVNIKU(void) {
+DWORD pozice,celkem;
+WORD malapozice1,malapozice2;
+char *informace;
+Typ_slova trida;
+
+  printf("\r0%%      ");
+  informace=ALOKUJ_RETEZEC(DELKA_NALEZENYCH_INFORMACI);
+  for (g_aktualnipismeno=0; g_aktualnipismeno < POCET_DVOJPISMEN; g_aktualnipismeno++) {
+    for (pozice=0,celkem=g_pocetslovvuplnedatabazi[g_aktualnipismeno]; pozice < celkem; pozice++) {
+      for (malapozice1=0; g_databazeuplnychslov[g_aktualnipismeno][pozice][malapozice1] != ZAKODOVANY_ZNAK(':'); malapozice1++) {
+        if (malapozice1 >= DELKA_JEDNODUCHEHO_SLOVA) {
+          NAHLAS_CHYBU("Pøíliš dlouhé slovo ve \"velkém\" slovníku.",0,_JINA_CHYBA_,_STORNO_);
+         }
+       }
+      malapozice1++;
+      for (malapozice2=0; g_databazeuplnychslov[g_aktualnipismeno][pozice][malapozice1] != 0; malapozice1++,malapozice2++) {
+        if (malapozice2 >= DELKA_NALEZENYCH_INFORMACI) {
+          NAHLAS_CHYBU("Pøíliš dlouhé informace o slovì v \"velkém\" slovníku.",0,_JINA_CHYBA_,_STORNO_);
+         }
+        informace[malapozice2]=g_databazeuplnychslov[g_aktualnipismeno][pozice][malapozice1];
+       }
+      informace[malapozice2]=0;
+      DEKODUJ_SLOVO_V_PAMETI(informace);
+      trida=PREVED_NA_TRIDU_TYP_SLOVA(informace,0,"",1);
+      trida.VYMAZ_OBSAH();
+     }
+    printf("\r%u%%",(g_aktualnipismeno+1)*100/POCET_DVOJPISMEN);
+   }
+  UVOLNI(informace);
+ }

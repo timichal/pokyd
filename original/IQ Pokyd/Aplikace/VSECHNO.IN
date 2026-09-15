@@ -1,0 +1,59 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Mùžete ho použít k vlastní
+   potøebì, ale nesmíte jej ani programy založené na tomto kódu využít komerènì!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - vsechno.in - soubor pro naètení všech souborù IQ Pokydu
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <malloc.h>
+#include <stdlib.h>
+#include <conio.h>
+#include <time.h>
+
+#include "\!IQPokyd\!Zdrojak\Aplikace\konstant.k"
+
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vzory\sklonov.pr"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Debug\debug.pr"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Slovnik\slovnik.pr"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vstup\vstup.pr"
+//#include "\!IQPokyd\!Zdrojak\Aplikace\Intelig\intelig.tr"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Intelig\intelig.ft"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Intelig\intelig.pr"
+#ifndef BEZ_PROSTREDI
+  #include "\!IQPokyd\!Zdrojak\Aplikace\Prostred\prostred.pr"
+  #include "\!IQPokyd\!Zdrojak\Aplikace\Prostred\iqpwav.pr"
+#endif
+
+#include "\!IQPokyd\!Zdrojak\Aplikace\Debug\debug.h"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vzory\skl_a_dr.h"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Slovnik\slovnik.h"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vstup\vstup.h"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Intelig\intelig.h"
+#ifndef BEZ_PROSTREDI
+  #include "\!IQPokyd\!Zdrojak\Aplikace\Prostred\prostred.h"
+  #include "\!IQPokyd\!Zdrojak\Aplikace\Prostred\iqpwav.tr"
+#endif
+
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vstup\nastaven.tr"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vstup\nastaven.pr"
+
+#include "\!IQPokyd\!Zdrojak\Aplikace\Debug\debug.fu"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vzory\podstjm.sk"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vzory\pridavjm.sk"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vzory\zajmena.sk"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vzory\cislovky.sk"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vzory\slovesa.sk"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vzory\prislovc.sk"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vzory\sklonov.fu"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Slovnik\slovnik.fu"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Vstup\vstup.fu"
+#include "\!IQPokyd\!Zdrojak\Aplikace\Intelig\intelig.fu"
+#ifndef BEZ_PROSTREDI
+#include "\!IQPokyd\!Zdrojak\Aplikace\Prostred\prostred.fu"
+#endif

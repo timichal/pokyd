@@ -1,0 +1,315 @@
+/* IQ Pokyd - txt2bin.fu - funkce pro program pro pøevod dosud neskloòovaného
+   slovníku v textové podobì do binární podoby
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+void *ALOKUJ_PAMET(DWORD velikost) {
+void *pointer;
+  ZNOVU:
+  if ((pointer=malloc(velikost)) == NULL) {
+    printf("Chyba alokace!"); exit(0);
+   }
+  return(pointer);
+ }
+
+char *ALOKUJ_RETEZEC(DWORD velikost) {
+char *pointer;
+  pointer=(char *)ALOKUJ_PAMET(velikost);
+  return(pointer);
+ }
+
+void UVOLNI(void *pointer) {
+  if (pointer == NULL) {
+    printf("Chyba!!! NULLovy pointer!"); exit(0);
+   }
+  free(pointer);
+ }
+
+void CHYBA(void) {
+  printf(" Radek: %lu\n",radek);
+  if (pocetchyb == 0) {
+    if (getch() == 0x1B) {
+      fclose(f1); fclose(f2);
+      exit(0);
+     }
+   }
+  pocetchyb++;
+ }
+
+BYTE PREVED_TEXTOVE_KONSTANTY_VYJIMEK_NA_BINARNI(void) {
+WORD poziceslv,pozicevys,celkem=strlen(slovoted);
+char *vyjimka,*vysledek,znak;
+  if (slovoted[0] != '{' || slovoted[celkem-1] != '}') {
+    printf("Chyba! Vyjimky musi byt ve slozenych zavorkach!"); CHYBA(); return(1);
+   }
+
+  vyjimka=ALOKUJ_PAMET(3);
+  vysledek=ALOKUJ_PAMET(1000);
+
+  vysledek[0]='{';
+  pozicevys=1; poziceslv=1;                  //preskoci se '{'
+
+UPLNEZNOVA:
+  for (; (znak=slovoted[poziceslv]) != '>'; poziceslv++,pozicevys++) {
+    if ((znak < '0' || znak > '9') && znak != 'c') {
+      printf("Chyba! Neplatny znak ('%c') ve vnoreni vyjimek!",znak); CHYBA(); return(1);
+     }
+    vysledek[pozicevys]=znak;
+   }
+  vysledek[pozicevys++]=slovoted[poziceslv++];
+
+
+ZNOVA:
+  vyjimka[0]=slovoted[poziceslv++]; vyjimka[1]=slovoted[poziceslv++]; vyjimka[2]=0;
+  znak=0;
+
+  if (vyjimka[0] == ':') { poziceslv--; goto VLASTNISLOVO; }  //bez podminkovych elementu
+
+  if (strcmp(vyjimka,"1p") == 0) znak='1';        //pad
+  if (strcmp(vyjimka,"2p") == 0) znak='2';
+  if (strcmp(vyjimka,"3p") == 0) znak='3';
+  if (strcmp(vyjimka,"4p") == 0) znak='4';
+  if (strcmp(vyjimka,"5p") == 0) znak='5';
+  if (strcmp(vyjimka,"6p") == 0) znak='6';
+  if (strcmp(vyjimka,"7p") == 0) znak='7';
+
+  if (strcmp(vyjimka,"0o") == 0) znak='n';        //osoba
+  if (strcmp(vyjimka,"1o") == 0) znak='o';
+  if (strcmp(vyjimka,"2o") == 0) znak='p';
+  if (strcmp(vyjimka,"3o") == 0) znak='q';
+
+  if (strcmp(vyjimka,"jc") == 0) znak='y';        //cislo
+  if (strcmp(vyjimka,"mc") == 0) znak='Y';
+
+  if (strcmp(vyjimka,"c1") == 0) znak='i';        //cas
+  if (strcmp(vyjimka,"c2") == 0) znak='j';
+  if (strcmp(vyjimka,"c3") == 0) znak='k';
+  if (strcmp(vyjimka,"c4") == 0) znak='l';
+  if (strcmp(vyjimka,"c5") == 0) znak='m';
+
+  if (strcmp(vyjimka,"r1") == 0) znak='r';        //rod
+  if (strcmp(vyjimka,"r2") == 0) znak='s';
+  if (strcmp(vyjimka,"r3") == 0) znak='t';
+
+  if (strcmp(vyjimka,"zA") == 0) znak='Z';        //zivotnost
+  if (strcmp(vyjimka,"zN") == 0) znak='z';
+
+  if (strcmp(vyjimka,"jC") == 0) znak='x';        //cislopredmetu
+  if (strcmp(vyjimka,"mC") == 0) znak='X';
+
+  if (strcmp(vyjimka,"R1") == 0) znak='a';        //rodpredmetu
+  if (strcmp(vyjimka,"R2") == 0) znak='b';
+  if (strcmp(vyjimka,"R3") == 0) znak='c';
+
+  if (strcmp(vyjimka,"vN") == 0) znak='d';        //vid
+  if (strcmp(vyjimka,"vD") == 0) znak='e';
+                            // (neni zde "pouze predlozka" - neni to treba)
+
+  if (strcmp(vyjimka,"T0") == 0) znak='A';        //tvar
+  if (strcmp(vyjimka,"T1") == 0) znak='B';
+  if (strcmp(vyjimka,"T2") == 0) znak='C';
+  if (strcmp(vyjimka,"T3") == 0) znak='D';
+  if (strcmp(vyjimka,"T4") == 0) znak='E';
+  if (strcmp(vyjimka,"T5") == 0) znak='F';
+  if (strcmp(vyjimka,"T6") == 0) znak='G';
+  if (strcmp(vyjimka,"T7") == 0) znak='H';
+  if (strcmp(vyjimka,"T8") == 0) znak='I';
+  if (strcmp(vyjimka,"T9") == 0) znak='J';
+
+  if (strcmp(vyjimka,"P0") == 0) znak='K';        //pridavek
+  if (strcmp(vyjimka,"P1") == 0) znak='L';
+  if (strcmp(vyjimka,"P2") == 0) znak='M';
+  if (strcmp(vyjimka,"P3") == 0) znak='N';
+  if (strcmp(vyjimka,"P4") == 0) znak='O';
+  if (strcmp(vyjimka,"P5") == 0) znak='P';
+  if (strcmp(vyjimka,"P6") == 0) znak='Q';
+  if (strcmp(vyjimka,"P7") == 0) znak='R';
+  if (strcmp(vyjimka,"P8") == 0) znak='S';
+  if (strcmp(vyjimka,"P9") == 0) znak='T';
+
+  if (strcmp(vyjimka,"nA") == 0) znak='W';        //zapor
+  if (strcmp(vyjimka,"nN") == 0) znak='w';
+  //Zapor zde neni, protoze ve vyjimce nemuze byt zapor (odvozuje se vzdy sam)
+
+
+  if (znak == 0) {
+    printf("Chyba! Neznamy vyraz ve vyjimce (\"%s\")!",vyjimka); CHYBA(); return(1);
+   }
+
+  vysledek[pozicevys++]=znak;
+
+  switch(slovoted[poziceslv]) {
+    case '-': poziceslv++; goto ZNOVA;          //novy podminkovy element
+    case ':': poziceslv++; break;
+    default: printf("Chyba! Neznamy znak ve vyjimce (\"%c\")!",slovoted[poziceslv]); CHYBA(); return(1);
+   }
+
+  VLASTNISLOVO:
+  vysledek[pozicevys++]=':';
+  for (; slovoted[poziceslv] != '}' && slovoted[poziceslv] != ';'; poziceslv++,pozicevys++) {
+    znak=slovoted[poziceslv];
+    if ((znak >= '0' && znak <= '9')
+     || (znak >= 'a' && znak <= 'z')
+     || (znak >= 'A' && znak <= 'Z')
+     || znak == '*' || znak == ',' || znak < 0) {   //znaky s diakritikou
+      vysledek[pozicevys]=znak;
+     }
+    else {
+      printf("Chyba! Neznamy znak ve vyjimce (\'%c\')!",slovoted[poziceslv]); CHYBA(); return(1);
+     }
+   }
+  vysledek[pozicevys]=slovoted[poziceslv];
+  if (vysledek[pozicevys] == ';') { pozicevys++; poziceslv++; goto UPLNEZNOVA; }
+  if (vysledek[pozicevys] == '}') {
+    if ((poziceslv+1) != celkem) {
+      printf("Chyba! Predcasny znak '}' ve vyjimce!"); CHYBA(); return(1);
+     }
+   }
+  else {
+    printf("Chyba! Neznamy znak '%c' ve vyjimce!",vysledek[pozicevys]); CHYBA(); return(1);
+   }
+  vysledek[++pozicevys]=0;
+
+  strcpy(slovoted,vysledek);
+
+  UVOLNI(vysledek);
+  UVOLNI(vyjimka);
+
+  return(0);
+ }
+
+void SPOCITEJ_KONTROLNI_SOUCET(char zceho) {
+  kontrolnisoucet1+=zceho;
+  kontrolnisoucet2^=zceho; kontrolnisoucet2+=zceho;
+ }
+
+BYTE PRECTI_SLOVO(void) {
+char znak;
+WORD pozice=0;
+short slozzavorky=0,komentar=0;
+
+  znak=getc(f1);
+  if (znak == EOF) return(2);
+  else goto ZACATEK2;
+
+  ZACATEK:
+  znak=getc(f1);
+  ZACATEK2:
+  if (znak == '=') {
+    komentar^=1;
+   }
+  else if ((znak >= '0' && znak <= '9')
+   || (znak >= 'a' && znak <= 'z')
+   || znak == 'D' || znak == 'T' || znak == 'N'
+   || (znak >= 'A' && znak <= 'Z' && slozzavorky > 0)
+   || znak == '_'
+   || znak < 0) {                      //znaky s diakritikou
+    if (komentar == 0) { slovoted[pozice]=znak; pozice++; }
+   }
+  else if (znak == '~' && komentar == 0) return(2);     //symbol konce
+  else if (znak == '\r') {
+    znak=getc(f1);                  //precti i '\n'
+    if (slozzavorky > 0) { printf("Chyba! Neuzavrene slozene zavorky!"); CHYBA(); return(1); }
+    if (slozzavorky < 0) { printf("Chyba! Prava slozena zavorka navic!"); CHYBA(); return(1); }
+    slovoted[pozice]=0; return(1);
+   }
+  else if (znak == '\n') {
+    printf("Chyba! Enter bez \\r!"); CHYBA(); return(1);
+   }
+  else if (komentar == 1) {}
+  else if (znak == '{') { slozzavorky++; slovoted[pozice]=znak; pozice++; }
+  else if (znak == '}') { slozzavorky--; slovoted[pozice]=znak; pozice++; }
+  else if (znak == ':' || znak == ',') {
+    if (slozzavorky == 0) { slovoted[pozice]=0; return(0); }
+    else { slovoted[pozice]=znak; pozice++; }
+   }
+  else if ((znak == '-' || znak == ';' || znak == '>') && slozzavorky == 1) {
+    slovoted[pozice]=znak; pozice++;
+   }
+  else { printf("Chyba! Neznamy znak '%c'!",znak); CHYBA(); return(1); }
+  goto ZACATEK;
+ }
+
+void ZAPIS_NOVE_SLOVO(void) {
+WORD pocetstejnychznaku,pozice,delka;
+  if ((rand()%64) == 0) {                     //napisou se kontrolni soucty
+    putc(((((char)255)^nahodnykodovaciklic)+'I')^'Q',f2);
+    SPOCITEJ_KONTROLNI_SOUCET((char)255);
+
+    putc(kontrolnisoucet1,f2);
+    putc(kontrolnisoucet2,f2);
+   }
+
+  for (pocetstejnychznaku=0;
+       skutecneslovo[pocetstejnychznaku] == predchozislovo[pocetstejnychznaku]
+        && skutecneslovo[pocetstejnychznaku] != 0;
+       pocetstejnychznaku++);
+
+  if (strlen(skutecneslovo) > 255) {
+    printf("Prilis dlouhy vyraz! Predelej strukturu slovniku!"); CHYBA(); exit(0);
+   }
+  pocetusetrenychbajtu+=pocetstejnychznaku; pocetusetrenychbajtu--;
+
+  hlavicka[0]=pocetstejnychznaku; hlavicka[1]=strlen(skutecneslovo);
+  strcpy(hlavicka+2,skutecneslovo+pocetstejnychznaku);
+
+  pozice=strlen(hlavicka+2)+2;
+
+                                                 //informace o slove
+  hlavicka[pozice++]=vzor;
+  if (vid != 255) hlavicka[pozice++]=vid;
+  strcpy(hlavicka+pozice,slovoted);
+
+  delka=strlen(hlavicka+pozice)+pozice;
+
+  for (pozice=0; pozice < 2; pozice++) {
+    SPOCITEJ_KONTROLNI_SOUCET(hlavicka[pozice]);
+    hlavicka[pozice]^=nahodnykodovaciklic;
+    hlavicka[pozice]+='I';
+    hlavicka[pozice]^='Q';
+   }
+  for (pozice=2; pozice <= delka; pozice++) {     //vcetne 0 na konci
+    hlavicka[pozice]+=KODOVACI_ZNAK;
+    hlavicka[pozice]^=KODOVACI_ZNAK;       //toto se nepocita jako kodovani
+
+    SPOCITEJ_KONTROLNI_SOUCET(hlavicka[pozice]);
+    hlavicka[pozice]^=nahodnykodovaciklic;
+    hlavicka[pozice]+='I';
+    hlavicka[pozice]^='Q';
+    hlavicka[pozice]+=pozice;
+    hlavicka[pozice]^=pocetstejnychznaku;
+   }
+
+  fwrite(hlavicka,delka+1,1,f2);           //vcetne 0 na konci
+
+  strcpy(predchozislovo,skutecneslovo);
+ }
+
+void UPRAV_SLOVO_PRO_IQPOKYD(char *retezec) {
+int poz1,poz2,celkem=strlen(retezec);
+char *pomocslovo;
+  pomocslovo=ALOKUJ_PAMET(DELKA_FRONTY);
+
+  for (poz1=0,poz2=0; poz1 < celkem; poz1++,poz2++) {
+    if (strncmp(retezec+poz1,"ch",2) == 0) { pomocslovo[poz2]='*'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"di",2) == 0) { pomocslovo[poz2]='ï'; continue; }
+    if (strncmp(retezec+poz1,"ti",2) == 0) { pomocslovo[poz2]=''; continue; }
+    if (strncmp(retezec+poz1,"ni",2) == 0) { pomocslovo[poz2]='ò'; continue; }
+    if (strncmp(retezec+poz1,"dí",2) == 0) { pomocslovo[poz2]='ï'; continue; }
+    if (strncmp(retezec+poz1,"tí",2) == 0) { pomocslovo[poz2]=''; continue; }
+    if (strncmp(retezec+poz1,"ní",2) == 0) { pomocslovo[poz2]='ò'; continue; }
+    if (strncmp(retezec+poz1,"dì",2) == 0) { pomocslovo[poz2]='ï'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"tì",2) == 0) { pomocslovo[poz2]=''; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"nì",2) == 0) { pomocslovo[poz2]='ò'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"bì",2) == 0) { pomocslovo[poz2]='B'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"fì",2) == 0) { pomocslovo[poz2]='F'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"mì",2) == 0) { pomocslovo[poz2]='M'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"pì",2) == 0) { pomocslovo[poz2]='P'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    if (strncmp(retezec+poz1,"vì",2) == 0) { pomocslovo[poz2]='V'; poz2++; pomocslovo[poz2]='e'; poz1++; continue; }
+    pomocslovo[poz2]=retezec[poz1];
+   }
+  pomocslovo[poz2]=0;
+  strcpy(retezec,pomocslovo);
+
+  UVOLNI(pomocslovo);
+ }

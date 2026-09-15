@@ -1,0 +1,760 @@
+/* Tento zdrojov˝ kÛd je pod licencÌ GNU/GPL. M˘ûete ho pouûÌt k vlastnÌ
+   pot¯ebÏ, ale nesmÌte jej ani programy zaloûenÈ na tomto kÛdu vyuûÌt komerËnÏ!
+
+   Jedn· se o zdrojov˝ kÛd programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleöe Jandy
+*/
+
+/* IQ Pokyd - cislovky.sk - funkce na skloÚov·nÌ jednotliv˝ch vzor˘ ËÌslovek
+   Aleö Janda (C) K›BLSoft 2002-2005 (kÛdov·nÌ Windows 1250)
+*/
+
+// V z·jmenech nenÌ pouûit û·dn˝ "z·kladnÌ tvar", protoûe slova se z niËeho
+// neodvozujÌ, ty musÌ program zn·t!
+
+
+BYTE SKLONUJ_CISLOVKY_ZAKLADNI(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,WORD cislovka,BYTE spredmetem) {
+/* "cislovka" m˘ûe mÌt norm·lnÌ hodnotu:
+   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,
+   100,200,300,400,500,600,700,800,900,1000
+   nebo z·stupnou hodnotu:
+   1001 - milion, 1002 - miliarda, 1005 - bilion, 1006 - biliarda,
+   1005 - trilion, 1006 - triliarda, 1007 - kvadrilion, 1008 - kvadriliarda
+   TakÈ m˘ûe mÌt hodnotu 22: oba
+   Pokud m· b˝t ËÌslovka neurËit·, m˘ûe nab˝vat "cislovka" tÏchto hodnot:
+   10000 - nÏkolik, 10001 - mnoho, 10002 - m·lo, 10003 - kolik, 10004 - tolik,
+   10005 - hodnÏ, 10006 - spousta
+   Jin˝ch hodnot nab˝vat nem˘ûe.
+   "spredmetem" znamen·, jestli je za ËÌslovkou nÏjak˝ p¯edmÏt nebo stojÌ sama
+   o sobÏ. M˘ûe b˝t 0 (ne) nebo 1 (ano). M· pouûitÌ pouze u neurËit˝ch ËÌslovek
+*/
+BYTE navrat=0;
+char *slovavefronte2=NULL;
+
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+  if (pad == 5) pad=1;				//jsou stejne
+
+  switch(cislovka) {
+    case 0: PRIDEJ_DO_FRONTY("nula"); navrat=1; goto UVOLNIPAMET;
+    case 1: SKLONUJ_ZAJMENA_UKAZOVACI(pad,cislo,rod,zivotnost,1);
+            NAHRAD_ZACATEK_ZACATKEM("t","jedn");
+            NAHRAD_ZACATEK_ZACATKEM("ù","jedÚ");
+            NAHRAD_ZACATEK_ZACATKEM("jednen","jeden"); //specialni pripad u 1.p.mn.c
+                                                 //a 4.p. mn.c. zivotneho
+            break;
+    case 2: switch(pad) {
+      case 1:
+      case 4:
+              if (rod == 1) PRIDEJ_DO_FRONTY("dva");
+              else PRIDEJ_DO_FRONTY("dVe");
+              break;
+      case 2:
+      case 6:
+              PRIDEJ_DO_FRONTY("dvou,dvou*");      //"dvouch" je nespisovne
+              break;
+      case 3: PRIDEJ_DO_FRONTY("dVema,dvoum");      //"dvoum" je nespisovne
+              break;
+      case 7: PRIDEJ_DO_FRONTY("dVema,dVemi,dvouma"); //"dvÏmi" a "dvouma"
+              break;                                //je nespisovne
+     } break;
+    case 22: SKLONUJ_CISLOVKY_ZAKLADNI(pad,1,rod,0,2,0);       //"oba"-rekurze
+             NAHRAD_ZACATEK_ZACATKEM("dv","ob");
+             NAHRAD_ZACATEK_ZACATKEM("dV","oB");
+             break;
+    case 3: if (pad == 7) PRIDEJ_DO_FRONTY("t¯emi,t¯ema");//"t¯ema"-nespisovne
+            else if (pad == 2) PRIDEJ_DO_FRONTY("t¯Ì,t¯e*");//"t¯ech"-nespisovne
+            else { strcpy(g_slovozaklad,"t¯"); SKLONUJ_VZOR_KOST(pad,2); }
+            break;
+    case 4: switch(pad) {
+                                                   //Ëtyry - nespisovnÈ
+      case 1:
+      case 4:
+              PRIDEJ_DO_FRONTY("Ëty¯i,Ëtyry"); break;
+      case 2: PRIDEJ_DO_FRONTY("Ëty¯,Ëtyr"); break;
+      case 3: PRIDEJ_DO_FRONTY("Ëty¯em,Ëtyrem"); break;
+      case 6: PRIDEJ_DO_FRONTY("Ëty¯e*,Ëtyre*"); break;
+      case 7: PRIDEJ_DO_FRONTY("Ëty¯mi,Ëty¯ma,Ëtyrmi,Ëtyrma"); break;
+     } break;
+    case 5: if (pad == 1 || pad == 4) PRIDEJ_DO_FRONTY("Pet");
+            else PRIDEJ_DO_FRONTY("Peùi");
+            break;
+    case 6: SKLONUJ_CISLOVKY_ZAKLADNI(pad,1,1,0,5,0);          //rekurze
+            NAHRAD_ZACATEK_ZACATKEM("Pe","öes"); break;
+    case 7: if (pad == 1 || pad == 4) PRIDEJ_DO_FRONTY("sedm,sedum");//"sedum"-nespisovne
+            else PRIDEJ_DO_FRONTY("sedmi");
+            if (pad == 7) PRIDEJ_DO_FRONTY("sedma");      //sedma-nespisovne
+            break;
+    case 8: if (pad == 1 || pad == 4) PRIDEJ_DO_FRONTY("osm,osum");//"osum"-nespisovne
+            else PRIDEJ_DO_FRONTY("osmi");
+            if (pad == 7) PRIDEJ_DO_FRONTY("osma");        //osma-nespisovne
+            break;
+    case 9: if (pad == 1 || pad == 4) PRIDEJ_DO_FRONTY("deVet");
+            else PRIDEJ_DO_FRONTY("devÌùi");
+            break;
+    case 10: if (pad == 1 || pad == 4) PRIDEJ_DO_FRONTY("deset");
+            else PRIDEJ_DO_FRONTY("deseùi,desÌùi");
+            break;
+    case 11: SKLONUJ_CISLOVKY_ZAKLADNI(pad,1,1,0,5,0);         //rekurze
+             NAHRAD_ZACATEK_ZACATKEM("Pe","jeden·c");
+             break;
+    case 12:
+    case 13:
+    case 16:
+    case 17:
+    case 18:
+             SKLONUJ_CISLOVKY_ZAKLADNI(1,1,1,0,cislovka-10,0);    //rekurze
+             if (pad == 1 || pad == 4) PRIDEJ_ZA_KAZDE_SLOVO("n·ct");
+             else PRIDEJ_ZA_KAZDE_SLOVO("n·cti");
+             break;
+    case 14: SKLONUJ_CISLOVKY_ZAKLADNI(pad,1,1,0,5,0);        //rekurze
+             NAHRAD_ZACATEK_ZACATKEM("Pe","Ëtrn·c"); break;
+    case 15: SKLONUJ_CISLOVKY_ZAKLADNI(pad,1,1,0,5,0);        //rekurze
+             NAHRAD_ZACATEK_ZACATKEM("Pe","patn·c"); break;
+    case 19: SKLONUJ_CISLOVKY_ZAKLADNI(pad,1,1,0,5,0);        //rekurze
+             NAHRAD_ZACATEK_ZACATKEM("Pe","devaten·c"); break;
+    case 20: if (pad == 1 || pad == 4) PRIDEJ_DO_FRONTY("dvacet");
+             else PRIDEJ_DO_FRONTY("dvaceùi,dvacÌùi");
+             break;
+    case 30: if (pad == 1 || pad == 4) PRIDEJ_DO_FRONTY("t¯icet");
+             else PRIDEJ_DO_FRONTY("t¯iceùi,t¯icÌùi");
+             break;
+    case 40: if (pad == 1 || pad == 4) PRIDEJ_DO_FRONTY("Ëty¯icet,Ëtyrycet");//Ëtyrycet-nespisovne
+             else PRIDEJ_DO_FRONTY("Ëty¯iceùi,Ëty¯icÌùi,Ëtyryceùi,ËtyrycÌùi");//Ëtyryceti,ËtyrycÌti-nespisovne
+             break;
+    case 50: SKLONUJ_CISLOVKY_ZAKLADNI(pad,1,1,0,5,0);        //rekurze
+             NAHRAD_ZACATEK_ZACATKEM("Pe","pades·"); break;
+    case 60: SKLONUJ_CISLOVKY_ZAKLADNI(pad,1,1,0,5,0);        //rekurze
+             NAHRAD_ZACATEK_ZACATKEM("Pe","öedes·"); break;
+    case 70:
+    case 80:
+             SKLONUJ_CISLOVKY_ZAKLADNI(1,1,1,0,cislovka/10,0);  //rekurze
+             if (pad == 1 || pad == 4) PRIDEJ_ZA_KAZDE_SLOVO("des·t");
+             else PRIDEJ_ZA_KAZDE_SLOVO("des·ti");
+             break;
+    case 90: SKLONUJ_CISLOVKY_ZAKLADNI(pad,1,1,0,5,0);    //rekurze
+             NAHRAD_ZACATEK_ZACATKEM("Pe","devades·"); break;
+    case 100: if (pad == 2 && cislo == 2) PRIDEJ_DO_FRONTY("set");
+              else { strcpy(g_slovozaklad,"sto"); SKLONUJ_VZOR_MESTO(pad,cislo); }
+              PRIDEJ_DO_FRONTY("sto");       //pouziva se i nesklonny tvar
+              break;
+    case 200:
+    case 300:
+    case 400:
+    case 500:
+    case 600:
+    case 700:
+    case 800:
+    case 900:
+              strcpy(slovavefronte2,g_slovavefronte);
+              if (pad != 1 && pad != 4 && pad != 5) {
+                VYMAZ_FRONTU(); SKLONUJ_CISLOVKY_ZAKLADNI(2,1,2,0,cislovka/100,0);
+                OREZ_FRONTU_NA_1_SLOVO(1);
+                strcat(g_slovavefronte,"set");
+                PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+                ZJEMNI_ZNAK(g_slovavefronte,strlen(g_slovavefronte)-1);       //t - ù
+                strcat(g_slovavefronte,"i");
+                PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+                if (cislovka == 400) {
+                  strcpy(g_slovavefronte,slovavefronte2);
+                  NAHRAD_ZACATEK_ZACATKEM("Ëty¯","Ëtyr"); //nespisovne
+                  PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+                 }
+               }
+              switch(cislovka) {
+                case 200: PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,"dVesùe"); break;
+                case 300:
+                case 400:
+                          VYMAZ_FRONTU();
+                          SKLONUJ_CISLOVKY_ZAKLADNI(1,1,1,0,cislovka/100,0);//rekurze
+                          PRIDEJ_ZA_KAZDE_SLOVO("sta");
+                          PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+                          break;
+                case 500:
+                case 600:
+                case 700:
+                case 800:
+                case 900:
+                          VYMAZ_FRONTU();
+                          SKLONUJ_CISLOVKY_ZAKLADNI(1,1,1,0,cislovka/100,0);//rekurze
+                          if (pad == 1 || pad == 4) PRIDEJ_ZA_KAZDE_SLOVO("set");
+                          else PRIDEJ_ZA_KAZDE_SLOVO("seùi");
+                          PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+                          break;
+               }
+              strcpy(g_slovavefronte,slovavefronte2);
+              break;
+    case 1000: strcpy(g_slovozaklad,"ùisÌc");
+               SKLONUJ_VZOR_STROJ(pad,cislo);
+               if (cislo == 1 && pad != 1 && pad != 4) PRIDEJ_DO_FRONTY("ùisÌc");
+               else {
+                 if (pad == 2) PRIDEJ_DO_FRONTY("ùisÌce,ùisÌc");
+                 if (pad == 3 || pad == 6 || pad == 7) PRIDEJ_DO_FRONTY("ùisÌci");
+                }
+               break;
+    case 1001:
+    case 1003:
+    case 1005:
+    case 1007:
+               strcpy(g_slovozaklad,"ilion");
+               SKLONUJ_VZOR_HRAD(pad,cislo);
+               strcpy(g_slovozaklad,"iliÛn");
+               SKLONUJ_VZOR_HRAD(pad,cislo);
+               switch(cislovka) {
+                 case 1001: PRIDEJ_PRED_KAZDE_SLOVO("m"); break;
+                 case 1003: PRIDEJ_PRED_KAZDE_SLOVO("b"); break;
+                 case 1005: PRIDEJ_PRED_KAZDE_SLOVO("tr"); break;
+                 case 1007: PRIDEJ_PRED_KAZDE_SLOVO("kvadr"); break;
+                }
+               break;
+    case 1002:
+    case 1004:
+    case 1006:
+    case 1008:
+               strcpy(g_slovozaklad,"iliarda");
+               SKLONUJ_VZOR_ZENA(pad,cislo);
+               switch(cislovka) {
+                 case 1002: PRIDEJ_PRED_KAZDE_SLOVO("m"); break;
+                 case 1004: PRIDEJ_PRED_KAZDE_SLOVO("b"); break;
+                 case 1006: PRIDEJ_PRED_KAZDE_SLOVO("tr"); break;
+                 case 1008: PRIDEJ_PRED_KAZDE_SLOVO("kvadr"); break;
+                }
+               break;
+    case 10000: if (pad == 1 || pad == 4) PRIDEJ_DO_FRONTY("Úekolik");
+                else PRIDEJ_DO_FRONTY("Úekolika,Úekolik");//nÏkolik-nespisovne
+                break;
+    case 10001: if (pad == 1 || pad == 4) PRIDEJ_DO_FRONTY("mnoho");
+                else PRIDEJ_DO_FRONTY("mnoha");
+                if (spredmetem == 0) {
+                  strcpy(g_slovozaklad,"mnoho");
+                  SKLONUJ_VZOR_MESTO(pad,cislo);     //nespisovne
+                 }
+                break;
+    case 10002: if (spredmetem == 1) {
+                  if (pad != 1 && pad != 4) PRIDEJ_DO_FRONTY("m·la");
+                 }
+                else {
+                  strcpy(g_slovozaklad,"m·lo");
+                  SKLONUJ_VZOR_MESTO(pad,cislo);
+                  if (pad == 2 && cislo == 2) PRIDEJ_NA_ZACATEK_FRONTY("m·la");
+                 }
+                PRIDEJ_DO_FRONTY("m·lo");       //nespisovne
+                break;
+    case 10003:
+    case 10004:
+                SKLONUJ_CISLOVKY_ZAKLADNI(pad,cislo,rod,zivotnost,10000,spredmetem);
+                if (cislovka == 10003) NAHRAD_ZACATEK_ZACATKEM("Úe","");
+                else NAHRAD_ZACATEK_ZACATKEM("Úek","t");
+                break;
+    case 10005: PRIDEJ_DO_FRONTY("hodÚe"); break;
+    case 10006: strcpy(g_slovozaklad,"spousta");
+                SKLONUJ_VZOR_ZENA(pad,cislo);
+                if (pad != 1 || cislo != 1) PRIDEJ_DO_FRONTY("spousta");//nespisovne
+                break;
+
+    default: navrat=0; goto UVOLNIPAMET;         //jinak zadny tvar neexistuje
+   }
+  navrat=1; goto UVOLNIPAMET;
+
+  UVOLNIPAMET:
+  UVOLNI(slovavefronte2);
+  return(navrat);
+ }
+
+BYTE SKLONUJ_CISLOVKY_RADOVE(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,WORD cislovka) {
+int pozice;
+BYTE navrat=0;
+char *slovavefronte2=NULL;
+
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+
+/* "cislovka" m˘ûe mÌt norm·lnÌ hodnotu:
+   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,
+   100,200,300,400,500,600,700,800,900,1000
+   nebo z·stupnou hodnotu:
+   1001 - milion, 1002 - miliarda, 1005 - bilion, 1006 - biliarda,
+   1005 - trilion, 1006 - triliarda, 1007 - kvadrilion, 1008 - kvadriliarda
+ !!!  Hodnotu 22: oba mÌt NEMŸéE  !!!
+   Pokud m· b˝t ËÌslovka neurËit·, m˘ûe nab˝vat "cislovka" tÏchto hodnot:
+   10000 - nÏkolik, 10001 - mnoho, 10002 - NEMŸéE, 10003 - kolik,
+   10004 a v˝ö NEMŸéE.
+   Jin˝ch hodnot nab˝vat nem˘ûe.
+*/
+
+  if (pad == 5) pad=1;				//jsou stejne
+
+  switch(cislovka) {
+    case 0: strcpy(g_slovozaklad,"nult˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 1: strcpy(g_slovozaklad,"prvÚÌ"); SKLONUJ_VZOR_JARNI(pad,cislo,rod,zivotnost,0,0); break;
+    case 2: strcpy(g_slovozaklad,"druh˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 3: strcpy(g_slovozaklad,"t¯eùÌ"); SKLONUJ_VZOR_JARNI(pad,cislo,rod,zivotnost,0,0); break;
+    case 4: strcpy(g_slovozaklad,"Ëtvrt˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 5: strcpy(g_slovozaklad,"p·t˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 6:
+    case 7:
+    case 8:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+    case 17:
+    case 18:
+    case 19:
+    case 50:
+    case 60:
+    case 70:
+    case 80:
+    case 90:
+             SKLONUJ_VSECHNY_CISLOVKY(slovavefronte2,"˝",cislovka,pad,cislo,rod,zivotnost);
+             break;
+    case 9: strcpy(g_slovozaklad,"dev·t˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 10: strcpy(g_slovozaklad,"des·t˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 20:
+    case 30:
+    case 40:
+             SKLONUJ_VSECHNY_CISLOVKY(slovavefronte2,"˝",cislovka,pad,cislo,rod,zivotnost);
+      // sklonovani fronty, zde spise pro jistotu - 1 slovo by tam uz melo byt
+             NAHRAD_CAST_CASTI("cet","c·t");
+             NAHRAD_CAST_CASTI("ceù","c·ù");
+             break;
+    case 100: strcpy(g_slovozaklad,"st˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 200: strcpy(g_slovozaklad,"dvoust˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 300: strcpy(g_slovozaklad,"t¯Ìst˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 400:
+    case 500:
+    case 600:
+    case 700:
+    case 800:
+    case 900:
+              strcpy(slovavefronte2,g_slovavefronte);
+              for (pozice=1; ; pozice++) {        //vysklonuje vsechna slova
+                VYMAZ_FRONTU(); SKLONUJ_CISLOVKY_ZAKLADNI(2,1,1,zivotnost,cislovka/100,0);
+                if (OREZ_FRONTU_NA_1_SLOVO(pozice) == 0)
+                                          //dulezite pro sklonovani fronty
+                 break;
+                strcpy(g_slovozaklad,g_slovavefronte); strcat(g_slovozaklad,"st˝");
+                VYMAZ_FRONTU(); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);
+                PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+               }
+              strcpy(g_slovavefronte,slovavefronte2);
+              break;
+    case 1000: strcpy(g_slovozaklad,"ùisÌcÌ"); SKLONUJ_VZOR_JARNI(pad,cislo,rod,zivotnost,0,0);
+               strcpy(g_slovozaklad,"ùisÌcÌ"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);
+                                //sklonovani podle vzoru mlady je nespisovne
+               NAHRAD_CAST_CASTI("c˝","cÌ");
+               NAHRAD_CAST_CASTI("cy","ci");
+               NAHRAD_CAST_CASTI("ËÌ","cÌ"); //specialni pripad u 1.a 5.p.mn.c.
+               break;
+    case 1001:
+    case 1002:
+    case 1003:
+    case 1004:
+    case 1005:
+    case 1006:
+    case 1007:
+    case 1008:
+               SKLONUJ_VSECHNY_CISLOVKY(slovavefronte2,"t˝",cislovka,pad,cislo,rod,zivotnost);
+               NAHRAD_CAST_CASTI("dat","dt");
+               NAHRAD_CAST_CASTI("daù","dù");
+               break;
+    case 10000: strcpy(g_slovozaklad,"Úekolik·t˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 10001: strcpy(g_slovozaklad,"mnoh˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 10003: strcpy(g_slovozaklad,"kolik·t˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+
+    default: navrat=0; goto UVOLNIPAMET;        //jinak zadny tvar neexistuje
+   }
+  navrat=1; goto UVOLNIPAMET;
+
+  UVOLNIPAMET:
+  UVOLNI(slovavefronte2);
+  return(navrat);
+ }
+
+BYTE SKLONUJ_CISLOVKY_DRUHOVE(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,WORD cislovka,BYTE jmennytvar) {
+BYTE navrat=0;
+char *slovavefronte2=NULL;
+
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+/* "jmennytvar" m˘ûe nab˝vat hodnoty 0 (ne) nebo 1 (ano) a znamen·, jestli
+   m· vygenerovanÈ slovo podobu jmennÈho tvaru (dvoje) nebo ne (dvojÌ).
+
+   "cislovka" m˘ûe mÌt norm·lnÌ hodnotu:
+   1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,
+   100,200,300,400,500,600,700,800,900,1000
+   TakÈ m˘ûe mÌt hodnotu 22: oba
+   Z·stupn˝ch hodnot (1001 - miliÛn, 1002 - miliarda atd.) nab˝vat NEMŸéE
+   Pokud m· b˝t ËÌslovka neurËit·, m˘ûe nab˝vat "cislovka" tÏchto hodnot:
+   10000 - nÏkoliker˝, 10001 - NEMŸéE, 10002 - NEMŸéE, 10003 - koliker˝,
+   10004 a vÌc NEMŸéE.
+   Jin˝ch hodnot nab˝vat nem˘ûe.
+*/
+
+   jmennytvar=jmennytvar;
+//! "jmennytvar" jeötÏ nenÌ zahrnut!
+
+  switch(cislovka) {
+    case 1: strcpy(g_slovozaklad,"jednotn˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 2: strcpy(g_slovozaklad,"dvojÌ"); SKLONUJ_VZOR_JARNI(pad,cislo,rod,zivotnost,0,0); break;
+    case 3: strcpy(g_slovozaklad,"trojÌ"); SKLONUJ_VZOR_JARNI(pad,cislo,rod,zivotnost,0,0); break;
+    case 4: strcpy(g_slovozaklad,"Ëtver˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 5: strcpy(g_slovozaklad,"pater˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 9: strcpy(g_slovozaklad,"devater˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 10: strcpy(g_slovozaklad,"desater˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 6:
+    case 7:
+    case 8:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+    case 17:
+    case 18:
+    case 19:
+    case 50:
+    case 60:
+    case 70:
+    case 80:
+    case 90:
+             SKLONUJ_VSECHNY_CISLOVKY(slovavefronte2,"er˝",cislovka,pad,cislo,rod,zivotnost);
+             break;
+    case 20:
+    case 30:
+    case 40:
+             SKLONUJ_VSECHNY_CISLOVKY(slovavefronte2,"er˝",cislovka,pad,cislo,rod,zivotnost);
+             NAHRAD_CAST_CASTI("cet","cat");
+             break;
+    case 22: strcpy(g_slovozaklad,"obojÌ"); SKLONUJ_VZOR_JARNI(pad,cislo,rod,zivotnost,0,0); break;
+    case 100: strcpy(g_slovozaklad,"ster˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 200:
+    case 300:
+    case 400:
+    case 500:
+    case 600:
+    case 700:
+    case 800:
+    case 900:
+              VYMAZ_FRONTU(); SKLONUJ_CISLOVKY_ZAKLADNI(2,1,1,zivotnost,cislovka/100,0);
+              OREZ_FRONTU_NA_1_SLOVO(1);  //dulezite pro sklonovani fronty
+              PRIDEJ_ZA_KAZDE_SLOVO("ster˝");
+              strcpy(g_slovozaklad,g_slovavefronte);
+              VYMAZ_FRONTU(); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);
+              break;
+    case 1000: strcpy(g_slovozaklad,"tisÌcer˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 1001: strcpy(g_slovozaklad,"Úekoliker˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+    case 1003: strcpy(g_slovozaklad,"koliker˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+              
+
+    default: navrat=0; goto UVOLNIPAMET;       //jinak zadny tvar neexistuje
+   }
+  navrat=1; goto UVOLNIPAMET;
+
+  UVOLNIPAMET:
+  UVOLNI(slovavefronte2);
+  return(navrat);
+ }
+
+BYTE SKLONUJ_CISLOVKY_NASOBNE(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,WORD cislovka,BYTE tvar) {
+int pozice;
+BYTE navrat=0;
+char *slovavefronte2=NULL,*slovavefronte3=NULL;
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+  slovavefronte3=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+
+/* "tvar" m˘ûe b˝t 1 (dvakr·t) nebo 2 (dvoun·sobn˝)
+   Kdyû je "cislovka" 1, m˘ûe b˝t "tvar" taky pouze 1 (jednou)
+*/
+
+  if (tvar == 1) {
+    switch(cislovka) {
+      case 0: PRIDEJ_DO_FRONTY("nulakr·t,nulakr·te,nulkr·t,nulkr·te"); break;//nulkr·t-nespisovny
+      case 1: PRIDEJ_DO_FRONTY("jednou,jedenkr·t,jedenkr·te"); break;
+      default: if (SKLONUJ_CISLOVKY_ZAKLADNI(1,1,1,zivotnost,cislovka,0) == 0) { navrat=0; goto UVOLNIPAMET; }
+               if (cislovka == 1002 || cislovka == 1004 || cislovka == 1006 || cislovka == 1008) {
+                 strcpy(slovavefronte3,g_slovavefronte);
+                 OREZ_O_SAMOHLASKU(g_slovavefronte);  //nap¯. miliardkr·te
+                 PRIDEJ_DO_FRONTY(slovavefronte3); //miliardakr·te-nespisovne
+                }
+               PRIDEJ_ZA_KAZDE_SLOVO("kr·te");
+               NAHRAD_CAST_CASTI("kk","k");
+               strcpy(slovavefronte2,g_slovavefronte);
+               VYMAZ_FRONTU(); SKLONUJ_CISLOVKY_ZAKLADNI(1,1,1,zivotnost,cislovka,0);
+               if (cislovka == 1002 || cislovka == 1004 || cislovka == 1006 || cislovka == 1008) {
+                 strcpy(slovavefronte3,g_slovavefronte);
+                 OREZ_O_SAMOHLASKU(g_slovavefronte);  //nap¯. miliardkr·t
+                 PRIDEJ_DO_FRONTY(slovavefronte3); //miliardakr·t-nespisovne
+                }
+               PRIDEJ_ZA_KAZDE_SLOVO("kr·t");
+               NAHRAD_CAST_CASTI("kk","k");
+               PRIDEJ_DO_FRONTY(slovavefronte2);
+
+               break;
+     }
+   }
+  else if (tvar == 2) {                    //pouze pro prehled, stacilo by else
+    switch(cislovka) {
+      case 0: strcpy(g_slovozaklad,"nulan·sobn˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+      case 1: strcpy(g_slovozaklad,"jednon·sobn˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+      case 2: strcpy(g_slovozaklad,"dvojn·sobn˝"); VYMAZ_FRONTU();
+              SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); strcpy(slovavefronte2,g_slovavefronte);
+              strcpy(g_slovozaklad,"dvoun·sobn˝"); VYMAZ_FRONTU();
+              SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+              strcpy(g_slovavefronte,slovavefronte2); break;
+      case 3: strcpy(g_slovozaklad,"trojn·sobn˝"); VYMAZ_FRONTU();
+              SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); strcpy(slovavefronte2,g_slovavefronte);
+              strcpy(g_slovozaklad,"t¯Ìn·sobn˝"); VYMAZ_FRONTU();
+              SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+              strcpy(g_slovavefronte,slovavefronte2); break;
+      case 100: strcpy(g_slovozaklad,"ston·sobn˝"); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); break;
+      case 1000: strcpy(g_slovozaklad,"ùisÌcin·sobn˝"); VYMAZ_FRONTU();
+                 SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); strcpy(slovavefronte2,g_slovavefronte);
+                 strcpy(g_slovozaklad,"ùisÌcen·sobn˝"); VYMAZ_FRONTU();//nespisovne
+                 SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0); PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+                 strcpy(g_slovavefronte,slovavefronte2); break;
+      case 1001:
+      case 1002:
+      case 1003:
+      case 1004:
+      case 1005:
+      case 1006:
+      case 1007:
+      case 1008:
+                 navrat=0; goto UVOLNIPAMET;         //neexistuje tvar
+      default: strcpy(slovavefronte2,g_slovavefronte);
+               for (pozice=1; ; pozice++) {        //vysklonuje vsechna slova
+                 VYMAZ_FRONTU(); SKLONUJ_CISLOVKY_ZAKLADNI(2,1,1,zivotnost,cislovka,0);
+                 if (OREZ_FRONTU_NA_1_SLOVO(pozice) == 0)
+                                           //dulezite pro sklonovani fronty
+                  break;
+                 strcpy(g_slovozaklad,g_slovavefronte); strcat(g_slovozaklad,"n·sobn˝");
+                 VYMAZ_FRONTU(); SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);
+                 PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+                }
+               strcpy(g_slovavefronte,slovavefronte2);
+               if (g_slovavefronte[0] == 0) { navrat=0; goto UVOLNIPAMET; }
+                                                      //nepovedlo se vytvorit
+               break;
+     }
+   }
+  navrat=1; goto UVOLNIPAMET;
+
+  UVOLNIPAMET:
+  UVOLNI(slovavefronte2);
+  return(navrat);
+ }
+
+BYTE SKLONUJ_CISLA(BYTE pad,BYTE cislo,WORD cislovka) {
+// "cislovka" m˘ûe mÌt norm·lnÌ hodnotu:
+//  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,
+//  100,200,300,400,500,600,700,800,900,1000
+// nebo z·stupnÈ hodnoty 1001-1008.
+// Jin˝ch nab˝vat nem˘ûe.
+BYTE navrat=0;
+char *slovavefronte2=NULL;
+int pozice;
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+  switch(cislovka) {
+    case 0: strcpy(g_slovozaklad,"nula"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 1: strcpy(g_slovozaklad,"jedÚiËka"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 2: strcpy(g_slovozaklad,"dvojka"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 3: strcpy(g_slovozaklad,"trojka"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 4: strcpy(g_slovozaklad,"Ëty¯ka"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 7: strcpy(g_slovozaklad,"sedmiËka"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 8: strcpy(g_slovozaklad,"osmiËka"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 9: strcpy(g_slovozaklad,"devÌtka"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 10: strcpy(g_slovozaklad,"desÌtka"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 5:
+    case 6:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+    case 17:
+    case 18:
+    case 19:
+    case 50:
+    case 60:
+    case 70:
+    case 80:
+    case 90:
+             strcpy(slovavefronte2,g_slovavefronte);
+             for (pozice=1; ; pozice++) {        //vysklonuje vsechna slova
+               VYMAZ_FRONTU(); SKLONUJ_CISLOVKY_ZAKLADNI(1,1,1,0,cislovka,0);
+               if (OREZ_FRONTU_NA_1_SLOVO(pozice) == 0)
+                                         //dulezite pro sklonovani fronty
+                break;
+               strcpy(g_slovozaklad,g_slovavefronte); strcat(g_slovozaklad,"ka");
+               VYMAZ_FRONTU(); SKLONUJ_VZOR_ZENA(pad,cislo);
+               PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+              }
+             strcpy(g_slovavefronte,slovavefronte2);
+             break;
+    case 20:
+    case 30:
+    case 40:
+             strcpy(slovavefronte2,g_slovavefronte);
+             for (pozice=1; ; pozice++) {        //vysklonuje vsechna slova
+               VYMAZ_FRONTU(); SKLONUJ_CISLOVKY_ZAKLADNI(1,1,1,0,cislovka/10,0);
+               if (OREZ_FRONTU_NA_1_SLOVO(pozice) == 0)
+                                         //dulezite pro sklonovani fronty
+                break;
+               strcpy(g_slovozaklad,g_slovavefronte); strcat(g_slovozaklad,"cÌtka");
+               VYMAZ_FRONTU(); SKLONUJ_VZOR_ZENA(pad,cislo);
+               PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+              }
+             strcpy(g_slovavefronte,slovavefronte2);
+             break;
+    case 100:
+    case 200:
+    case 300:
+    case 400:
+    case 500:
+    case 600:
+    case 700:
+    case 800:
+    case 900:
+    case 1000:
+               strcpy(slovavefronte2,g_slovavefronte);
+               for (pozice=1; ; pozice++) {        //vysklonuje vsechna slova
+                 VYMAZ_FRONTU(); SKLONUJ_CISLOVKY_RADOVE(1,1,2,0,cislovka);
+            //zensky rod je tu proto, ze je pouze jediny (st·, ale st˝ a stej)
+                 if (OREZ_FRONTU_NA_1_SLOVO(pozice) == 0)
+                                           //dulezite pro sklonovani fronty
+                  break;
+                 strcpy(g_slovozaklad,g_slovavefronte);
+                 OREZ_O_SAMOHLASKU(g_slovozaklad); strcat(g_slovozaklad,"ovka");
+                 VYMAZ_FRONTU(); SKLONUJ_VZOR_ZENA(pad,cislo);
+                 PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+                }
+               strcpy(g_slovavefronte,slovavefronte2);
+               break;
+    case 1001:
+    case 1002:
+    case 1003:
+    case 1004:
+    case 1005:
+    case 1006:
+    case 1007:
+    case 1008:
+               SKLONUJ_CISLOVKY_ZAKLADNI(pad,cislo,1,0,cislovka,0);
+               break;
+    default: navrat=0; goto UVOLNIPAMET;       //jinak zadny tvar neexistuje
+   }
+  navrat=1; goto UVOLNIPAMET;
+
+  UVOLNIPAMET:
+  UVOLNI(slovavefronte2);
+  return(navrat);
+ }
+
+
+BYTE SKLONUJ_CISLA_ZLOMKU(BYTE pad,BYTE cislo,WORD cislovka) {
+// "cislovka" m˘ûe mÌt norm·lnÌ hodnotu:
+//  2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,30,40,50,60,70,80,90,
+//  100,200,300,400,500,600,700,800,900,1000
+// nebo z·stupnÈ hodnoty 1001-1008.
+// Hodnoty 0,1 a jin˝ch nab˝vat nem˘ûe.
+BYTE navrat=0;
+char *slovavefronte2=NULL;
+int pozice;
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+  switch(cislovka) {
+    case 2: VYMAZ_FRONTU(); strcpy(g_slovozaklad,"polovina");
+            SKLONUJ_VZOR_ZENA(pad,cislo); strcpy(slovavefronte2,g_slovavefronte);
+            VYMAZ_FRONTU(); strcpy(g_slovozaklad,"p˘lka");
+            SKLONUJ_VZOR_ZENA(pad,cislo); PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+            VYMAZ_FRONTU(); strcpy(g_slovozaklad,"p˘le");
+            SKLONUJ_VZOR_RUZE(pad,cislo); PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+            strcpy(g_slovavefronte,slovavefronte2); break;
+    case 3: strcpy(g_slovozaklad,"t¯eùina"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 4: strcpy(g_slovozaklad,"Ëtvrùina"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 7: strcpy(g_slovozaklad,"sedmina"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 8: strcpy(g_slovozaklad,"osmina"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 5:
+    case 6:
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+    case 17:
+    case 18:
+    case 19:
+    case 20:
+    case 30:
+    case 40:
+    case 50:
+    case 60:
+    case 70:
+    case 80:
+    case 90:
+    case 500:
+    case 600:
+    case 700:
+    case 800:
+    case 900:
+             strcpy(slovavefronte2,g_slovavefronte);
+             for (pozice=1; ; pozice++) {        //vysklonuje vsechna slova
+               VYMAZ_FRONTU(); SKLONUJ_CISLOVKY_ZAKLADNI(2,1,1,0,cislovka,0);
+               if (OREZ_FRONTU_NA_1_SLOVO(pozice) == 0)
+                                         //dulezite pro sklonovani fronty
+                break;
+               if (POSLEDNI_ZNAK(g_slovavefronte) != 'i') continue; //pÏtsetna mÌsto pÏtsetina
+               strcpy(g_slovozaklad,g_slovavefronte); strcat(g_slovozaklad,"na");
+               VYMAZ_FRONTU(); SKLONUJ_VZOR_ZENA(pad,cislo);
+               PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+              }
+             strcpy(g_slovavefronte,slovavefronte2);
+             break;
+    case 100: strcpy(g_slovozaklad,"seùina"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 200: strcpy(g_slovozaklad,"dvouseùina"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 300: strcpy(g_slovozaklad,"t¯Ìseùina"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 400: VYMAZ_FRONTU(); strcpy(g_slovozaklad,"Ëty¯seùina");
+              SKLONUJ_VZOR_ZENA(pad,cislo); strcpy(slovavefronte2,g_slovavefronte);
+              VYMAZ_FRONTU(); strcpy(g_slovozaklad,"Ëtyrseùina"); //nespisovne
+              SKLONUJ_VZOR_ZENA(pad,cislo); PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+              strcpy(g_slovavefronte,slovavefronte2); break;
+    case 1000: strcpy(g_slovozaklad,"ùisÌcina"); SKLONUJ_VZOR_ZENA(pad,cislo); break;
+    case 1001:
+    case 1002:
+    case 1003:
+    case 1004:
+    case 1005:
+    case 1006:
+    case 1007:
+    case 1008:
+               strcpy(slovavefronte2,g_slovavefronte);
+               for (pozice=1; ; pozice++) {        //vysklonuje vsechna slova
+                 VYMAZ_FRONTU(); SKLONUJ_CISLOVKY_RADOVE(1,1,2,0,cislovka);
+  //zensky rod je tu proto, ze je pouze jediny (miliont·, ale miliont˝ a miliontej)
+                 if (OREZ_FRONTU_NA_1_SLOVO(pozice) == 0)
+                                           //dulezite pro sklonovani fronty
+                  break;
+                 NAHRAD_CAST_CASTI("t·","ùina");
+                 strcpy(g_slovozaklad,g_slovavefronte);
+                 VYMAZ_FRONTU(); SKLONUJ_VZOR_ZENA(pad,cislo);
+                 PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+                }
+               strcpy(g_slovavefronte,slovavefronte2);
+               break;
+    default: navrat=0; goto UVOLNIPAMET;       //jinak zadny tvar neexistuje
+   }
+  navrat=1; goto UVOLNIPAMET;
+
+  UVOLNIPAMET:
+  UVOLNI(slovavefronte2);
+  return(navrat);
+ }

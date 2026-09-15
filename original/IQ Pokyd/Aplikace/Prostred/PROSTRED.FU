@@ -1,0 +1,1173 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Mùžete ho použít k vlastní
+   potøebì, ale nesmíte jej ani programy založené na tomto kódu využít komerènì!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - prostred.fu - funkce pro ovládání prostøedí programu
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+
+CString _NAJDI_BASNICKE_SLOVO(char *koncovka) {
+CString odpoved;
+DWORD pozice1,pozice2,nejvyssi;
+DWORD delkaodpovedi,delkated;
+WORD kolikhledat;
+char *hledane=ALOKUJ_RETEZEC(strlen(koncovka)+2);
+char *nalezeno=ALOKUJ_RETEZEC(DELKA_JEDNODUCHEHO_SLOVA);
+char *odpovedchar=ALOKUJ_RETEZEC(50);
+
+  strcpy(hledane,koncovka); UPRAV_SLOVO_PRO_IQPOKYD(hledane);
+  strcat(hledane,":"); kolikhledat=strlen(hledane);
+  ZAKODUJ_SLOVO_V_PAMETI(hledane);
+  strcpy(odpovedchar,"Žádná slova nenalezena"); delkaodpovedi=0;
+  for (g_aktualnipismeno=0; g_aktualnipismeno < POCET_DVOJPISMEN; g_aktualnipismeno++) {
+    nejvyssi=g_pocetslovvuplnedatabazi[g_aktualnipismeno];
+    for (pozice1=0; pozice1 < nejvyssi; pozice1++) {
+      for (pozice2=0; g_databazeuplnychslov[g_aktualnipismeno][pozice1][pozice2] != ZAKODOVANY_ZNAK(':'); pozice2++) {
+        if (strncmp(g_databazeuplnychslov[g_aktualnipismeno][pozice1]+pozice2,hledane,kolikhledat) == 0) {
+          strncpy(nalezeno,g_databazeuplnychslov[g_aktualnipismeno][pozice1],kolikhledat+pozice2-1);
+          nalezeno[kolikhledat+pozice2-1]=0;
+          DEKODUJ_SLOVO_V_PAMETI(nalezeno);
+          ODUPRAV_SLOVO_PRO_IQPOKYD(nalezeno);
+          delkated=strlen(nalezeno);
+          odpovedchar=(char *)REALOKUJ_PAMET((void *)odpovedchar,delkaodpovedi+delkated+3);
+          strcpy(odpovedchar+delkaodpovedi,nalezeno);
+          delkaodpovedi+=delkated;
+          strcpy(odpovedchar+delkaodpovedi,"\r\n");
+          delkaodpovedi+=2;
+         }
+       }
+     }
+   }
+
+  if (delkaodpovedi >= 2) odpovedchar[delkaodpovedi-2]=0;
+                              //smazani enteru na konci
+
+  UVOLNI(nalezeno);
+  UVOLNI(hledane);
+  odpoved=odpovedchar;
+  UVOLNI(odpovedchar);
+  return(odpoved);
+ }
+
+BYTE ZKONTROLUJ_SPRAVNOST_ZNAKU_VE_JMENE(CString &cjmeno) {
+char *jmeno=ALOKUJ_RETEZEC(cjmeno.GetLength()+1);
+int pozice1,pozice2;
+  strcpy(jmeno,cjmeno);
+  for (pozice1=0; jmeno[pozice1] <= ' ' && jmeno[pozice1] > 0; pozice1++);
+                       //oriznuti retezce
+  if (pozice1 != 0) strcpy(jmeno,jmeno+pozice1);
+
+  for (pozice1=0; jmeno[pozice1] != 0; pozice1++) {
+    if (jmeno[pozice1] > 0 && jmeno[pozice1] <= ' ') {  //chyba
+      for (pozice2=pozice1+1; jmeno[pozice2] != 0; pozice2++) {
+                          //zkusi se, jestli se to nema jen oriznout
+        if (jmeno[pozice2] < 0 || jmeno[pozice2] > ' ') {
+          UVOLNI(jmeno); return(0);           //ted uz je fakt chyba
+         }
+       }
+      jmeno[pozice1]=0;         //ma se to jen uriznout
+      break;//to tu ani nemusi byt, stejne je na konci, ale pro prehlednost...
+     }
+   }
+
+  cjmeno=jmeno;
+
+  UVOLNI(jmeno);
+  return(1);        //v poradku
+ }
+
+void ROZEBER_PRIKAZOVY_RADEK(void) {
+LPTSTR radekL;
+char *radek,*parametry;
+int pozice,delka;
+
+  g_nastaveni.prikaz_readonlymod=0;        //standardni hodnoty
+  g_nastaveni.prikaz_nezobrazovatpozadi=0;
+
+  radekL=GetCommandLine();
+  radek=ALOKUJ_RETEZEC(strlen(radekL)+2);  //pro mezeru a pro 0 na konci
+  strcpy(radek,radekL);
+  strcat(radek," ");     //aby se v tom lepe vyhledavalo
+  parametry=strchr(radek,' ');
+
+  for (pozice=0,delka=strlen(parametry); pozice < delka; pozice++) {
+    if (parametry[pozice] == '-' || parametry[pozice] == '/') {
+      if (POROVNEJ_DVA_RETEZCE(parametry+pozice+1,"readonly ",9) == 1)
+       g_nastaveni.prikaz_readonlymod=1;   //Read Only mod
+      if (POROVNEJ_DVA_RETEZCE(parametry+pozice+1,"bezpozadi ",10) == 1)
+       g_nastaveni.prikaz_nezobrazovatpozadi=1;   //nezobrazovat pozadi
+     }
+   }
+
+  UVOLNI(radek);
+ }
+
+DWORD VRAT_BARVU_TEXTU(HWND hWnd) {
+int pozice;
+
+  for (pozice=99; pozice >= 100-g_poslednich100vet.pocetzobrazenychvet; pozice--) {
+    if (g_MfcDlghlavniokno.policka[pozice] != NULL
+     && hWnd == g_MfcDlghlavniokno.policka[pozice]->m_hWnd) {
+      if (g_poslednich100vet.puvodcevety[pozice] == 'c')
+       return g_barvatextucloveka;          //clovek
+      else if (g_poslednich100vet.puvodcevety[pozice] == 'p')
+       return g_barvatextupocitace;         //pocitac
+      else NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+     }
+   }
+  if (hWnd == g_HWNDhlavickovychtextu[0]
+   || hWnd == g_HWNDhlavickovychtextu[2]) return g_barvahlavickovychtextu;
+                           //radek s autorem, nazvem programu a KYBLSoftem
+
+  if (hWnd == g_HWNDhlavickovychtextu[1]) return g_barvanapisuIQPokyd;
+
+  return g_barvatextuhlavnihookna;       //vse ostatni
+ }
+
+void NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU(char *vetacloveka,char *vetapocitace) {
+static BYTE prvniveta=1;
+  if (prvniveta != 1) {    //pokud to neni prvni veta pocitace
+    g_zaznamrozhovoru+="Èlovìk:  ";
+    g_zaznamrozhovoru+=vetacloveka;
+    g_zaznamrozhovoru+="\r\n";
+    g_poslednich100vet.PRIDEJ_VETU(vetacloveka,'c');
+   }
+  g_zaznamrozhovoru+="Poèítaè: ";
+  g_zaznamrozhovoru+=vetapocitace;
+  g_zaznamrozhovoru+="\r\n";
+  g_poslednich100vet.PRIDEJ_VETU(vetapocitace,'p');
+
+  PREFORMATUJ_TEXTY_CLOVEKA_A_POCITACE_NA_OBRAZOVCE(0);
+
+  prvniveta=0;
+ }
+
+//*** pøetížení funkce ***
+void NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU(CString vetacloveka,CString vetapocitace) {
+char *clovek=NULL,*pocitac=NULL;
+  clovek=ALOKUJ_RETEZEC(vetacloveka.GetLength()+1);
+  strcpy(clovek,vetacloveka);
+
+  pocitac=ALOKUJ_RETEZEC(vetapocitace.GetLength()+1);
+  strcpy(pocitac,vetapocitace);
+
+  NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU(clovek,pocitac);
+
+  UVOLNI(clovek); UVOLNI(pocitac);
+ }
+
+void NASTAV_VIDITELNOST_EFEKTNICH_PROGRESSBARU(void) {
+  switch(g_nastaveni.pouzivatefekty) {
+    case 0: ShowWindow(GetDlgItem(g_HWNDhlavnihookna,IDC_EFEKTPROGRES1),SW_HIDE);
+            ShowWindow(GetDlgItem(g_HWNDhlavnihookna,IDC_EFEKTPROGRES2),SW_HIDE);
+            break;
+    case 1: ShowWindow(GetDlgItem(g_HWNDhlavnihookna,IDC_EFEKTPROGRES1),SW_SHOW);
+            ShowWindow(GetDlgItem(g_HWNDhlavnihookna,IDC_EFEKTPROGRES2),SW_SHOW);
+            break;
+   }
+ }
+
+void ZOBRAZ_HLASKU_NA_POZADI(char kterou,HWND nacem) {
+        //pokud je "kterou" 0, jedna hlaska se vymaze
+static BYTE pravedelano=0;
+WORD pozice;
+  while (pravedelano == 1) Sleep(10);    //cekani na dokonceni predchozi
+  pravedelano=1;
+
+  if (kterou == 0) {        //vymazani prvni hlasky
+    for (pozice=0; g_zobrazithlasku[pozice] != 0; pozice++) {
+      g_zobrazithlasku[pozice]=g_zobrazithlasku[pozice+1];
+     }
+   }
+  else {                    //pridani hlasky na konec
+    pozice=strlen(g_zobrazithlasku);
+    if (pozice >= 99) NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+    if (kterou == _PREKRESLIT_OBRAZOVKU_
+     && g_zobrazithlasku[pozice-1] == _PREKRESLIT_OBRAZOVKU_)
+      goto KONEC;             //uz tam jedno prekresleni je
+    g_zobrazithlasku[pozice]=kterou; g_zobrazithlasku[pozice+1]=0;
+    g_rodichlasky=nacem;
+   }
+  KONEC:
+  pravedelano=0;
+ }
+
+void ZAPIS_INFORMACI_O_NEZNAMEM_SLOVE(char *slovo) {
+#if FINALNI_VERZE == 0
+
+FILE *f=NULL;
+
+  f=OTEVRI_SOUBOR("!NEZNAMA.TXT","a");
+  if (f == NULL) return;
+  fprintf(f,"%s\n",slovo);
+  fclose(f);
+
+#endif
+ }
+
+void IQ_POKYDE_ODPOVEZ(char *vetacloveka) {
+//odpovìï se vrací v globální promìnné g_odpovedpocitace
+/*WORD poziceslova;
+FILE *soubor;
+char *ident_tvaru=ALOKUJ_RETEZEC(30);
+
+  soubor=OTEVRI_SOUBOR("vystup.txt","w");
+
+  for (poziceslova=1; poziceslova <= g_pocetslovvzakladnidatabazi; poziceslova++) {
+    VRAT_SLOVO_ZE_ZAKLADNIHO_SLOVNIKU(poziceslova);
+    if (VRAT_SLOVNI_DRUH(g_informaceoslove[0]) == 1) {
+      SKLONUJ_PODSTATNA_JMENA(g_informaceoslove[0],1,1);
+      ODUPRAV_SLOVO_PRO_IQPOKYD(g_slovavefronte);
+      fprintf(soubor,"%s\n",g_slovavefronte);
+
+      SKLONUJ_PODSTATNA_JMENA(g_informaceoslove[0],1,2);
+      ODUPRAV_SLOVO_PRO_IQPOKYD(g_slovavefronte);
+      fprintf(soubor,"%s\n",g_slovavefronte);
+     }
+   }                           //rozsklonovani slov - 1. narocna operace
+
+  fclose(soubor);
+
+  UVOLNI(ident_tvaru);
+
+*/
+
+
+
+  g_pocetodpovedipocitace=0;
+  g_pocetrecenychvet++;
+  POROZUMEJ_VETE_NAPSANE_CLOVEKEM(vetacloveka);
+  ZPRACUJ_VETU();
+  VYBER_JEDNU_ODPOVED_Z_ODPOVEDI_PODLE_HISTORIE();
+  g_smyslposlednivetypocitace=ZJISTI_SMYSL_VETY_POCITACE(g_odpovedpocitace);
+ }
+
+void ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI(void) {
+HMENU menu;
+char *conapsat=ALOKUJ_RETEZEC(1000);
+
+  conapsat[0]=0;
+  if (g_nastaveni.jmenocloveka[0] == 0) {
+    if (g_nastaveni.pohlavicloveka == 1) strcat(conapsat,"muž");
+    else strcat(conapsat,"žena");
+   }
+  else strcat(conapsat,g_nastaveni.jmenocloveka);
+
+  strcat(conapsat," x ");
+
+  if (g_nastaveni.jmenopocitace[0] == 0) {
+    if (g_nastaveni.pohlavipocitace == 1) strcat(conapsat,"muž");
+    else strcat(conapsat,"žena");
+   }
+  else strcat(conapsat,g_nastaveni.jmenopocitace);
+
+  strcat(conapsat,", ");
+
+  switch(g_nastaveni.charakter) {
+    case 0: strcat(conapsat,"stroj"); break;
+    case 1: strcat(conapsat,"naivní"); break;
+    case 2: strcat(conapsat,"klidný"); break;
+    case 3: strcat(conapsat,"prùmìrný"); break;
+    case 4: strcat(conapsat,"nedùvìøivý"); break;
+    case 5: strcat(conapsat,"náladový"); break;
+    case 6: strcat(conapsat,"výbušný"); break;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  strcat(conapsat,": ");
+
+  switch(g_nastaveni.nalada) {
+    case 1: strcat(conapsat,"výborná"); break;
+    case 2: strcat(conapsat,"dobrá"); break;
+    case 3: strcat(conapsat,"normální"); break;
+    case 4: strcat(conapsat,"špatná"); break;
+    case 5: strcat(conapsat,"hrozná"); break;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  menu = GetMenu(g_HWNDhlavnihookna);
+  ModifyMenu(menu,2,MF_BYPOSITION | MF_STRING | MFT_RIGHTJUSTIFY,ID_NASTAVENI,conapsat);
+  SetMenu(g_HWNDhlavnihookna,menu);
+  DrawMenuBar(g_HWNDhlavnihookna);       //asi nemusi byt
+
+  UVOLNI(conapsat);
+ }
+
+void NAPIS_UVODNI_UVITANI(void) {
+CString kratkepohlavicloveka,priselpohlavi,kratkepohlavipocitace;
+
+  if (g_nastaveni.pohlavicloveka == 1) { kratkepohlavicloveka=""; priselpohlavi="pøišel"; }
+  else { kratkepohlavicloveka="a"; priselpohlavi="pøišla"; }
+  if (g_nastaveni.pohlavipocitace == 1) { kratkepohlavipocitace=""; }
+  else { kratkepohlavipocitace="a"; }
+
+  srand(time(NULL));
+
+  switch(rand()%10) {
+    case 0: NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU("","Ahoj! Dobøe, že mì spouštíš :-)"); break;
+    case 1: NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU("","Vítám tì! Jak ses mìl"+kratkepohlavicloveka+"?"); break;
+    case 2: NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU("","Nazdar! Jsem rád"+kratkepohlavipocitace+", že ses na mì "+priselpohlavi+" podívat."); break;
+    case 3: NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU("","Èest pìst! Co tì ke mnì pøivádí?"); break;
+    case 4: NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU("","Nazdárek, jdeš si zakydat?"); break;
+    case 5: NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU("","No, to je dobøe, že se taky na mì pøijdeš jednou podívat."); break;
+    case 6: NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU("","Zdar! Jak žiješ?"); break;
+    case 7: NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU("","Vítej, kámo!"); break;
+    case 8: NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU("","Jsem moc rád"+kratkepohlavipocitace+", že si se mnou jdeš pokydat."); break;
+    case 9: NAPIS_VETU_S_ODPOVEDI_NA_OBRAZOVKU("","Ahoj, tak co je nového?"); break;
+   }
+ }
+
+void ZMEN_FONT_U_TEXTU_NA_OBRAZOVCE(CWnd *handletextu,BYTE velikost,char *jakepismo) {
+CFont cFont;
+LOGFONT font;
+
+  ZeroMemory(&font, sizeof(LOGFONT));
+  font.lfHeight = -velikost;
+  font.lfWeight = FW_BOLD;
+  strcpy(font.lfFaceName,jakepismo);
+
+  cFont.CreateFontIndirect(&font);
+  handletextu->SetFont(&cFont);
+  cFont.~CFont();  //nemusi byt
+ }
+
+void NASTAV_VIDITELNOST_POZADI(BYTE refresh) {
+  if (g_nastaveni.prikaz_nezobrazovatpozadi == 1) {
+    g_stetecpozadihlavnihookna=CreateSolidBrush(0x000000);
+                                 //hlavni okno bude mit cerne pozadi
+    g_stetecpozadipodokna=CreateSolidBrush(GetSysColor(COLOR_3DFACE));
+                                 //podokno bude mit standardni barvu
+    g_stetecpozadizadavanivety=CreateSolidBrush(0xFFFFFF);
+   }
+  else {
+    g_obrazekpozadihlavnihookna = (HBITMAP)LoadImage(g_instanceprogramu, MAKEINTRESOURCE(IDB_POZADIHLAVNIHOOKNA), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+    g_stetecpozadihlavnihookna=CreatePatternBrush(g_obrazekpozadihlavnihookna);
+    g_stetecpozadipodokna=CreatePatternBrush(LoadBitmap(GetModuleHandle(NULL),MAKEINTRESOURCE(IDB_POZADIMALE)));
+    g_stetecpozadizadavanivety=CreateSolidBrush(g_barvapozadizadavanivety);
+   }
+
+  if (refresh == 1) PREKRESLI_OBRAZOVKU();
+ }
+
+DWORD WINAPI VLAKNO__BLIKNUTI_S_NAPISEM_IQPOKYD(LPVOID lpParameter) {
+                           //zablikani napisem "IQ Pokyd"
+BYTE velikost=18;
+CFont *puvodnifont;
+
+  puvodnifont=g_CWndhlavnihookna->GetDlgItem(IDC_NADPIS2)->GetFont();
+
+  while (velikost > 10 && g_zavritvlaknoefektu == 0) {  //zmenseni fontu
+    ZMEN_FONT_U_TEXTU_NA_OBRAZOVCE(g_CWndhlavnihookna->GetDlgItem(IDC_NADPIS2),velikost,"Garamond");
+    velikost--;
+    Sleep(20);
+   }
+  while (velikost <= 21 && g_zavritvlaknoefektu == 0) {  //zvetseni fontu
+    ZMEN_FONT_U_TEXTU_NA_OBRAZOVCE(g_CWndhlavnihookna->GetDlgItem(IDC_NADPIS2),velikost,"Garamond");
+    velikost++;
+    Sleep(2*velikost+4*(velikost-10));
+   }
+//
+  g_CWndhlavnihookna->GetDlgItem(IDC_NADPIS2)->SetFont(puvodnifont);
+
+  return 0;
+ }
+  
+DWORD WINAPI VLAKNO__EFEKTY(LPVOID lpParameter) {
+WORD pozice;
+BYTE predchoziakce=0,predchozipouzivani=g_nastaveni.pouzivatefekty;
+
+  SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES1,PBM_SETRANGE32,0,1000);
+  SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES2,PBM_SETRANGE32,0,1000);
+
+  while (g_zavritvlaknoefektu == 0) {
+
+    if (g_akceefektu != predchoziakce) {    //zmena akce, vynulovani
+      predchoziakce=g_akceefektu; pozice=0;
+      SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES1,PBM_SETPOS,0,0);
+      SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES2,PBM_SETPOS,0,0);
+     }
+    if (g_nastaveni.pouzivatefekty != predchozipouzivani) {
+      predchozipouzivani=g_nastaveni.pouzivatefekty;
+      if (g_nastaveni.pouzivatefekty == 0) {     //vypnuti efektu
+        SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES1,PBM_SETPOS,0,0);
+        SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES2,PBM_SETPOS,0,0);
+       }
+     }
+
+    if (g_nastaveni.pouzivatefekty == 0) {   //nepouzivat efekty
+      Sleep(100); continue;
+     }
+
+    switch(predchoziakce /* je stejna jako g_akceefektu */) {
+      case 0: break;                        //nic
+
+      case 1:                   //vertikalni "vystup" nahoru
+        SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES1,PBM_SETPOS,(DWORD)pozice,0);
+        SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES2,PBM_SETPOS,(DWORD)pozice,0);
+        pozice+=100;
+        if (pozice > 1000) {      //uz vyjel az nahoru
+          pozice=0; g_akceefektu=0;
+         }
+        break;
+
+      case 2:                              //2x zablikani
+        if (pozice == 0 || pozice == 20) {    //vypnuto, tak se "rozsvit"
+          SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES1,PBM_SETPOS,1000,0);
+          SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES2,PBM_SETPOS,1000,0);
+          pozice++;
+         }
+        else if (pozice == 10 || pozice == 30) { //zapnuto, tak "zhasni"
+          SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES1,PBM_SETPOS,0,0);
+          SendDlgItemMessage(g_HWNDhlavnihookna,IDC_EFEKTPROGRES2,PBM_SETPOS,0,0);
+          pozice++;
+         }
+        else if (pozice > 30) {    //skonci, uz jsi 2x zablikal
+          pozice=0; g_akceefektu=0;
+         }
+        else pozice++;
+        break;
+      default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+     }
+    Sleep(20);
+   }
+  g_zavritvlaknoefektu=0;
+  g_bezivlaknoefektu=0;
+
+  return 0;
+ }
+
+DWORD WINAPI VLAKNO__HLASKY_A_OPERACE_NA_POZADI(LPVOID lpParameter) {
+  while (g_zavritvlaknohlasek == 0) {
+    Sleep(100);
+    if (g_zobrazithlasku[0] == _PREKRESLIT_OBRAZOVKU_) {
+//!      PREFORMATUJ_TEXTY_CLOVEKA_A_POCITACE_NA_OBRAZOVCE(1);
+      PREKRESLI_OBRAZOVKU();
+      ZOBRAZ_HLASKU_NA_POZADI(0,0);     //vymazani z fronty
+     }
+    if (g_zobrazithlasku[0] == _UVODNI_KEC_) {
+      ZOBRAZ_HLASKU_NA_POZADI(0,0);     //vymazani z fronty
+/*//!      g_zobrazenahlaska=1;
+
+      MessageBox(g_rodichlasky,""
+      "Ahoj!"
+      "\n\nVítej v programu IQ Pokyd. Dobøe, že mì spouštíš. "
+      "Budu ti tykat, tak si na to zvykni :-)"
+      "\n\nToto je první verze programu IQ Pokyd, která samozøejmì má ještì "
+      "hodnì nedostatkù (to také napovídá èíselné oznaèení verze 0.15). "
+      "Proto prosím omluv sníženou kvalitu a IQ programu."
+      "\n\nDík a hodnì zábavy!"
+      "\n\nP.S.: Pokud se se mnou budeš hodnì nudit, stáhni si pøedchùdce "
+      "tohoto programu Pokyd z \"http://iqpokyd.kyblsoft.cz\" - pøece jenom je ještì "
+      "v mnohém dokonalejší."
+                       "","Vítej v programu IQ Pokyd v0.15",MB_ICONINFORMATION | MB_SYSTEMMODAL);
+      SetFocus(g_HWNDhlavnihookna); g_zobrazenahlaska=0;
+*/     }
+    if (g_zobrazithlasku[0] == _O_VYTVARENI_SLOVNIKU_) {
+      ZOBRAZ_HLASKU_NA_POZADI(0,0);     //vymazani z fronty
+      g_zobrazenahlaska=1;
+
+      MessageBox(g_rodichlasky,""
+      "Nyní je tøeba vytvoøit tzv. \"velký slovník\". To mùže trvat "
+      "i nìkolik minut. Tato operace se provede pouze pøi tomto prvním spuštìní, "
+      "pøíštì se už program spustí rychle. \r\n\r\n"
+      "Výsledek tohoto procesu se uloží "
+      "do souboru SLOVNIK.TMP. Ten zabere asi 17 MB a je to zdaleka nejvìtší "
+      "soubor IQ Pokydu. "
+      "Pokud tedy budeš v budoucnu program šíøit, mùžeš tento soubor "
+      "s klidným svìdomím smazat, na novém poèítaèi se vytvoøí znova."
+                       "","Co se právì dìlá",MB_ICONINFORMATION | MB_SYSTEMMODAL);
+      if (::IsWindow(g_HWNDpodokna) == TRUE) SetFocus(g_HWNDpodokna);
+      g_zobrazenahlaska=0;
+     }
+    if (g_zobrazithlasku[0] == _NEKDO_SI_HRAL_S_NASTAVENIM_) {
+      ZOBRAZ_HLASKU_NA_POZADI(0,0);     //vymazani z fronty
+      g_zobrazenahlaska=1;
+
+      MessageBox(g_rodichlasky,""
+      "Soubor s nastavením "JMENO_SOUBORU_S_NASTAVENIM" je nìjaký špatný. "
+      "Nìkdo se v nìm asi vrtal, nevíš o nìm nìco? "
+      "Já se nezlobím, ale holt si mì budeš muset nastavit znovu, no. "
+                       "","Špatný soubor s nastavením",MB_ICONINFORMATION | MB_SYSTEMMODAL);
+      if (::IsWindow(g_HWNDpodokna) == TRUE) SetFocus(g_HWNDpodokna);
+      g_zobrazenahlaska=0;
+     }
+
+    if (g_zobrazithlasku[0] == 0 && g_zobrazitnastaveni == 1) {
+      g_zobrazitnastaveni=0;
+      SendMessage(g_HWNDhlavnihookna,WM_COMMAND,(UINT)ID_NASTAVENI,0);
+     }
+   }
+  g_zavritvlaknohlasek=0;
+  g_bezivlaknohlasek=0;
+  CloseHandle(g_handlevlaknahlasek);
+  return 0;
+ }
+
+DWORD WINAPI VLAKNO__PROCENTA_PROGRESU(LPVOID lpParameter) {
+char *procentatext=ALOKUJ_RETEZEC(20);
+long double procenta;
+
+  do {
+    procenta=g_procentanacitani;
+    switch(g_praveprovadenaakce) {
+      case 1: break;          //nacitani cehokoliv
+      case 2:                 //vytvareni slovniku (0-50%)
+              procenta=procenta*50/100; break;
+      case 3:                 //trideni slovniku (50-100%)
+              procenta=procenta*50/100+50; break;
+      case 4: break;          //zapisovani velkeho slovniku - novy progres
+      case 5: break;          //ostatni (podradne) akce
+     }
+
+    switch(g_praveprovadenaakce) {
+      case 1: case 4: case 5: sprintf(procentatext,"%.0f%%",procenta); break;
+      default: sprintf(procentatext,"%.1f%%",procenta); break;
+     }
+    if (PREDPREDPOSLEDNI_ZNAK(procentatext) == '.')
+     procentatext[strlen(procentatext)-3]=',';  //desetinna carka
+    g_handletext2->SetWindowText(procentatext);
+    SendDlgItemMessage(g_HWNDpodokna,IDC_PROGRESNACITANI,PBM_SETPOS,(DWORD)(procenta*10),0);
+
+    switch (g_praveprovadenaakce) {
+      case 1: case 4: case 5: Sleep(50); break;
+      default: Sleep(100); break;
+     }
+   } while (g_bezivlaknoprocesu == 1 && g_zavritvlaknoprocent == 0);
+
+  UVOLNI(procentatext);
+
+  g_zavritvlaknoprocent=0;
+  g_bezivlaknoprocent=0;
+
+  if (g_bezivlaknoprocesu == 0) SendMessage(g_HWNDpodokna,WM_CLOSE,0,0);
+  CloseHandle(g_handlevlaknaprocent);
+  return 0;
+ }
+
+DWORD WINAPI VLAKNO__NACITEJ_JAK_DIVEJ(LPVOID lpParameter) {
+HWND hlaska;
+DWORD pozice;
+
+  g_praveprovadenaakce=5;
+  g_procentanacitani=0;
+
+  if (g_zavritvlaknoprocesu == 1) {
+    g_nastaveni.debug_rychleukoncovani=1; goto SKONCI;  //je alokována pouze èást pamìti
+   }
+
+  ALOKUJ_VSECHNY_PRVKY_G_VETACLOVEKA();
+  if (g_zavritvlaknoprocesu == 1) {
+    g_nastaveni.debug_rychleukoncovani=1; goto SKONCI;  //je alokována pouze èást pamìti
+   }
+
+  g_praveprovadenaakce=5;
+  g_procentanacitani=0;
+  g_handletext1->SetWindowText("Naèítám základní slovník...");
+  PRECTI_DATABAZI_SLOV_ZE_ZAKLADNIHO_SLOVNIKU();
+  if (g_zavritvlaknoprocesu == 1) {
+    g_nastaveni.debug_rychleukoncovani=1; goto SKONCI;  //je alokována pouze èást pamìti
+   }
+
+  g_praveprovadenaakce=1;
+  g_procentanacitani=0;
+  g_handletext1->SetWindowText("Naèítám slovní zásobu...");
+  if (PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU() == 1) {
+    if (g_zavritvlaknoprocesu == 1) goto SKONCI;
+    SetWindowText(g_HWNDpodokna,"Vytváøím slovní zásobu, prosím èekejte...");
+    NACTI_A_ROZSKLONUJ_ZAKLADNI_SLOVNIK();
+    if (g_zavritvlaknoprocesu == 1) goto SKONCI;
+   }
+  
+  g_praveprovadenaakce=5;
+  g_procentanacitani=0;
+  g_handletext1->SetWindowText("Naèítám inteligenci...");
+  PRECTI_INTELIGENCI_ZE_SOUBORU();
+  g_odpovedipocitace=(char **)ALOKUJ_PAMET(g_pocetiqpodminek*sizeof(*g_odpovedipocitace));
+  g_idodpovedipocitace=(WORD *)ALOKUJ_PAMET(g_pocetiqpodminek*sizeof(g_idodpovedipocitace[0]));
+  for (pozice=0; pozice < g_pocetiqpodminek; pozice++) {
+    g_odpovedipocitace[pozice]=ALOKUJ_RETEZEC(MAX_DELKA_ODPOVEDI_POCITACE+1);
+   }
+  if (g_zavritvlaknoprocesu == 1) {
+    g_nastaveni.debug_rychleukoncovani=1; goto SKONCI;  //je alokována pouze èást pamìti
+   }
+
+  g_praveprovadenaakce=5;
+  g_procentanacitani=0;
+  g_handletext1->SetWindowText("Naèítám externí data...");
+  PRECTI_PROFIL_ZE_SOUBORU();
+  if (g_zavritvlaknoprocesu == 1) goto SKONCI;
+
+  g_procentanacitani=30;
+  g_tuknuti.DOVYTVOR_VSECHNY_ZVUKY_TUKNUTI();
+  if (g_zavritvlaknoprocesu == 1) goto SKONCI;
+
+  g_procentanacitani=70;
+  switch(ZKONTROLUJ_SPRAVNY_OBSAH_SOUBORU_S_NAPOVEDOU()) {
+    case 0:  //soubor s nápovìdou neexistuje
+      NAHLAS_CHYBU("Bohužel, program IQ Pokyd je narušen; konkrétnì chybí soubor s nápovìdou \"" JMENO_SOUBORU_S_NAPOVEDOU "\". Možná si øekneš, že je to kravina, ale už z principu se musím ukonèit, není možné, aby mì takhle nìkdo \"oøezával\".\r\n\r\nCo s tím: Nahraj si tento soubor ze zdroje znova. Nemáš-li už odkud, tak z internetu ze stránky \"http://iqpokyd.kyblsoft.cz\".\r\n\r\nDíky!",0,_JINA_CHYBA_,_UKONCIT_);
+    case 1: break;   //v poøádku
+    case 2:  //soubor s nápovìdou je narušen
+      NAHLAS_CHYBU("Bohužel, program IQ Pokyd je narušen; konkrétnì je špatný soubor s nápovìdou \"" JMENO_SOUBORU_S_NAPOVEDOU "\". Je možné, že je soubor špatnì nahraný nebo ho nìjaký chytrák prostì pøepsal k obrazu svému. To se mi však pochopitelnì nelíbí a proto se nyní ukonèím.\r\n\r\nCo s tím: Nahraj si tento soubor ze zdroje znova. Nemáš-li už odkud, tak z internetu ze stránky \"http://iqpokyd.kyblsoft.cz\".\r\n\r\nDíky!",0,_JINA_CHYBA_,_UKONCIT_);
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  if (g_zavritvlaknoprocesu == 1) goto SKONCI;
+
+  DWORD vlakno;
+  CreateThread(NULL,0,VLAKNO__BLIKNUTI_S_NAPISEM_IQPOKYD,(LPVOID)0,0,&vlakno);
+
+  SKONCI:
+  g_zavritvlaknoprocesu=0;
+  g_bezivlaknoprocesu=0;
+  hlaska=FindWindow(NULL,"IQ Pokyd - Upozornìní");
+  if (hlaska != NULL)
+   EndDialog(hlaska,IDNO);
+  if (g_bezivlaknoprocent == 0) SendMessage(g_HWNDpodokna,WM_CLOSE,0,0);
+  CloseHandle(g_handlevlaknaprocesu);
+  return 0;
+ }
+
+void WINMFC_NACTI_SLOVNIKY(void) {
+DWORD dwVlakno1,dwVlakno2;
+ 
+  SendDlgItemMessage(g_HWNDpodokna,IDC_PROGRESNACITANI,PBM_SETRANGE32,0,1000);
+  SendDlgItemMessage(g_HWNDpodokna,IDC_PROGRESNACITANI,PBM_SETPOS,0,0);
+
+  g_bezivlaknoprocesu=1;
+  g_handlevlaknaprocesu=CreateThread(NULL,0,VLAKNO__NACITEJ_JAK_DIVEJ,(LPVOID)0,0,&dwVlakno1);
+  if (!g_handlevlaknaprocesu) NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+
+  g_bezivlaknoprocent=1;
+  g_handlevlaknaprocent=CreateThread(NULL,0,VLAKNO__PROCENTA_PROGRESU,(LPVOID)0,0,&dwVlakno2);
+  if (!g_handlevlaknaprocent) NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+ }
+
+void WINMFC_UVOLNI_VESKEROU_DYNAMICKOU_PAMET(void) {
+  UVOLNI_VESKEROU_DYNAMICKOU_PAMET();
+ }
+
+CString VRAT_NAZEV_MESICE(WORD mesic) {
+  switch(mesic) {
+    case 1: return("ledna");
+    case 2: return("února");
+    case 3: return("bøezna");
+    case 4: return("dubna");
+    case 5: return("kvìtna");
+    case 6: return("èervna");
+    case 7: return("èervence");
+    case 8: return("srpna");
+    case 9: return("záøí");
+    case 10: return("øíjna");
+    case 11: return("listopadu");
+    case 12: return("prosince");
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+             return("");  //pouze pro prekladac
+   }
+ }
+
+void ULOZ_KYDY(void) {
+FILE *fw=NULL;
+SYSTEMTIME sysTime;
+
+  if (g_nastaveni.prikaz_readonlymod == 1) return;    //bez zapisu
+
+  fw=OTEVRI_SOUBOR(JMENO_SOUBORU_S_TEXTOVYMI_ZAZNAMY,"ab");
+  if (fw == NULL) return;
+
+  GetLocalTime(&sysTime);
+  fprintf(fw,""
+"-------------------------------------------------------------------\r\n"
+" Záznam rozhovoru z programu IQ Pokyd v0.15 - %d.%s %d v %d:%02d\r\n"
+"      Aleš Janda (C) KÝBLSoft 1999-2005, http://iqpokyd.kyblsoft.cz\r\n"
+"-------------------------------------------------------------------\r\n\r\n"
+"%s\r\n\r\n\r\n"
+"",sysTime.wDay,VRAT_NAZEV_MESICE(sysTime.wMonth),sysTime.wYear,sysTime.wHour,sysTime.wMinute,g_zaznamrozhovoru);
+  fclose(fw);
+ }
+
+void ULOZ_BINARNI_KYDY(void) {
+FILE *soubor=NULL;
+SYSTEMTIME sysTime;
+BYTE pocetzbytecnosti,koneckodovani;
+int delkahlavicky,pozice;
+char nahodnykodovaciklic,*hlavicka=NULL,*data=NULL,predchoziznak,novypredchoziznak;
+
+  if (g_nastaveni.prikaz_readonlymod == 1) return;    //bez zapisu
+
+  soubor=OTEVRI_SOUBOR(JMENO_SOUBORU_S_BINARNIMI_ZAZNAMY,"rb");
+  if (soubor != NULL) {
+    fseek(soubor,0,SEEK_END); if (ftell(soubor) > 10) {   //neco uz tam je
+      fclose(soubor); goto ZAPIS;
+     }
+    fclose(soubor);
+   }
+  soubor=OTEVRI_SOUBOR(JMENO_SOUBORU_S_BINARNIMI_ZAZNAMY,"wb");
+
+  hlavicka=ALOKUJ_RETEZEC(500);
+
+  strcpy(hlavicka,"IQ Pokyd v0.15 - nova slova, gramaticke vyznamy, struktury vet: TENTO SOUBOR NEOBSAHUJE ZADNA CITLIVA DATA. Prosim odeslete tento soubor ve formulari na strance \"http://iqpokyd.kyblsoft.cz\", prispejete tim k rozvoji IQ Pokydu. Dekujeme.");
+  delkahlavicky=strlen(hlavicka)+1;   //i s nulou na konci
+
+  pocetzbytecnosti=rand()%100;
+  hlavicka[delkahlavicky++]=pocetzbytecnosti^'I';
+  for (pozice=0; pozice< pocetzbytecnosti; pozice++)
+   hlavicka[delkahlavicky++]=(char)rand();  //zbytecnosti (pro zmateni hackera)
+
+  pozice=delkahlavicky;
+
+  nahodnykodovaciklic=(char)rand();
+
+  hlavicka[pozice++]=nahodnykodovaciklic ^'I'; //nahodny kodovaci klic
+  //(je pouzit vlastne jen pro zakodovani hlavicky, jinde jsou jine)
+
+  hlavicka[pozice++]=(5 ^'K')+nahodnykodovaciklic;  //signatura binarnich zaznamu rozhovoru
+
+  hlavicka[pozice++]=(0 ^'K')+nahodnykodovaciklic;
+   hlavicka[pozice++]=(15 ^'K')+nahodnykodovaciklic;//verze IQ Pokydu 0.15
+
+  hlavicka[pozice++]=(0 ^'K')+nahodnykodovaciklic;//verze dat 0
+
+  fwrite(hlavicka,pozice,1,soubor);
+  fclose(soubor);
+
+  UVOLNI(hlavicka);
+
+
+  ZAPIS:
+  soubor=OTEVRI_SOUBOR(JMENO_SOUBORU_S_BINARNIMI_ZAZNAMY,"ab");
+  if (soubor == NULL) return;
+
+  GetLocalTime(&sysTime);
+  data=ALOKUJ_RETEZEC(strlen(g_zaznamrozhovoru)+100);
+  sprintf(data,"IQ Pokyd v0.15 - %d.%d.%d v %d:%02d\r\n%s",sysTime.wDay,sysTime.wMonth,sysTime.wYear,sysTime.wHour,sysTime.wMinute,g_zaznamrozhovoru);
+
+  nahodnykodovaciklic=(char)rand();
+  putc(nahodnykodovaciklic^'I',soubor);
+
+  predchoziznak=0; koneckodovani=0;
+  for (pozice=0; koneckodovani == 0; pozice++) {
+    if (data[pozice] == 0) koneckodovani=1;
+                           //aby se zakodovala i nula na konci
+
+    data[pozice]^=nahodnykodovaciklic;
+    data[pozice]+=(char)pozice;
+    data[pozice]^=predchoziznak;
+    novypredchoziznak=data[pozice];
+    data[pozice]-=(char)(pozice*nahodnykodovaciklic);
+    data[pozice]^='Q';
+    data[pozice]+=nahodnykodovaciklic;
+    data[pozice]^=predchoziznak;
+    data[pozice]+=pozice/4;
+    data[pozice]^=pozice/256;
+
+    predchoziznak=novypredchoziznak;
+   }
+  
+  fwrite(data,pozice,1,soubor);
+
+  fclose(soubor);
+
+  UVOLNI(data);
+ }
+
+void ZOBRAZ_NAPOVEDU(void) {
+  CText dlg;
+
+  CString pohlavi,dlpohlavi;
+  if (g_nastaveni.pohlavicloveka == 2) { pohlavi="a"; dlpohlavi="á"; }
+  else { pohlavi=""; dlpohlavi="ý"; }
+  dlg.nadpis="IQ Pokyd - Nápovìda";
+
+  dlg.text="<h><u>IQ Pokyd v0.15</u></h>\r\n\r\n"
+"<c><u>Jak to tu funguje:</u></c>\r\n"
+"Je to jednoduché. Do øádku dole píšeš vìty a já ti na nì odpovídám. "
+"Je to prostì povídání èlovìka s poèítaèem.\r\n\r\n"
+"Samozøejmì ode mì nemùžeš oèekávat žádnou záønou inteligenci, "
+"nejsem nic víc než stroj. Chybí mi zejména pojem o svìtì, \"nežiju\", "
+"ale i tak se snažím :-)\r\n\r\n"
+"A nìjaká pravidla, která bys mìl"+pohlavi+" dodržovat:\r\n"
+"<c>1) Piš s diakritikou</c> - diakritika jsou háèky a èárky. Toto dodržovat "
+"prostì musíš, protože jinak ti rozumìt nebudu. Jestli jsi tedy "
+"zvykl"+dlpohlavi+" z Pokydu (nebo jiného programu :-) ) psát bez "
+"diakritiky, tak si rychle odvykni. Je to v tvém zájmu.\r\n"
+"<c>2) Za otázkou piš otazník</c> - zní to jako samozøejmost, ale mnoho lidí "
+"to pøesto nedìlá. Pøitom já nemùžu podle nièeho jiného poznat, jde-li "
+"o otázku (i stavba vìty je vìtšinou stejná). Tak pøekonej lenost, "
+"zjisti si, kde na klávesnici je otazník a hlavnì ho piš.\r\n"
+"<c>3) Piš co nejjednodušší vìty</c> - tj. nejlépe vìty jednoduché, tìm nejsnáz "
+"porozumím. To ale neznamená, že budeš vìty odflinkávat. S vìtami typu "
+"\"co vèera?\", \"to ne\" atd. mì moc nenadchneš.\r\n"
+"<c>4) Piš spisovnì</c> - nespisovnou èeštinu nemám rád. Vìtšinou jí porozumím, "
+"ale alespoò se snaž. A ještì nìco - prznìní èeštiny typu \"jaxe máš?\""
+"neakceptuji a ani akceptovat nehodlám, ale to snad není tvùj pøípad.\r\n\r\n"
+"Tento program je <u>freeware</u>. Autor z toho sice nemá ani korunu, ale zato "
+"ty mì mùžeš libovolnì šíøit a užívat. Podmínkou však je, že to bude "
+"se všemi soubory, nesmíš mì modifikovat nebo šíøit za poplatky. "
+"Pokud máš zájem mì distribuovat napø. na CD nebo DVD, je minimálnì "
+"slušností to oznámit autorovi, jinak mùžeš zcela bez omezení.\r\n\r\n"
+"Takže pøeji pøíjemnou zábavu! :-)\r\n\r\n"
+"<u>Naprogramoval Aleš Janda - KÝBLSoft 1999-2005</u>\r\n\r\n"
+"Informace o IQ Pokydu a jeho aktualizace:\r\n"
+"<c>http://iqpokyd.kyblsoft.cz</c>\r\n"
+"E-mail na autora:\r\n"
+"<c>iqpokyd@kyblsoft.cz</c>\r\n";
+
+  dlg.DoModal();
+ }
+
+void PREKRESLI_OBRAZOVKU(void) {
+HBITMAP staraBitmapa,novaBitmapa;
+RECT okno;
+HBRUSH staryobrazek,novyobrazek;
+
+  if (g_nastaveni.prikaz_nezobrazovatpozadi != 1) {
+    GetClientRect(g_HWNDhlavnihookna, &okno);
+    novaBitmapa = (HBITMAP)LoadImage(g_instanceprogramu, MAKEINTRESOURCE(IDB_POZADIHLAVNIHOOKNA), IMAGE_BITMAP, okno.right, okno.bottom, 0);
+
+    staryobrazek=g_stetecpozadihlavnihookna;
+    staraBitmapa=g_obrazekpozadihlavnihookna;
+
+    novyobrazek=CreatePatternBrush(novaBitmapa);
+    g_stetecpozadihlavnihookna=novyobrazek;
+    g_obrazekpozadihlavnihookna=novaBitmapa;
+
+    Sleep(1); //aby se dokreslilo to, co se pripadne ted vykresluje
+    DeleteObject(staryobrazek);
+    DeleteObject(staraBitmapa);
+   }
+  RedrawWindow(g_HWNDhlavnihookna, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_ERASENOW);
+ }
+
+void ZMEN_POZICI_PRVKU(HWND objekt,int x,int y) {
+  SetWindowPos(objekt, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+ }
+
+void ZMEN_VELIKOST_PRVKU(HWND objekt,int sirka,int vyska) {
+  SetWindowPos(objekt, NULL, 0, 0, sirka, vyska, SWP_NOMOVE | SWP_NOZORDER);
+ }
+
+char *VRAT_ZALOMENY_TEXT_PRO_VYKRESLENI_NA_OBRAZOVKU(HDC hDc,HFONT hFont,CString text,int maxdelka_x,int vyska,int &pocetradku) {
+                      //vrátí zalomený text a poèet øádkù v nìm
+
+char *navrat=ALOKUJ_RETEZEC(text.GetLength()*2+1);
+int pozice,odkud,docasnapozice;
+SIZE velikost;
+
+  maxdelka_x -= 15;  //rezerva (nevim, proc musi byt, ale jinak to obcas zalomi zbytecne!!!)
+
+  strcpy(navrat,text);
+  SelectObject(hDc,hFont);
+  GetTextExtentPoint32(hDc, navrat, strlen(navrat), &velikost);
+  if (velikost.cx <= maxdelka_x && velikost.cy <= vyska) {
+                        //ve vìtšinì pøípadù, zvyšuje to rychlost
+    pocetradku=1; return(navrat);
+   }
+
+  odkud=0; pocetradku=1;
+  for (pozice=0; true; pozice++, odkud=pozice) {
+    do {
+      docasnapozice=pozice;
+      for (pozice++; navrat[pozice] != ' ' && navrat[pozice] != 0; pozice++);
+                                     //nalezeni dalsiho slova
+      SelectObject(hDc,hFont);
+      GetTextExtentPoint32(hDc, navrat+odkud, pozice-odkud, &velikost);
+     } while (velikost.cx <= maxdelka_x && velikost.cy <= vyska && navrat[pozice] != 0);
+
+    if (velikost.cx > maxdelka_x || velikost.cy > vyska) {
+      if (docasnapozice > odkud) pozice=docasnapozice;
+      else {           //nelze zalomit po slovech
+        pozice=docasnapozice;
+        do {
+          pozice++;           //rozdeleni po jednotlivych znacich
+          SelectObject(hDc,hFont);
+          GetTextExtentPoint32(hDc, navrat+odkud, pozice-odkud, &velikost);
+         } while (velikost.cx <= maxdelka_x && velikost.cy <= vyska && navrat[pozice] != 0);
+        pozice--;
+                                           //posunuti
+        for (int i=strlen(navrat); i >= pozice; i--) navrat[i+1]=navrat[i];
+        navrat[pozice]='\n'; pocetradku++;
+       }
+     }
+
+    if (navrat[pozice] == 0) break;             //konec vety
+    if (navrat[pozice] == ' ') { pocetradku++; navrat[pozice]='\n'; }
+   }
+
+  return(navrat);
+ }
+
+#define OKRAJE 15
+#define ROZESTUP 10
+
+void PREFORMATUJ_TEXTY_CLOVEKA_A_POCITACE_NA_OBRAZOVCE(BYTE zmenavelikosti) {
+int pozice,pozice_y,radkuprvku,poz,vlevo,vpravo,nahore,dole,zobrazenychvet=100;
+static int vyskaznaku=0,prvnispusteni=1;
+RECT rozmery,aktrozmery;
+SIZE velikost;
+HDC hDc;
+char *novaveta=NULL;
+
+HFONT hFont;
+LOGFONT font;
+
+  ZeroMemory(&font, sizeof(LOGFONT));
+  font.lfHeight = 20;
+  strcpy(font.lfFaceName,"Trebuchet MS");
+
+  hFont=CreateFontIndirect(&font);
+
+              //nastaveni okraju
+  GetClientRect(g_HWNDhlavnihookna,&rozmery);
+  vlevo=OKRAJE+10; vpravo=rozmery.right-OKRAJE-10;
+  nahore=OKRAJE+20; dole=rozmery.bottom-OKRAJE-45;
+  pozice_y = dole;
+
+              //zjisteni HDC
+  CPaintDC dc(g_CWndhlavnihookna);
+  hDc=dc.GetSafeHdc();
+
+  if (zmenavelikosti == 0 && prvnispusteni == 0)       //pri zmene velikosti neni zakaz prekresleni (strasne to blika)
+   SendMessage(g_HWNDhlavnihookna,WM_SETREDRAW,(WPARAM)FALSE,(LPARAM)0);
+
+
+  for (pozice=99; pozice >= 1; pozice--) {            //tohle by slo zoptimalizovat
+    if (g_MfcDlghlavniokno.policka[pozice] != NULL) {
+      ShowWindow(g_MfcDlghlavniokno.policka[pozice]->m_hWnd,SW_HIDE);
+     }
+   }
+
+  //vykresleni celistvych vet
+  for (pozice=99; pozice >= 1; pozice--) {
+    if (g_poslednich100vet.puvodcevety[pozice] == 0) goto KONEC; //konec
+
+    pozice_y -= ROZESTUP;
+
+    if (g_MfcDlghlavniokno.policka[pozice] == NULL) {           //pouze u nove vytvareneho objektu (jednou za spusteni)
+      g_MfcDlghlavniokno.policka[pozice] = new CStatic();
+      g_MfcDlghlavniokno.policka[pozice]->Create("STATIC",WS_CHILD | WS_VISIBLE, CRect(0,0,0,0), g_CWndhlavnihookna);
+      g_MfcDlghlavniokno.policka[pozice]->SendMessage(WM_SETFONT,(WPARAM)hFont,TRUE);
+
+      if (prvnispusteni == 1) {              //urceni vysky 1 znaku - pouze jednou za program
+        SelectObject(hDc,hFont);
+        GetTextExtentPoint32(hDc, "a", 1, &velikost);
+        vyskaznaku=velikost.cy;
+       }
+     }
+    if (pozice < 98 && zmenavelikosti == 0) {    //posunuti starych vet
+      GetClientRect(g_MfcDlghlavniokno.policka[pozice]->m_hWnd,&aktrozmery);
+      pozice_y-= aktrozmery.bottom;
+      if (pozice_y < nahore) {        //neuplna veta uplne nahore - vyskoci z cyklu
+        pozice_y+= aktrozmery.bottom;   //vraceni zpatky
+        SelectObject(hDc,hFont);
+        novaveta=VRAT_ZALOMENY_TEXT_PRO_VYKRESLENI_NA_OBRAZOVKU(hDc,hFont,g_poslednich100vet.vety[pozice],vpravo-vlevo,vyskaznaku,radkuprvku);
+        break;
+       }
+      ZMEN_POZICI_PRVKU(g_MfcDlghlavniokno.policka[pozice]->m_hWnd, vlevo, pozice_y);
+     }
+    else {              //vykresleni novych vet
+      SelectObject(hDc,hFont);
+      novaveta=VRAT_ZALOMENY_TEXT_PRO_VYKRESLENI_NA_OBRAZOVKU(hDc,hFont,g_poslednich100vet.vety[pozice],vpravo-vlevo,vyskaznaku,radkuprvku);
+
+      g_MfcDlghlavniokno.policka[pozice]->SetWindowText(novaveta);
+      pozice_y-= radkuprvku*vyskaznaku;
+      if (pozice_y < nahore) {
+        pozice_y+= radkuprvku*vyskaznaku;       //vraceni zpatky
+        break;
+       }
+
+      ZMEN_POZICI_PRVKU(g_MfcDlghlavniokno.policka[pozice]->m_hWnd, vlevo, pozice_y);
+      ZMEN_VELIKOST_PRVKU(g_MfcDlghlavniokno.policka[pozice]->m_hWnd, vpravo-vlevo, vyskaznaku*radkuprvku);
+
+      UVOLNI(novaveta);
+     }
+    ShowWindow(g_MfcDlghlavniokno.policka[pozice]->m_hWnd,SW_SHOW);
+   }
+
+  //vykresleni zbytku vety, ktery se vejde
+  radkuprvku=(pozice_y-nahore)/vyskaznaku;
+  for (poz=strlen(novaveta)-1; radkuprvku > 0; poz--) {
+    if (novaveta[poz] == '\n') radkuprvku--;
+    if (poz == 0)
+     NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  if (novaveta[poz+1] != 0) { //jestli se tam vejde alespon cast
+    poz+=2;   //(protoze to skoncilo znak pred enterem)
+    radkuprvku=(pozice_y-nahore)/vyskaznaku; pozice_y-= radkuprvku*vyskaznaku;
+    g_MfcDlghlavniokno.policka[pozice]->SetWindowText(novaveta+poz);
+    ZMEN_POZICI_PRVKU(g_MfcDlghlavniokno.policka[pozice]->m_hWnd, vlevo, pozice_y);
+    ZMEN_VELIKOST_PRVKU(g_MfcDlghlavniokno.policka[pozice]->m_hWnd, vpravo-vlevo, vyskaznaku*radkuprvku);
+    ShowWindow(g_MfcDlghlavniokno.policka[pozice]->m_hWnd,SW_SHOW);
+    pozice--;
+   }
+
+  UVOLNI(novaveta);
+  if (zobrazenychvet == 100) zobrazenychvet=99-pozice;
+
+  KONEC:
+  if (zmenavelikosti == 0 && prvnispusteni == 0) {  //pri zmene velikosti neni zakaz prekresleni (strasne to blika)
+    SendMessage(g_HWNDhlavnihookna,WM_SETREDRAW,(WPARAM)TRUE,(LPARAM)0);
+                //musim prekreslit vety
+    rozmery.left=vlevo; rozmery.right=vpravo; rozmery.top=nahore; rozmery.bottom=dole;
+    InvalidateRect(g_HWNDhlavnihookna,&rozmery,FALSE);
+                //a taky radek, kam pise vety clovek
+    InvalidateRect(GetDlgItem(g_HWNDhlavnihookna,IDC_VETA),NULL,FALSE);
+   }
+
+  g_poslednich100vet.pocetzobrazenychvet = zobrazenychvet;
+  prvnispusteni=0;
+ }
+
+void PREKRESLI_PRVKY_V_OKNE_PRI_ZMENE_VELIKOSTI(int puvodni_x,int puvodni_y) {
+RECT vel,velobj;
+HWND objekt;
+int zmenasirky,zmenavysky,korekcex,korekcey;
+static int puvsirka,puvvyska;
+static BYTE poprve=1;
+
+  if (puvodni_x != 0) {      //uvodni inicializace puvodni sirky a vysky
+    puvsirka=puvodni_x; puvvyska=puvodni_y;
+    return;
+   }
+
+  GetClientRect(g_HWNDhlavnihookna,&vel);
+
+  if (vel.right > 0 && vel.bottom > 0) {     //pokud se okno neminimalizuje
+    zmenasirky=vel.right-puvsirka;
+    zmenavysky=vel.bottom-puvvyska;
+   }
+  else {
+    zmenasirky=0; zmenavysky=0;
+   }
+
+  if (poprve == 0) g_CWndhlavnihookna->SetRedraw(FALSE);
+
+  if (zmenasirky != 0 || zmenavysky != 0) {
+    PREFORMATUJ_TEXTY_CLOVEKA_A_POCITACE_NA_OBRAZOVCE(1);
+   }
+
+  objekt=GetDlgItem(g_HWNDhlavnihookna,IDC_EFEKTPROGRES1);
+  ZMEN_POZICI_PRVKU(objekt,0,0); GetWindowRect(objekt,&velobj);
+  korekcex=velobj.left; korekcey=velobj.top; //tady se urci korekce
+  // (tedy rozdil mezi 0. pixelem okna a 0. pixelem vykreslovaci plochy)
+  ZMEN_VELIKOST_PRVKU(objekt,6,vel.bottom+korekcey);
+
+  objekt=GetDlgItem(g_HWNDhlavnihookna,IDC_EFEKTPROGRES2); GetWindowRect(objekt,&velobj);
+  ZMEN_POZICI_PRVKU(objekt,vel.right-6,0);
+  ZMEN_VELIKOST_PRVKU(objekt,6,vel.bottom+korekcey);
+
+  objekt=GetDlgItem(g_HWNDhlavnihookna,IDC_NOVAVETA); GetWindowRect(objekt,&velobj);
+  ZMEN_POZICI_PRVKU(objekt,vel.right-OKRAJE-(velobj.right-velobj.left)-10,vel.bottom-OKRAJE-(velobj.bottom-velobj.top)-2);
+
+  objekt=GetDlgItem(g_HWNDhlavnihookna,IDC_VETA); GetWindowRect(objekt,&velobj);
+  ZMEN_POZICI_PRVKU(objekt,velobj.left-korekcex,vel.bottom-OKRAJE-(velobj.bottom-velobj.top)-2);
+  ZMEN_VELIKOST_PRVKU(objekt,velobj.right-velobj.left+zmenasirky,velobj.bottom-velobj.top);
+
+  objekt=GetDlgItem(g_HWNDhlavnihookna,IDC_NAPISTVAVETA); GetWindowRect(objekt,&velobj);
+  ZMEN_POZICI_PRVKU(objekt,OKRAJE+10,vel.bottom-OKRAJE-(velobj.bottom-velobj.top));
+  
+  objekt=GetDlgItem(g_HWNDhlavnihookna,IDC_NADPIS1); GetWindowRect(objekt,&velobj);
+  ZMEN_POZICI_PRVKU(objekt,OKRAJE,OKRAJE-3);
+
+  objekt=GetDlgItem(g_HWNDhlavnihookna,IDC_NADPIS2); GetWindowRect(objekt,&velobj);
+  ZMEN_POZICI_PRVKU(objekt,(vel.right-OKRAJE-(velobj.right-velobj.left))/2,OKRAJE-5);
+
+  objekt=GetDlgItem(g_HWNDhlavnihookna,IDC_NADPIS3); GetWindowRect(objekt,&velobj);
+  ZMEN_POZICI_PRVKU(objekt,vel.right-OKRAJE-(velobj.right-velobj.left),OKRAJE-3);
+
+  if (poprve == 0) g_CWndhlavnihookna->SetRedraw(TRUE);
+  else poprve=0;
+
+  PREKRESLI_OBRAZOVKU();
+
+  if (vel.right > 0 && vel.bottom > 0) {     //pokud se okno neminimalizuje
+    puvsirka=vel.right; puvvyska=vel.bottom;
+   }
+ }
+
+void JDI_NA_WWW_STRANKU(char *adresa) {
+char *hlaska=NULL,*prohlizec=NULL,*soubor=NULL;
+DWORD vysledek;
+
+  prohlizec=ALOKUJ_RETEZEC(MAX_PATH+1);
+  soubor=ALOKUJ_RETEZEC(MAX_PATH+1);
+
+  GetModuleFileName(NULL,soubor,MAX_PATH);
+  strcpy(strrchr(soubor,'\\')+1,JMENO_SOUBORU_S_NAPOVEDOU);
+
+  vysledek=(DWORD)FindExecutable(soubor,NULL,prohlizec);
+  if (vysledek <= 32) {             //neznama chyba, ale jede se dal
+    strcpy(prohlizec,adresa);
+    UVOLNI(soubor); soubor=NULL;
+   }
+  else strcpy(soubor,adresa);
+  ShellExecute(NULL,"open",prohlizec,soubor,NULL,SW_MAXIMIZE);
+  if (vysledek <= 32) {
+    hlaska=ALOKUJ_RETEZEC(500);
+    sprintf(hlaska,"Bohužel, z jakéhosi pro mì záhadného dùvodu ti nemùžu zobrazit www stránku s informacemi o IQ Pokydu.\r\n\r\nBuï nemáš nainstalovaný žádný internetový prohlížeè nebo nevím. Každopádnì informace nalezneš na \"%s\".",adresa);
+    NAHLAS_CHYBU(hlaska,0,_JINA_CHYBA_,_POKRACOVAT_);
+    UVOLNI(hlaska);
+   }
+  UVOLNI(prohlizec);
+  if (soubor != NULL) UVOLNI(soubor);
+ }
+
+void NAPIS_FORMATOVANY_TEXT_NAPOVEDY(char *formatovanytext,HWND policko) {
+char *holytext=ALOKUJ_RETEZEC(strlen(formatovanytext)+1);
+int pozice1,pozice2,konecnapozice;
+BYTE tucne,podtrzene,zvyraznene,velike;
+CHARFORMAT2 chf;
+
+  for (pozice1=0,pozice2=0; formatovanytext[pozice1] != 0; pozice1++) {
+    if (formatovanytext[pozice1] != '<') {
+      holytext[pozice2]=formatovanytext[pozice1]; pozice2++;
+     }
+    else while (formatovanytext[pozice1] != '>') pozice1++;
+   }
+  holytext[pozice2]=0;
+
+  SetWindowText(policko,holytext);
+
+  tucne=0; podtrzene=0; zvyraznene=0; velike=0;
+
+  for (pozice1=0,pozice2=0; formatovanytext[pozice1] != 0; pozice1++) {
+    if (formatovanytext[pozice1] != '<') pozice2++;
+    else {
+      if (strncmp(formatovanytext+pozice1,"<b>",3) == 0) tucne=1;
+      else if (strncmp(formatovanytext+pozice1,"</b>",4) == 0) tucne=0;
+      else if (strncmp(formatovanytext+pozice1,"<u>",3) == 0) podtrzene=1;
+      else if (strncmp(formatovanytext+pozice1,"</u>",4) == 0) podtrzene=0;
+      else if (strncmp(formatovanytext+pozice1,"<c>",3) == 0) zvyraznene=1;
+      else if (strncmp(formatovanytext+pozice1,"</c>",4) == 0) zvyraznene=0;
+      else if (strncmp(formatovanytext+pozice1,"<h>",3) == 0) velike=1;
+      else if (strncmp(formatovanytext+pozice1,"</h>",4) == 0) velike=0;
+      else NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+
+      while (formatovanytext[pozice1] != '>') pozice1++;   //dojeti na konec tagu
+      if (formatovanytext[pozice1+1] == '<') continue;  //hned za tim je dalsi tag
+      else pozice1++;  //preskoceni '>'
+     }
+    for (konecnapozice=0; formatovanytext[pozice1+konecnapozice] != '<' &&
+                          formatovanytext[pozice1+konecnapozice] != 0;
+          konecnapozice++);  //preskoceni stale stejneho textu
+
+    SendMessage(policko,EM_SETSEL,(WPARAM)pozice2,(LPARAM)(pozice2+konecnapozice));
+    pozice2+=konecnapozice;
+    pozice1+=konecnapozice-1;
+
+    ZeroMemory(&chf,sizeof(chf));
+    chf.cbSize=sizeof(chf);
+    chf.dwMask=CFM_BACKCOLOR | CFM_UNDERLINETYPE | CFM_WEIGHT | CFM_SIZE;
+
+    if (podtrzene == 1) chf.bUnderlineType=CFU_UNDERLINEDOUBLE; else chf.bUnderlineType=CFU_UNDERLINENONE;
+    if (zvyraznene == 1) chf.crBackColor=0x00FFE0D0; else chf.crBackColor=0xFFFFFF;
+    if (tucne == 1) chf.wWeight=FW_BOLD; else chf.wWeight=FW_NORMAL;
+    if (velike == 1) chf.yHeight=350; else chf.yHeight=220;
+    SendMessage(policko, EM_SETCHARFORMAT, (WPARAM)SCF_SELECTION, (LPARAM)&chf);
+   }
+
+  SendMessage(policko,EM_SETSEL,(WPARAM)-1,(LPARAM)0);
+
+  UVOLNI(holytext);
+ }

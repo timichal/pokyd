@@ -1,0 +1,441 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Czech resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CSY)
+#ifdef _WIN32
+LANGUAGE LANG_CZECH, SUBLANG_DEFAULT
+#pragma code_page(1250)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\IQPokyd.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON    DISCARDABLE     "res\\IQPokyd.ico"
+IDI_TVAR                ICON    DISCARDABLE     "res\\icon1.ico"
+IDI_TVAR16              ICON    DISCARDABLE     "res\\ico00001.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 236, 162
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "O IQ Pokydu"
+FONT 12, "System"
+BEGIN
+    CTEXT           "IQ Pokyd v0.15",IDC_NADPIS,97,16,126,9,SS_NOPREFIX
+    DEFPUSHBUTTON   "OK",IDOK,92,141,50,14,WS_GROUP
+    LTEXT           "Toto je jedna z prvních verzí programu. Sledujte prosím další vývoj na našich internetových stránkách.",
+                    IDC_STATIC,30,51,176,18
+    GROUPBOX        "Upozornìní",IDC_STATIC,26,43,186,30
+    LTEXT           "http://iqpokyd.kyblsoft.cz",IDC_INTERNET,95,79,83,8,
+                    SS_NOTIFY
+    CONTROL         139,IDC_STATIC,"Static",SS_BITMAP,20,13,66,22
+    GROUPBOX        "",IDC_STATIC,18,7,70,30
+    EDITTEXT        IDC_PODEKOVANI,17,103,202,33,ES_MULTILINE | 
+                    ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL
+    CTEXT           "Aleš Janda © KÝBLSoft 1999-2005",IDC_STATIC,97,26,126,9,
+                    SS_NOPREFIX
+    CTEXT           ":: freeware ::",IDC_STATIC,127,35,65,8
+    RTEXT           "1. vydání",IDC_STATIC,183,3,47,8
+    LTEXT           "Web:\nE-mail:",IDC_STATIC,63,79,28,17
+    LTEXT           "iqpokyd@kyblsoft.cz",IDC_STATIC,95,87,79,8
+END
+
+IDD_HLAVNI_OKNO DIALOGEX 0, 0, 324, 181
+STYLE WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU | WS_THICKFRAME
+EXSTYLE WS_EX_CONTEXTHELP | WS_EX_STATICEDGE | WS_EX_APPWINDOW
+CAPTION "IQ Pokyd v0.15"
+MENU IDR_MENU
+FONT 12, "Trebuchet MS"
+BEGIN
+    EDITTEXT        IDC_VETA,46,162,215,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "Øekni",IDC_NOVAVETA,268,162,43,12
+    CTEXT           "IQ Pokyd v0.15",IDC_NADPIS2,116,4,69,9,SS_CENTERIMAGE
+    LTEXT           "Aleš Janda",IDC_NADPIS1,9,3,44,8
+    RTEXT           "KÝBLSoft 2005",IDC_NADPIS3,254,3,53,8
+    LTEXT           "Tvá vìta",IDC_NAPISTVAVETA,8,163,33,11
+    CONTROL         "Progress1",IDC_EFEKTPROGRES1,"msctls_progress32",
+                    PBS_VERTICAL | PBS_SMOOTH | NOT WS_VISIBLE,0,0,6,176
+    CONTROL         "Progress1",IDC_EFEKTPROGRES2,"msctls_progress32",
+                    PBS_VERTICAL | PBS_SMOOTH | NOT WS_VISIBLE,316,0,6,176
+END
+
+IDD_NACITANI DIALOG DISCARDABLE  0, 0, 214, 55
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Spouštím IQ Pokyd..."
+FONT 12, "System"
+BEGIN
+    PUSHBUTTON      "Pøerušit",IDCANCEL,78,34,50,14
+    CONTROL         "Progress1",IDC_PROGRESNACITANI,"msctls_progress32",
+                    PBS_SMOOTH | WS_BORDER,7,19,170,11
+    LTEXT           "Spouštím IQ Pokyd...",IDC_TEXT,7,7,200,8
+    RTEXT           "0.0%",IDC_PROCENTA,178,19,29,12
+END
+
+IDD_NASTAVENI DIALOG DISCARDABLE  0, 0, 175, 225
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "IQ Pokyd - nastavení"
+FONT 12, "System"
+BEGIN
+    DEFPUSHBUTTON   "&OK",IDOK,25,204,50,14
+    PUSHBUTTON      "&Storno",IDCANCEL,99,204,50,14
+    GROUPBOX        "Naše charakteristiky",IDC_RAMECEK1,7,18,161,114,
+                    BS_CENTER
+    CTEXT           "Ty jsi...",IDC_CLOVEKPOHLAVI,19,29,56,8
+    CONTROL         "ž&ena",IDC_CLOVEKZENA,"Button",BS_AUTORADIOBUTTON | 
+                    BS_LEFT,27,39,46,8
+    CONTROL         "&muž",IDC_CLOVEKMUZ,"Button",BS_AUTORADIOBUTTON,27,48,
+                    41,8
+    CTEXT           "...a já mám být",IDC_POCITACPOHLAVI,92,28,67,8
+    CONTROL         "že&na",IDC_POCITACZENA,"Button",BS_AUTORADIOBUTTON,116,
+                    38,43,8
+    CONTROL         "m&už",IDC_POCITACMUZ,"Button",BS_AUTORADIOBUTTON,116,47,
+                    43,8
+    LTEXT           "&a jmenuješ se",IDC_JMENOCLOVEKASTATIC,20,59,55,8
+    EDITTEXT        IDC_JMENOCLOVEKA,19,70,55,12,ES_AUTOHSCROLL
+    CTEXT           "a &jmenuji se",IDC_JMENOPOCITACESTATIC,94,58,65,8
+    EDITTEXT        IDC_JMENOPOCITACE,101,69,58,12,ES_AUTOHSCROLL
+    CTEXT           "Mùj &charakter má být:",IDC_CHARAKTERSTATIC,9,89,78,11
+    LISTBOX         IDC_CHARAKTER,16,100,61,26,LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    CTEXT           "...a ná&lada:",IDC_NALADASTATIC,88,89,77,11
+    LISTBOX         IDC_NALADA,100,100,60,26,LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Prostøedí",IDC_RAMECEK2,7,138,161,55,BS_CENTER
+    CONTROL         "Uklá&dat rozhovor do souboru",IDC_UKLADATROZHOVOR,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,34,146,114,11
+    CONTROL         "Používat z&vuky v programu",IDC_POUZIVATZVUKY,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,34,157,114,11
+    CONTROL         "Používat e&fekty v programu",IDC_POUZIVATEFEKTY,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,34,168,119,11
+    CONTROL         "&Preferovat spisovnou èeštinu",IDC_SPISOVNACESTINA,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,34,179,113,11
+    CONTROL         "&Emulovat národní klávesnici",IDC_EMULOVATKLAVESNICI,
+                    "Button",BS_AUTOCHECKBOX | BS_LEFT | NOT WS_VISIBLE | 
+                    WS_TABSTOP,18,33,138,8
+    CONTROL         "èesko&u",IDC_EMULOVATCESKOUKLAVESNICI,"Button",
+                    BS_AUTORADIOBUTTON | NOT WS_VISIBLE,25,47,57,8
+    CONTROL         "slo&venskou",IDC_EMULOVATSLOVENSKOUKLAVESNICI,"Button",
+                    BS_AUTORADIOBUTTON | NOT WS_VISIBLE,25,57,52,8
+    CONTROL         "&QWERTY",IDC_KLAVESNICEQWERTY,"Button",BS_AUTOCHECKBOX | 
+                    NOT WS_VISIBLE | WS_TABSTOP,94,51,55,8
+    LTEXT           "Pro správné pochopení tvé vìty programem MUSÍŠ psát s diakritikou, tj. s háèky a èárkami. Pokud nemáš nainstalovánu národní klávesnici, která je k tomu potøeba, nebo se ti ji jen nechce ""poøád"" pøepínat, mùžu ji v programu emulovat.",
+                    IDC_TEXTKEMULACI,14,72,147,54,NOT WS_VISIBLE
+    CONTROL         "Zobrazovat standardní kurzor",
+                    IDC_ZOBRAZOVATSTANDARDNIKURZOR,"Button",BS_AUTOCHECKBOX | 
+                    BS_MULTILINE | NOT WS_VISIBLE | WS_TABSTOP,34,146,123,8
+    CONTROL         "Nezobrazovat &pozadí okna",IDC_NEZOBRAZOVATPOZADI,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | NOT WS_VISIBLE | 
+                    WS_TABSTOP,34,158,123,8
+    CONTROL         "Nez&apisovat na disk",IDC_READONLYMOD,"Button",
+                    BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,34,168,124,
+                    11
+    CONTROL         "Zo&brazovat popisky funkcí",IDC_ZOBRAZOVATPOPISKY,
+                    "Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,
+                    34,179,119,11
+    PUSHBUTTON      "Základní nastavení",IDC_ZAKLADNINASTAVENI,0,0,88,13
+    PUSHBUTTON      "Rozšíøené nastavení",IDC_ROZSIRENENASTAVENI,86,0,89,13
+END
+
+IDD_TEXT DIALOG DISCARDABLE  0, 0, 227, 196
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "IQ Pokyd"
+FONT 14, "Tahoma"
+BEGIN
+    PUSHBUTTON      "OK",IDC_BUTTON,82,179,58,12
+    CONTROL         "",IDC_TEXT,"RICHEDIT",ES_MULTILINE | ES_READONLY | 
+                    ES_WANTRETURN | WS_BORDER | WS_VSCROLL | WS_TABSTOP,4,3,
+                    218,166
+END
+
+IDD_DEBUGNASTAVENI DIALOG DISCARDABLE  0, 0, 274, 159
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "IQ Pokyd v0.15 - DEBUG INFO"
+FONT 10, "System"
+BEGIN
+    DEFPUSHBUTTON   "&OK",IDOK,68,138,50,14
+    EDITTEXT        IDC_HODNOTY,7,7,167,126,ES_MULTILINE | ES_AUTOVSCROLL | 
+                    ES_READONLY | WS_VSCROLL
+    EDITTEXT        IDC_NALADABODY,242,13,21,10,ES_AUTOHSCROLL
+    LTEXT           "Pøesná nálada:",IDC_STATIC,184,14,53,8
+    CTEXT           "Tolerance pravopisu",IDC_STATIC,181,42,86,9
+    CONTROL         "žá&dná",IDC_ZADNATOLERANCEPRAVOPISU,"Button",
+                    BS_AUTORADIOBUTTON,203,52,41,8
+    CONTROL         "ú&plná",IDC_UPLNATOLERANCEPRAVOPISU,"Button",
+                    BS_AUTORADIOBUTTON,203,62,40,8
+    CTEXT           "Rekurze prohledávání",IDC_STATIC,181,77,86,9
+    CONTROL         "žád&ná",IDC_ZADNAREKURZEPROHLEDAVANI,"Button",
+                    BS_AUTORADIOBUTTON,203,87,34,8
+    CONTROL         "&malá",IDC_MALAREKURZEPROHLEDAVANI,"Button",
+                    BS_AUTORADIOBUTTON,203,97,34,8
+    CONTROL         "s&tøední",IDC_STREDNIREKURZEPROHLEDAVANI,"Button",
+                    BS_AUTORADIOBUTTON,203,107,34,8
+    CONTROL         "&velká",IDC_VELKAREKURZEPROHLEDAVANI,"Button",
+                    BS_AUTORADIOBUTTON,203,117,34,8
+    CONTROL         "ma&ximální",IDC_MAXIMALNIREKURZEPROHLEDAVANI,"Button",
+                    BS_AUTORADIOBUTTON,203,127,46,8
+    PUSHBUTTON      "&Storno",IDCANCEL,141,138,50,14
+    CONTROL         "Rychlé ukonèování",IDC_RYCHLEUKONCOVANI,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,188,28,79,10
+END
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 0,1,0,0
+ PRODUCTVERSION 0,1,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040504b0"
+        BEGIN
+            VALUE "Comments", "Aktualizace programu zdarma na http://iqpokyd.kyblsoft.cz\0"
+            VALUE "CompanyName", "KÝBLSoft\0"
+            VALUE "FileDescription", "IQ Pokyd v0.15 - kecací program od KÝBLSoftu\0"
+            VALUE "FileVersion", "0, 1, 0, 0\0"
+            VALUE "InternalName", "IQPokyd\0"
+            VALUE "LegalCopyright", "Copyright (C) KÝBLSoft 1999-2005\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OriginalFilename", "IQPokyd.EXE\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "IQ Pokyd\0"
+            VALUE "ProductVersion", "0, 1, 0, 0\0"
+            VALUE "SpecialBuild", "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x405, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 229
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 155
+    END
+
+    IDD_HLAVNI_OKNO, DIALOG
+    BEGIN
+        RIGHTMARGIN, 316
+        BOTTOMMARGIN, 176
+    END
+
+    IDD_NACITANI, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 207
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 48
+    END
+
+    IDD_NASTAVENI, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 168
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 218
+    END
+
+    IDD_TEXT, DIALOG
+    BEGIN
+        LEFTMARGIN, 4
+        RIGHTMARGIN, 222
+        TOPMARGIN, 3
+        BOTTOMMARGIN, 191
+    END
+
+    IDD_DEBUGNASTAVENI, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 267
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 152
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU MENU DISCARDABLE 
+BEGIN
+    POPUP "&IQ Pokyd"
+    BEGIN
+        MENUITEM SEPARATOR
+        MENUITEM "&Nastavení...\tF4",           ID_NASTAVENI
+        MENUITEM "&Konec\tAlt+F4",              ID_KONEC
+        MENUITEM SEPARATOR
+    END
+    POPUP "&Nápovìda"
+    BEGIN
+        MENUITEM SEPARATOR
+        MENUITEM "&Malá nápovìda\tF1",          ID_MALANAPOVEDA
+        MENUITEM "&Velká nápovìda...\tAlt+F1",  ID_VELKANAPOVEDA
+        MENUITEM SEPARATOR
+        MENUITEM "&IQ Pokyd na internetu...\tAlt+F12", ID_NAPOVEDA_INTERNET
+        MENUITEM "I&nformace o verzi\tAlt+V",   ID_OVERZI
+        MENUITEM "&O programu\tShift+F1",       ID_OPROGRAMU
+        MENUITEM SEPARATOR
+    END
+    MENUITEM "Nálada",                      ID_NASTAVENI, HELP
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_ZKRATKY ACCELERATORS DISCARDABLE 
+BEGIN
+    "D",            ID_CHEAT_DEBUGINFO,     VIRTKEY, SHIFT, CONTROL, ALT, 
+                                                    NOINVERT
+    "E",            ID_PREDCHOZIVETA,       VIRTKEY, CONTROL, NOINVERT
+    "V",            ID_OVERZI,              VIRTKEY, ALT, NOINVERT
+    VK_ESCAPE,      ID_ZKRATKA_SMAZRADEK,   VIRTKEY, NOINVERT
+    VK_F1,          ID_MALANAPOVEDA,        VIRTKEY, NOINVERT
+    VK_F1,          ID_VELKANAPOVEDA,       VIRTKEY, ALT, NOINVERT
+    VK_F1,          ID_OPROGRAMU,           VIRTKEY, SHIFT, NOINVERT
+    VK_F12,         ID_NAPOVEDA_INTERNET,   VIRTKEY, ALT, NOINVERT
+    VK_F3,          ID_PREDCHOZIVETA,       VIRTKEY, NOINVERT
+    VK_F4,          ID_NASTAVENI,           VIRTKEY, NOINVERT
+    VK_F7,          ID_ZLEPSENINALADY,      VIRTKEY, NOINVERT
+    VK_F7,          ID_ZLEPSENICHARAKTERU,  VIRTKEY, CONTROL, NOINVERT
+    VK_F8,          ID_ZHORSENINALADY,      VIRTKEY, NOINVERT
+    VK_F8,          ID_ZHORSENICHARAKTERU,  VIRTKEY, CONTROL, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_KYBLSOFT            BITMAP  DISCARDABLE     "res\\kyblsoft.bmp"
+IDB_MENUKONEC           BITMAP  DISCARDABLE     "res\\bitmap2.bmp"
+IDB_MENUNASTAVENI       BITMAP  DISCARDABLE     "res\\menunast.bmp"
+IDB_MENUMALANAPOVEDA    BITMAP  DISCARDABLE     "res\\menumala.bmp"
+IDB_MENUVELKANAPOVEDA   BITMAP  DISCARDABLE     "res\\menuvelk.bmp"
+IDB_MENUOPROGRAMU       BITMAP  DISCARDABLE     "res\\menuopro.bmp"
+IDB_POZADIMALE          BITMAP  DISCARDABLE     "res\\POZMALE.BMP"
+IDB_MENUOVERZI          BITMAP  DISCARDABLE     "res\\menuverz.bmp"
+IDB_MENUINTERNET        BITMAP  DISCARDABLE     "res\\internet.bmp"
+IDB_KURZORKLAVESNICE    BITMAP  DISCARDABLE     "res\\bmp00001.bmp"
+IDB_POZADIHLAVNIHOOKNA  BITMAP  DISCARDABLE     "res\\pozadi-iqpokyd.bmp"
+#endif    // Czech resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\IQPokyd.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

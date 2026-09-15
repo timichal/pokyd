@@ -1,0 +1,768 @@
+/* Tento zdrojov˝ kÛd je pod licencÌ GNU/GPL. M˘ûete ho pouûÌt k vlastnÌ
+   pot¯ebÏ, ale nesmÌte jej ani programy zaloûenÈ na tomto kÛdu vyuûÌt komerËnÏ!
+
+   Jedn· se o zdrojov˝ kÛd programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleöe Jandy
+*/
+
+/* IQ Pokyd - pridavm.sk - funkce na skloÚov·nÌ jednotliv˝ch vzor˘
+   Aleö Janda (C) K›BLSoft 2002-2005 (kÛdov·nÌ Windows 1250)
+*/
+
+
+BYTE SKLONUJ_VZOR_MLADY(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+//"tvar":  0 - standardnÌ p¯ÌdavnÈ jmÈno
+//         1 - p¯Ìslovce
+//         2 - jmenn˝ tvar (parametry p·d, Ëas, rod a z·por)
+//         3 - podstatnÈ jmÈno
+//         4 - druh˝ stupeÚ
+//         5 - t¯etÌ stupeÚ (norm·lnÏ) \ Tyto dva atributy nejsou ve slovnÌku,
+//         6 - t¯etÌ stupeÚ p¯Ìslovce  / protoûe jdou pravidelnÏ odvozovat
+int pozice;
+BYTE navrat=0;
+char *puvslovozaklad=NULL;
+  puvslovozaklad=ALOKUJ_RETEZEC(DELKA_JEDNODUCHEHO_SLOVA);
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1:
+    case 6:
+      goto PRISLOVCE;
+    case 2: goto JMENNYTVAR;
+    case 3: goto PODSTATNEJMENO;
+    case 4:
+    case 5:
+      goto DRUHYSTUPEN;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (rod == 1) goto MUZSKYROD;
+  if (rod == 2) goto ZENSKYROD;
+  if (rod == 3) goto STREDNIROD;
+
+  MUZSKYROD:  
+
+  if (cislo == 2) goto MNOZNECISLO1;
+  switch(pad) {
+    case 1: PAD1_1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ej");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Èho");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝ho");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Èmu");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝mu");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: if (zivotnost == 1) goto PAD2_1_1;
+            else goto PAD1_1_1;
+    case 5: goto PAD1_1_1;
+    case 6: PAD6_1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Èm");
+            PRIDEJ_DO_FRONTY();
+			//break tu neni schvalne, pokracuje se na 7. pad
+    case 7: PAD7_1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝m");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);               //nespisovne
+            PRIDEJ_NA_KONEC("ym");
+            PRIDEJ_DO_FRONTY();
+            break;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  goto ZAPOR;
+
+  MNOZNECISLO1:
+  switch(pad) {
+    case 1: PAD1_2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            if (zivotnost == 1) {
+              ZJEMNI_KONCOVKU_PRIDJM();
+              PRIDEJ_NA_KONEC("Ì");
+             }
+            else PRIDEJ_NA_KONEC("È");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝*");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ej*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝m");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ejm");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: PAD4_2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("È");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 5: goto PAD1_2_1;
+    case 6: goto PAD2_2_1;
+    case 7: PAD7_2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝mi");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝ma");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ejma");
+            PRIDEJ_DO_FRONTY();
+            break;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  goto ZAPOR;
+
+  ZENSKYROD:  
+
+  if (cislo == 2) goto MNOZNECISLO2;
+  switch(pad) {
+    case 1: PAD1_1_2:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("·");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2:
+    case 3: PAD3_1_2:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("È");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ej");        //MedvÏd˘v p¯Ìzvuk - k tej holce
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: PAD4_1_2:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ou");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 5: goto PAD1_1_2;
+    case 6: goto PAD3_1_2;
+    case 7: goto PAD4_1_2;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  goto ZAPOR;
+
+  MNOZNECISLO2:
+  switch(pad) {
+    case 1: goto PAD4_2_1;
+    case 2: goto PAD2_2_1;
+    case 3: goto PAD3_2_1;
+    case 4: goto PAD4_2_1;
+    case 5: goto PAD4_2_1;
+    case 6: goto PAD2_2_1;
+    case 7: goto PAD7_2_1;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  goto ZAPOR;
+
+  STREDNIROD:  
+
+  if (cislo == 2) goto MNOZNECISLO3;
+  switch(pad) {
+    case 1: goto PAD4_2_1;
+    case 2: goto PAD2_1_1;
+    case 3: goto PAD3_1_1;
+    case 4: goto PAD4_2_1;
+    case 5: goto PAD4_2_1;
+    case 6: goto PAD6_1_1;
+    case 7: goto PAD7_1_1;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  goto ZAPOR;
+
+  MNOZNECISLO3:
+  switch(pad) {
+    case 1: PAD1_2_3:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("·");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: goto PAD2_2_1;
+    case 3: goto PAD3_2_1;
+    case 4:
+    case 5: goto PAD1_2_3;
+    case 6: goto PAD2_2_1;
+    case 7: goto PAD7_2_1;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  goto ZAPOR;
+
+  DRUHYSTUPEN:
+
+  strcpy(g_slovo,g_slovodocasne);
+  if (POSLEDNI_ZNAK(g_slovo) == 'k') {
+    pozice=strlen(g_slovo)-2;
+    switch(g_slovo[pozice]) {
+      case 'c': g_slovo[pozice]='Ë';	//nap¯. otrock˝ - otroËtÏjöÌ
+                g_slovo[pozice+1]=0;
+                PRIDEJ_NA_KONEC("ùejöÌ");
+                PRIDEJ_DO_FRONTY(); goto DRUHYSTUPENDAL; //uû nenÌ vÌce tvar˘
+      case 's': g_slovo[pozice]='ö';	//nap¯. p¯·telsk˝ - p¯·telötÏjöÌ
+                g_slovo[pozice+1]=0;
+                PRIDEJ_NA_KONEC("ùejöÌ");
+                PRIDEJ_DO_FRONTY(); goto DRUHYSTUPENDAL;	//uû nenÌ vÌce tvar˘
+      case 'z': g_slovo[pozice-1]=ZKRAT_SAMOHLASKU(g_slovo[pozice-1]);//˙zk˝->uûöÌ
+                switch(g_slovo[pozice-1]) {
+                  case 'e': g_slovo[pozice+1]=0;		//nap¯. hezk˝
+                            PRIDEJ_NA_KONEC("ËÌ");
+                            PRIDEJ_DO_FRONTY(); break;
+                  default: g_slovo[pozice]='û';		//nap¯. nÌzk˝
+                           g_slovo[pozice+1]=0;
+                           PRIDEJ_NA_KONEC("öÌ");
+                           PRIDEJ_DO_FRONTY(); break;
+                 } break;
+      case 'd': case 't': case 'û':     	//sladk˝, kr·tk˝, tÏûk˝
+                g_slovo[pozice-1]=ZKRAT_SAMOHLASKU(g_slovo[pozice-1]); //kr·tk˝->kratöÌ
+                g_slovo[pozice+1]=0;
+                PRIDEJ_NA_KONEC("öÌ");
+                PRIDEJ_DO_FRONTY();
+                strcpy(g_slovo,g_slovodocasne);
+                g_slovo[pozice-1]=ZKRAT_SAMOHLASKU(g_slovo[pozice-1]); //kr·tk˝->kratöÌ
+                g_slovo[pozice+1]=0;
+                PRIDEJ_NA_KONEC("ËÌ");
+                PRIDEJ_DO_FRONTY(); break;
+      case 'o': switch(g_slovo[pozice-1]) {
+                  case 'b': case 'B':
+                            g_slovo[pozice]=0;		//nap¯. hlubok˝
+                            PRIDEJ_NA_KONEC("öÌ");
+                            PRIDEJ_DO_FRONTY();
+                            strcpy(g_slovo,g_slovodocasne); g_slovo[pozice+1]=0;
+                            PRIDEJ_NA_KONEC("ËÌ");
+                            PRIDEJ_DO_FRONTY(); break;
+                  case 's': g_slovo[pozice]='ö';		//nap¯. vysok˝
+                            PRIDEJ_NA_KONEC("öÌ");
+                            PRIDEJ_DO_FRONTY(); break;
+                  default: break;		//nap¯. divok˝ - divöÌ je blbost
+                 }
+     }
+   }
+  else if (POSLEDNI_ZNAK(g_slovo) == '*') {		//such˝, jednoduch˝
+    pozice=strlen(g_slovo)-1; g_slovo[pozice]=0; PRIDEJ_NA_KONEC("ööÌ");
+    PRIDEJ_DO_FRONTY();
+   }
+
+  strcpy(g_slovo,g_slovodocasne);
+  pozice=strlen(g_slovo)-1;
+  switch(POSLEDNI_ZNAK(g_slovo)) {//p¯idat tvary jako kratöejöÌ, ale i divoËejöÌ,
+				//barvitÏjöÌ atd.
+    case 'b': case 'B':
+              g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("BejöÌ");
+              PRIDEJ_DO_FRONTY(); break;
+    case 'd': g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("ÔejöÌ");
+              PRIDEJ_DO_FRONTY(); break;
+    case 'h': g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("ûejöÌ");
+              PRIDEJ_DO_FRONTY(); break;
+    case '*': g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("öejöÌ");
+              PRIDEJ_DO_FRONTY(); break;
+    case 'k': g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("ËejöÌ");
+              PRIDEJ_DO_FRONTY();
+              g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("öejöÌ");
+              PRIDEJ_DO_FRONTY(); break;
+    case 'm': g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("MejöÌ");
+              PRIDEJ_DO_FRONTY(); break;
+    case 'n': g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("ÚejöÌ");
+              PRIDEJ_DO_FRONTY(); break;
+    case 'p': g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("PejöÌ");
+              PRIDEJ_DO_FRONTY(); break;
+    case 'r': g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("¯ejöÌ");
+              PRIDEJ_DO_FRONTY(); break;
+    case 't': g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("ùejöÌ");
+              PRIDEJ_DO_FRONTY(); break;
+    case 'v': g_slovo[pozice]=0;
+              PRIDEJ_NA_KONEC("VejöÌ");
+              PRIDEJ_DO_FRONTY(); break;
+    default: g_slovo[pozice+1]=0;
+             PRIDEJ_NA_KONEC("ejöÌ");
+             PRIDEJ_DO_FRONTY(); break;
+   }
+
+  DRUHYSTUPENDAL:
+  if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+  if (tvar == 5) PRIDEJ_PRED_KAZDE_SLOVO("nej");     //3. stupeÚ
+
+  OREZ_FRONTU_NA_1_SLOVO(1);
+  strcpy(puvslovozaklad,g_slovozaklad); strcpy(g_slovozaklad,g_slovavefronte);
+  VYMAZ_FRONTU();
+  navrat=SKLONUJ_VZOR_JARNI(pad,cislo,rod,zivotnost,0,0);
+  strcpy(g_slovozaklad,puvslovozaklad);
+  goto UVOLNIPAMET;
+
+  PRISLOVCE:
+  navrat=VYGENERUJ_PRISLOVCE_Z_PRIDAVNEHO_JMENA();
+  if (tvar == 6) PRIDEJ_PRED_KAZDE_SLOVO("nej");     //3. stupeÚ
+  goto UVOLNIPAMET;
+
+  JMENNYTVAR:
+  navrat=SKLONUJ_JMENNY_TVAR(pad,cislo,rod,zivotnost,zapor); goto UVOLNIPAMET;
+
+  PODSTATNEJMENO:
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ost");
+  PRIDEJ_DO_FRONTY();
+  goto ZAPOR;
+
+  ZAPOR:
+  if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+  navrat=1; goto UVOLNIPAMET;
+
+  UVOLNIPAMET:
+  UVOLNI(puvslovozaklad);
+  return(navrat);
+ }
+
+BYTE SKLONUJ_VZOR_JARNI(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+		//v pripade uspesneho vyskloneni vrati 1, pri neuspechu 0
+		//Neuspech nastane pouze u 2. a 3. stupne nekterych slov
+//"tvar":  0 - standardnÌ p¯ÌdavnÈ jmÈno
+//         1 - p¯Ìslovce (zde se mohou p¯Ìslovce rovnou stupÚovat)
+//         2 - jmenn˝ tvar (parametry p·d, Ëas, rod a z·por)
+//         3 - podstatnÈ jmÈno
+//         4 - druh˝ stupeÚ
+//         5 - t¯etÌ stupeÚ (norm·lnÏ) \ Tyto dva atributy nejsou ve slovnÌku,
+//         6 - t¯etÌ stupeÚ p¯Ìslovce  / protoûe jdou pravidelnÏ odvozovat
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+
+  switch(tvar) {
+    case 0: break;  //pokracuj dal
+    case 1:
+    case 6:
+      return(SKLONUJ_VZOR_MLADY(1,1,1,0,zapor,tvar));     //prislovce
+    case 2: return(0);          //neexistuje
+    case 3: goto JARNOST;
+    case 4:
+    case 5:
+      goto DRUHYSTUPEN;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cislo == 2) goto MNOZNECISLO;	//mnozne cislo pro vsechny rody stejne
+  if (rod == 1) goto MUZSKYROD;
+  if (rod == 2) goto ZENSKYROD;
+  if (rod == 3) goto STREDNIROD;
+
+  MUZSKYROD:
+
+  switch(pad) {
+    case 1: PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ho");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("mu");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: if (zivotnost == 1) goto PAD2_1;
+            else goto PAD1_1;
+    case 5: goto PAD1_1;
+    case 6: PAD6_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: goto PAD6_1;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  goto ZAPOR;
+
+  ZENSKYROD:  
+
+  strcpy(g_slovo,g_slovodocasne);		//pro vsechny pady stejne
+  PRIDEJ_DO_FRONTY();
+  goto ZAPOR;
+
+  STREDNIROD:  
+
+  switch(pad) {
+    case 1: goto PAD1_1;
+    case 2: goto PAD2_1;
+    case 3: goto PAD3_1;
+    case 4:
+    case 5: goto PAD1_1;
+    case 6:
+    case 7: goto PAD6_1;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  goto ZAPOR;
+
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: goto PAD1_1;
+    case 2: PAD2_2:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: goto PAD6_1;
+    case 4:
+    case 5: goto PAD1_1;
+    case 6: goto PAD2_2;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("mi");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ma");
+            PRIDEJ_DO_FRONTY();
+            break;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  goto ZAPOR;
+
+  DRUHYSTUPEN:
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+  switch (POSLEDNI_ZNAK(g_slovodocasne)) {
+    case 'Ë': case 'Ú': case 'z': SKLONUJ_VZOR_MLADY(pad,cislo,rod,0,zapor,tvar);
+                                  return(1);
+    default: g_slovavefronte[0]=0; return(0);
+   }
+
+  JARNOST:
+  strcpy(g_slovo,g_slovodocasne);
+  if (POSLEDNI_PISMENA(g_slovo,"ÚÌ") == 1) {
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("nost");
+   }
+
+  ZAPOR:
+  if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+  return(1);
+ }
+
+void SKLONUJ_VZOR_MATCIN(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+
+  if (rod == 1) goto MUZSKYROD;
+  if (rod == 2) goto ZENSKYROD;
+  if (rod == 3) goto STREDNIROD;
+
+  MUZSKYROD:  
+
+  if (cislo == 2) goto MNOZNECISLO1;
+  switch(pad) {
+    case 1: PAD1_1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("a");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: strcpy(g_slovo,g_slovodocasne);
+            if (zivotnost == 1) PRIDEJ_NA_KONEC("a");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 5: goto PAD1_1_1;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            if (zivotnost == 1) PRIDEJ_NA_KONEC("u");
+            else {
+              ZJEMNI_KONCOVKU_PRIDJM();
+              PRIDEJ_NA_KONEC("e");
+             }
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: PAD7_1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝m");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ym");
+            PRIDEJ_DO_FRONTY();
+            break;				//nespisovny
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  return;
+  MNOZNECISLO1:
+  switch(pad) {
+    case 1: PAD1_2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            if (zivotnost == 1) {
+              ZJEMNI_KONCOVKU_PRIDJM();
+              PRIDEJ_NA_KONEC("i");
+             }
+            else PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝*");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ej*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝m");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ejm");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: PAD4_2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 5: goto PAD1_2_1;
+    case 6: goto PAD2_2_1;
+    case 7: PAD7_2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝mi");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˝ma");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ejma");
+            PRIDEJ_DO_FRONTY();
+            break;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  return;
+
+  ZENSKYROD:  
+
+  if (cislo == 2) goto MNOZNECISLO2;
+  switch(pad) {
+    case 1: goto PAD2_1_1;
+    case 2: goto PAD4_2_1;
+    case 3: PAD3_1_2:
+            strcpy(g_slovo,g_slovodocasne);
+            ZJEMNI_KONCOVKU_PRIDJM();
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 5: goto PAD2_1_1;
+    case 6: goto PAD3_1_2;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ou");
+            PRIDEJ_DO_FRONTY();
+            break;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  return;
+  MNOZNECISLO2:
+  switch(pad) {
+    case 1: goto PAD4_2_1;
+    case 2: goto PAD2_2_1;
+    case 3: goto PAD3_2_1;
+    case 4: goto PAD4_2_1;
+    case 5: goto PAD4_2_1;
+    case 6: goto PAD2_2_1;
+    case 7: goto PAD7_2_1;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  return;
+
+  STREDNIROD:  
+
+  if (cislo == 2) goto MNOZNECISLO3;
+  switch(pad) {
+    case 1: PAD1_1_3:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("o");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: goto PAD2_1_1;
+    case 3: goto PAD3_1_1;
+    case 4:
+    case 5: goto PAD1_1_3;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            ZJEMNI_KONCOVKU_PRIDJM();
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();		//spisovne je oboji
+            break;			//zivotne a nezivotne se nerozlisuje
+    case 7: goto PAD7_1_1;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  return;
+  MNOZNECISLO3:
+  switch(pad) {
+    case 1: PAD1_2_3:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("a");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            break;				//nespisovny
+    case 2: goto PAD2_2_1;
+    case 3: goto PAD3_2_1;
+    case 4:
+    case 5: goto PAD1_2_3;
+    case 6: goto PAD2_2_1;
+    case 7: goto PAD7_2_1;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+  return;
+ }
+
+void SKLONUJ_VZOR_OTCUV(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost) {
+char *puvslovozaklad=NULL;
+  puvslovozaklad=ALOKUJ_RETEZEC(DELKA_JEDNODUCHEHO_SLOVA);
+
+  strcpy(puvslovozaklad,g_slovozaklad);
+  if (cislo == 1 && rod == 1 && (pad == 1 || pad == 4 || pad == 5)) {
+    strcpy(g_slovo,g_slovozaklad); PRIDEJ_DO_FRONTY();
+   }
+  else {
+    g_slovozaklad[strlen(g_slovozaklad)-2]='o';
+    SKLONUJ_VZOR_MATCIN(pad,cislo,rod,zivotnost);
+    strcpy(g_slovozaklad,puvslovozaklad);
+   }
+  return;
+ }
+
+void SKLONUJ_VZOR_SUPER(void) {
+  strcpy(g_slovavefronte,g_slovozaklad);
+ }
+
+BYTE VYTVOR_JMENNY_TVAR(void) {
+int pozice;
+ //Funkce vraci 1, pokud pridala do slova "e". V opacnem pripade vraci 0.
+ //POKUD SE NEPODARI VYGENEROVAT TVAR, PROMENNA "g_slovodocasne" BUDE PRAZDNA!
+ //Jmenny tvar lze vytvorit pouze z pridavneho jmena vzoru mlady!
+ //Tato funkce vygeneruje vzdy 1 g_slovo do promenne "g_slovodocasne", ne do fronty!
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+  pozice=strlen(g_slovodocasne);
+  switch(g_slovodocasne[pozice-1]) {
+    case 'd': case 'n': break;
+    case 'v': if (g_slovodocasne[pozice-2] == 'o') goto NEUSPECH; else break;
+    default: NEUSPECH: g_slovodocasne[0]=0; return(0);	//skonËi ne˙spÏchem
+   }
+  if (JELI_SAMOHLASKA(g_slovodocasne[pozice-2]) == 1) {	//mlad˝ -> ml·d
+    if (g_slovodocasne[pozice-2] == 'a' && g_slovodocasne[pozice-1] != 'v') g_slovodocasne[pozice-2]='·';
+   }
+  else {					//smutn˝ -> smuten atd.
+    g_slovodocasne[pozice]=g_slovodocasne[pozice-1];
+    g_slovodocasne[pozice-1]='e'; return(1);
+   }
+  return(0);
+ }
+
+BYTE SKLONUJ_JMENNY_TVAR(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,BYTE zapor) {
+BYTE pridanoe;
+int pozice;
+		//V pripade uspesneho vyskloneni vrati 1, pri neuspechu 0
+		//Neuspech nastane v pripade, ze se nejedna o 1. nebo 4. pad,
+		//nebo ze se nepodari vygenerovat jmenny tvar
+  pridanoe=VYTVOR_JMENNY_TVAR();
+  if (g_slovodocasne[0] == 0) return(0);	//jmenn˝ tvar se nepoda¯ilo vytvo¯it
+  strcpy(g_slovo,g_slovodocasne);
+  if (pridanoe == 1) {
+    if (pad == 1 && cislo == 1 && rod == 1);
+    else {				//odebr·nÌ "e" (öùasten -> öùastna)
+      pozice=strlen(g_slovo); g_slovo[pozice-2]=g_slovo[pozice-1];
+      g_slovo[pozice-1]=0;
+     }
+   }
+  switch(pad) {
+    case 1: switch(rod) {
+      case 1: if (cislo == 1);
+              else {
+                if (zivotnost == 1) { ZJEMNI_KONCOVKU_PRIDJM(); PRIDEJ_NA_KONEC("i"); }
+                else PRIDEJ_NA_KONEC("y");
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("a");
+              else { PRIDEJ_NA_KONEC("y"); PRIDEJ_DO_FRONTY();
+                     strcpy(g_slovo,g_slovodocasne); ZJEMNI_KONCOVKU_PRIDJM();
+                     PRIDEJ_NA_KONEC("i"); }
+			//zûivotÚov·nÌ - nenÌ spisovnÈ ("holky jsou r·di")
+              break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("o");
+              else { PRIDEJ_NA_KONEC("a"); PRIDEJ_DO_FRONTY();
+                     strcpy(g_slovo,g_slovodocasne); ZJEMNI_KONCOVKU_PRIDJM();
+                     PRIDEJ_NA_KONEC("i"); }
+			//zûivotÚov·nÌ - nenÌ spisovnÈ ("mÏsta jsou r·di")
+              break;
+     } break;
+    case 4: switch(rod) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("a");
+              else PRIDEJ_NA_KONEC("y");
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else PRIDEJ_NA_KONEC("y");
+              break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("o");
+              else PRIDEJ_NA_KONEC("a");
+              break;
+     } break;
+    default: return(0);
+   }
+  PRIDEJ_DO_FRONTY();
+
+  if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+  return(1);
+ }

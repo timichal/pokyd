@@ -1,0 +1,59 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: mfc - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "D:\DOCUME~1\Ales\LOCALS~1\Temp\RSP1828.tmp" with contents
+[
+/nologo /MT /W3 /WX /GX /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /Fp"Release/IQPokyd.pch" /Yu"stdafx.h" /Fo"Release/" /Fd"Release/" /FD /c 
+"K:\!IQPokyd\!Zdrojak\!Prostre\IQPokyd.cpp"
+"K:\!IQPokyd\!Zdrojak\!Prostre\mfcDlg.cpp"
+"K:\!IQPokyd\!Zdrojak\!Prostre\ModalNemodalDlg.cpp"
+"K:\!IQPokyd\!Zdrojak\!Prostre\Nacitani.cpp"
+"K:\!IQPokyd\!Zdrojak\!Prostre\Nastaveni.cpp"
+"K:\!IQPokyd\!Zdrojak\!Prostre\Text.cpp"
+]
+Creating command line "cl.exe @D:\DOCUME~1\Ales\LOCALS~1\Temp\RSP1828.tmp" 
+Creating temporary file "D:\DOCUME~1\Ales\LOCALS~1\Temp\RSP1829.tmp" with contents
+[
+winmm.lib /nologo /subsystem:windows /incremental:no /pdb:"Release/IQPokyd.pdb" /machine:I386 /out:"Release/IQPokyd.exe" /opt:ref 
+".\Release\IQPokyd.obj"
+".\Release\mfcDlg.obj"
+".\Release\ModalNemodalDlg.obj"
+".\Release\Nacitani.obj"
+".\Release\Nastaveni.obj"
+".\Release\StdAfx.obj"
+".\Release\Text.obj"
+".\Release\IQPokyd.res"
+]
+Creating command line "link.exe @D:\DOCUME~1\Ales\LOCALS~1\Temp\RSP1829.tmp"
+<h3>Output Window</h3>
+Compiling...
+IQPokyd.cpp
+mfcDlg.cpp
+ModalNemodalDlg.cpp
+Nacitani.cpp
+Nastaveni.cpp
+Text.cpp
+Generating Code...
+Linking...
+
+
+
+<h3>Results</h3>
+IQPokyd.exe - 0 error(s), 0 warning(s)
+<h3>
+--------------------Configuration: mfc - Win32 Debug--------------------
+</h3>
+<h3>Command Lines</h3>
+
+
+
+<h3>Results</h3>
+IQPokyd.exe - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

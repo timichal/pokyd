@@ -1,0 +1,26 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Mùžete ho použít k vlastní
+   potøebì, ale nesmíte jej ani programy založené na tomto kódu využít komerènì!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - dos.in - soubor pro naètení všech souborù IQ Pokydu potøebných
+   pro odladìní v DOSu
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+
+#include "f:\!iqpokyd\aplikace\vzory\sklonov.pr"
+#include "f:\!iqpokyd\aplikace\slovnik\slovnik.pr"
+#include "f:\!iqpokyd\aplikace\vzory\skl_a_dr.h"
+#include "f:\!iqpokyd\aplikace\slovnik\slovnik.h"
+#include "f:\!iqpokyd\aplikace\vzory\podstjm.sk"
+#include "f:\!iqpokyd\aplikace\vzory\pridavjm.sk"
+#include "f:\!iqpokyd\aplikace\vzory\zajmena.sk"
+#include "f:\!iqpokyd\aplikace\vzory\cislovky.sk"
+#include "f:\!iqpokyd\aplikace\vzory\slovesa.sk"
+#include "f:\!iqpokyd\aplikace\vzory\prislovc.sk"
+#include "f:\!iqpokyd\aplikace\vzory\sklonov.fu"
+//#include "f:\!iqpokyd\aplikace\slovnik\slovnik.fu"
+

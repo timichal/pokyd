@@ -1,0 +1,47 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Mùžete ho použít k vlastní
+   potøebì, ale nesmíte jej ani programy založené na tomto kódu využít komerènì!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - slovnik.pr - promìnné pro pøevod dosud neskloòovaného
+   slovníku v textové podobì do binární podoby
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+
+#define KODOVACI_ZNAK (char)'K'
+  //Pokud je to 0, slovnik se nekoduje
+#define ZAKODOVANY_ZNAK(znak) ((char)((int)((znak+KODOVACI_ZNAK)^KODOVACI_ZNAK)))
+#define DEKODOVANY_ZNAK(znak) ((char)((int)((znak^KODOVACI_ZNAK)-KODOVACI_ZNAK)))
+
+char **g_databazezakladnichslov=NULL;
+              //zde je cely rozsklonovany slovnik podle abecedy
+              // (za 'z' je jedno pismeno urcujici 'ch' a jedno pismeno
+              // urcujici vsechny pismena s hackem a carkou
+char **g_docasnadatabazeuplnychslov=NULL;
+              //zde budou docasne rozsklonovana slova - nijak nesetridena,
+              //ta se potom daji do "databazeuplnychslov"
+              //Tato promenna je zde pouze pro ucely pocatecniho rozsklonovani
+char **g_databazeuplnychslov[POCET_DVOJPISMEN];
+              //zde je cely rozsklonovany slovnik podle abecedy
+              // (za 'z' je jedno pismeno urcujici 'ch' a jedno pismeno
+              // urcujici vsechna pismena s hackem a carkou
+char ***g_databazeiqpodminek=NULL;
+              //zde jsou podminky urcujici inteligenci. Kazdy prvek ma
+              //8 podretezcu - 1. retezec udavajici podminku a 7 odpovedi
+DWORD g_pocetslovvzakladnidatabazi;
+      //pocet slov v zakladni databazi slov
+DWORD g_pocetslovvdocasneuplnedatabazi;
+      //prozatimni pocet slov v docasne uplne databazi
+DWORD g_pocetslovvuplnedatabazi[POCET_DVOJPISMEN];
+      //aktualni pozice v databazi slov pro jednotliva pismena, pak pocty slov
+DWORD g_pocetiqpodminek;
+      //pocet podminek v inteligenci (souboru IQPOKYD.IQP)
+int g_aktualnipismeno;
+                   //prvni pismeno slova, ktere se prave sklonuje
+FILE *g_zakladnislovnik=NULL,*g_uplnyslovnik=NULL;
+                               //ukazatele na jednotlive soubory
+
+long double g_procentanacitani;

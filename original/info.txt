@@ -1,0 +1,47 @@
+
+
+   Zdrojové kódy k Pokydu 7.0 a IQ Pokydu 0.15
+   -------------------------------------------
+
+
+   Tyto zdrojové kódy jsou pod licencí GNU/GPL. Mùete je pouít k vlastní
+   potøebì, ale nesmíte jej ani programy zaloené na tomto kódu vyuít komerènì!
+
+   Jedná se o Pokyd 7.0 (v C, kompilováno Borland C++ 3.01)
+   a IQ Pokyd 0.15 (v mixu C a C++, kompilováno MS Visual C++ 6.0).
+   V IQ Pokydu není kompletní databáze jednotlivıch slov, nechal jsem tam pouze
+   slova od "a" a pak typické vıjimky. Zbytek je kompletní tak jak jsem to
+   dìlal :-)
+
+   Z dnešního pohledu se mi zdá, e jsem programoval celkem dost "prasácky",
+   ale èistého kódu stejnì nikdy nedosáhnu ;-)
+
+   Zdrojáky jsou urèené ke studiu, jak to celé fungovalo a funguje. Princip
+   je jednoduchı - aspoò se mi tak zdá. V Pokydu navíc masivnì pouívám
+   pøerušení procesoru, to však nesouvisí s vlastním algoritmem.
+   Dost vìcí ale asi nebude ze zdrojáku cizímu èlovìku jasné.
+
+   Prosím veškeré dotazy, pøipomínky atd. smìøovat na http://forum.kyblsoft.cz
+   do rubriky IQ Pokyd, a z toho nìco mají i ostatní ;-)
+
+   Pokud byste chtìli ve vıvoji pokraèovat, bude potøeba zdrojáky trošku
+   "pøekopat". Sám u to dìlám u IQ Pokydu, kde ho pøedìlám (spolu s dalšími
+   kvantami dalšího kódu) na rozpoznávaèe vıznamu v textu. Moná to bude stejná
+   utopie jako (IQ) Pokyd, kdo ví...
+
+   Jinak proti pokraèování nic nemám - jen prosím, pokud pouijete alespoò èást
+   z tìchto zdrojákù, tak ÁDNÉ VYDÌLÁVÁNÍ! Pokud to bude uiteèné k èemukoli
+   jinému, budu jen rád ;-)
+
+   Okolo roku 2002 - tedy pøi poslední verzi Pokydu pro DOS - byl tento program
+   legenda. K tomu jste pøispìli i Vy!
+
+   Dìkuji!
+
+   Aleš Janda
+   autor programu Pokyd a IQ Pokyd
+
+   ales.janda@kyblsoft.cz
+   http://iqpokyd.kyblsoft.cz
+   www.kyblsoft.cz
+

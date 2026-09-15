@@ -1,0 +1,830 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Mùžete ho použít k vlastní
+   potøebì, ale nesmíte jej ani programy založené na tomto kódu využít komerènì!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - zajmena.sk - funkce na skloòování jednotlivých vzorù
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+// V zájmenech není použit žádný "základní tvar", protože slova se z nièeho
+// neodvozují, ty program zná.
+
+
+//Rozsklonovani: 31
+BYTE SKLONUJ_ZAJMENA_OSOBNI(BYTE osoba,BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,BYTE umisteni) {
+ //Funkce vraci 1 pri uspesnem vygenerovani tvaru, 0 pri neuspechu a 2 pri
+ //vygenerovani tvaru, ktery se vsak prilis nehodi.
+ //Neuspech muze nastat pri pozadavku nesmyslneho zajmena (napr. 1p.,jè.,os.0)
+ //Pokud je osoba 0, jedna se o zvratne zajmeno "se" (na cisle nezalezi).
+ //Hodnota "umisteni" muze byt 0 (na zacatku vety), 1 (v pripade durazu,
+ //ale ne za predlozkou), 2 (za predlozkou), 3 (uprostred vety, ale ne za
+ //predlozkou) nebo 4 (vrat vse).
+
+  if (pad == 5) pad=1;			//jsou stejne
+
+  if (cislo == 2) goto MNOZNECISLO;
+
+  switch(osoba) {
+    case 0: switch(pad) {
+      case 1: return(0);			//neuspesne vygenerovani
+      case 2: PRIDEJ_DO_FRONTY("sebe"); break;
+      case 3: if (umisteni >= 3) PRIDEJ_DO_FRONTY("si");
+              if (umisteni != 3) PRIDEJ_DO_FRONTY("soBe"); break;
+      case 4: if (umisteni >= 3) PRIDEJ_DO_FRONTY("se");
+              if (umisteni != 3) PRIDEJ_DO_FRONTY("sebe"); break;
+      case 6: PRIDEJ_DO_FRONTY("soBe"); break;
+      case 7: PRIDEJ_DO_FRONTY("sebou"); break;
+     } return(1);
+    case 1: switch(pad) {
+      case 1: PRIDEJ_DO_FRONTY("já"); break;
+      case 2:
+      case 4:
+              PRIDEJ_DO_FRONTY("Me,mne"); break;
+      case 3: if (umisteni >= 3) PRIDEJ_DO_FRONTY("mi");
+              if (umisteni != 3) PRIDEJ_DO_FRONTY("mòe"); break;
+      case 6: PRIDEJ_DO_FRONTY("mòe"); break;
+      case 7: PRIDEJ_DO_FRONTY("mnou"); break;
+     } return(1);
+    case 2: switch(pad) {
+      case 1: PRIDEJ_DO_FRONTY("ty"); break;
+      case 2:
+      case 4:
+              if (umisteni >= 3) PRIDEJ_DO_FRONTY("e");
+              if (umisteni != 3) PRIDEJ_DO_FRONTY("tebe"); break;
+      case 3: if (umisteni >= 3) PRIDEJ_DO_FRONTY("i");
+              if (umisteni != 3) PRIDEJ_DO_FRONTY("toBe"); break;
+      case 6: PRIDEJ_DO_FRONTY("toBe"); break;
+      case 7: PRIDEJ_DO_FRONTY("tebou"); break;
+     } return(1);
+    case 3: switch(rod) {
+      case 1: switch(pad) {
+        case 1: PRIDEJ_DO_FRONTY("on"); break;
+        case 2: if (umisteni >= 3) PRIDEJ_DO_FRONTY("ho");
+                if (umisteni != 2 && umisteni != 3) PRIDEJ_DO_FRONTY("jeho");
+                if (umisteni == 2 || umisteni == 4) {
+                  PRIDEJ_DO_FRONTY("òej,òeho");
+                 }
+                if (umisteni == 4) PRIDEJ_DO_FRONTY("jej"); break;
+        case 3: ON3PAD: if (umisteni >= 3) PRIDEJ_DO_FRONTY("mu");
+                if (umisteni == 2 || umisteni == 4) PRIDEJ_DO_FRONTY("òemu");
+                if (umisteni != 2 && umisteni != 3) PRIDEJ_DO_FRONTY("jemu"); break;
+        case 4: ON4PAD: if (umisteni >= 3) PRIDEJ_DO_FRONTY("ho");
+                if (umisteni != 2 && umisteni != 3) PRIDEJ_DO_FRONTY("jeho");
+                if (umisteni == 2 || umisteni == 4) {
+                  PRIDEJ_DO_FRONTY("òej");
+                  if (zivotnost == 0) return(2);
+                  PRIDEJ_DO_FRONTY("òeho");		//pouze zivotne
+					//pouze timto se lisi od 2. padu
+                 }
+                if (umisteni == 4) PRIDEJ_DO_FRONTY("jej"); break;
+        case 6: PRIDEJ_DO_FRONTY("òem"); break;
+        case 7: if (umisteni == 2 || umisteni == 4) PRIDEJ_DO_FRONTY("òím");
+                if (umisteni != 2) PRIDEJ_DO_FRONTY("jím"); break;
+       } return(1);
+      case 2: switch(pad) {
+        case 1: PRIDEJ_DO_FRONTY("ona"); break;
+        case 2:
+        case 3:
+        case 7:
+                if (umisteni != 2) PRIDEJ_DO_FRONTY("jí,ji");
+                if (umisteni == 2 || umisteni == 4) PRIDEJ_DO_FRONTY("òí,òi"); break;
+        case 4: if (umisteni != 2) PRIDEJ_DO_FRONTY("ji,jí");
+                if (umisteni == 2 || umisteni == 4) PRIDEJ_DO_FRONTY("òi,òí"); break;
+        case 6: PRIDEJ_DO_FRONTY("òí"); break;
+       } return(1);
+      case 3: switch(pad) {
+        case 1: PRIDEJ_DO_FRONTY("ono"); break;
+        case 2:
+        case 4:
+                goto ON4PAD;
+        case 3: goto ON3PAD;
+        case 6: PRIDEJ_DO_FRONTY("òem"); break;
+        case 7: if (umisteni == 4) { PRIDEJ_DO_FRONTY("jím,ním"); break; }
+                if (umisteni == 2) { PRIDEJ_DO_FRONTY("òím"); break; }
+                else { PRIDEJ_DO_FRONTY("jím"); return(2); }	//nehodi se
+       } return(1);
+     } return(1);
+   }
+
+  MNOZNECISLO:
+
+  switch(osoba) {
+    case 0: return(0);		//zvratne zajmeno se - neuspesne vygenerovani
+    case 1: switch(pad) {
+      case 1: PRIDEJ_DO_FRONTY("my"); break;
+      case 2:
+      case 4:
+      case 6: PRIDEJ_DO_FRONTY("nás"); break;
+      case 3: PRIDEJ_DO_FRONTY("nám"); break;
+      case 7: PRIDEJ_DO_FRONTY("námi"); break;
+     } return(1);
+    case 2: switch(pad) {
+      case 1: PRIDEJ_DO_FRONTY("vy"); break;
+      case 2:
+      case 4:
+      case 6: PRIDEJ_DO_FRONTY("vás"); break;
+      case 3: PRIDEJ_DO_FRONTY("vám"); break;
+      case 7: PRIDEJ_DO_FRONTY("vámi"); break;
+     } return(1);
+    case 3: switch(pad) {
+      case 1: if (rod == 1) PRIDEJ_DO_FRONTY("oòi");
+              if (rod == 2) PRIDEJ_DO_FRONTY("ony,oòi");
+              if (rod == 3) PRIDEJ_DO_FRONTY("ona,ony"); break;
+      case 2: if (umisteni != 2) PRIDEJ_DO_FRONTY("ji*");
+              if (umisteni == 2 || umisteni == 4) PRIDEJ_DO_FRONTY("òi*"); break;
+      case 3: if (umisteni != 2) PRIDEJ_DO_FRONTY("jim");
+              if (umisteni == 2 || umisteni == 4) PRIDEJ_DO_FRONTY("òim"); break;
+      case 4: if (umisteni != 2) PRIDEJ_DO_FRONTY("je");
+              if (umisteni == 2 || umisteni == 4) PRIDEJ_DO_FRONTY("òe"); break;
+      case 6: PRIDEJ_DO_FRONTY("òi*"); break;
+      case 7: if (umisteni != 2) PRIDEJ_DO_FRONTY("jimi,jima");
+              if (umisteni == 2 || umisteni == 4) PRIDEJ_DO_FRONTY("òimi,òima"); break;
+     } return(1);
+   }
+  return(0);
+ }
+
+//Rozsklonovani: 32
+BYTE SKLONUJ_ZAJMENA_PRIVLASTNOVACI(BYTE osoba,BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,BYTE rodpredmetu,BYTE cislopredmetu) {
+
+  if (pad == 5) pad=1;			//jsou stejne
+
+  if (osoba < 3) {
+    if (cislopredmetu == 2) goto MNOZNECISLOPREDMETU012;
+    if (cislo == 2) goto MNOZNECISLO012;
+    switch(rodpredmetu) {
+      case 1: switch(pad) {
+        case 1:
+                PRIDEJ_DO_FRONTY("ùj"); break;
+        case 2: PRIDEJ_DO_FRONTY("ého,ýho,ojeho"); break;
+        case 3: PRIDEJ_DO_FRONTY("ému,ýmu,ojemu"); break;
+        case 4: if (zivotnost == 1) PRIDEJ_DO_FRONTY("ého,ýho,ojeho");
+                else PRIDEJ_DO_FRONTY("ùj"); break;
+        case 6: PRIDEJ_DO_FRONTY("ém,ým,ojem,ojim"); break;
+        case 7: PRIDEJ_DO_FRONTY("ým,ym"); break;
+       } goto PRIDEJ;
+      case 2: switch(pad) {
+        case 1: PRIDEJ_DO_FRONTY("á,oje"); break;
+        case 2: PRIDEJ_DO_FRONTY("é,ojí,ý,oji"); break;
+        case 3:
+        case 6:
+                PRIDEJ_DO_FRONTY("é,ojí,ý,oji,ej"); break; //Medvìdùv pøízvuk - k tej holce
+        case 4: PRIDEJ_DO_FRONTY("ou,oji,ojí"); break;
+        case 7: PRIDEJ_DO_FRONTY("ou,ojí"); break;
+       } goto PRIDEJ;
+      case 3: switch(pad) {
+        case 1:
+        case 4:
+                PRIDEJ_DO_FRONTY("é,oje,ý"); break;
+        case 2: PRIDEJ_DO_FRONTY("ého,ýho"); break;
+        case 3: PRIDEJ_DO_FRONTY("ému,ýmu,ojemu"); break;
+        case 6: PRIDEJ_DO_FRONTY("ém,ým,ojem,ojim"); break;
+        case 7: PRIDEJ_DO_FRONTY("ým,ym"); break;
+       } goto PRIDEJ;
+     }
+
+    MNOZNECISLO012:
+    switch(osoba) {
+      case 0: return(0);		//takovy tvar neexistuje
+      case 3: PRIDEJ_DO_FRONTY("jeji*"); break;
+      case 1:
+      case 2:
+        switch(rodpredmetu) {
+          case 1: switch(pad) {
+            case 1: PRIDEJ_DO_FRONTY("áš"); break;
+            case 2: PAD2_1_NASE: PRIDEJ_DO_FRONTY("ašeho"); break;
+            case 3: PAD3_1_NASE: PRIDEJ_DO_FRONTY("ašemu"); break;
+            case 4: if (zivotnost == 1) PRIDEJ_DO_FRONTY("ašeho");
+                    else PRIDEJ_DO_FRONTY("áš"); break;
+            case 6: PAD6_1_NASE: PRIDEJ_DO_FRONTY("ašem"); break;
+            case 7: PAD7_1_NASE: PRIDEJ_DO_FRONTY("aším,ašim"); break;
+           } goto PRIDANIKMNOZNEMUCISLU;
+          case 2: switch(pad) {
+            case 1: PAD1_2_NASE: PRIDEJ_DO_FRONTY("aše"); break;
+            case 2:
+            case 3:
+            case 6:
+
+                    PRIDEJ_DO_FRONTY("aší,aši"); break;
+            case 4: PRIDEJ_DO_FRONTY("aši,aší");
+            case 7: PRIDEJ_DO_FRONTY("aší"); break;
+           } goto PRIDANIKMNOZNEMUCISLU;
+          case 3: switch(pad) {
+            case 1: goto PAD1_2_NASE;
+            case 2: goto PAD2_1_NASE;
+            case 3: goto PAD3_1_NASE;
+            case 4: goto PAD1_2_NASE;
+            case 6: goto PAD6_1_NASE;
+            case 7: goto PAD7_1_NASE;
+           } goto PRIDANIKMNOZNEMUCISLU;
+        MNOZNECISLOMNOZNEHOCISLA:
+        if (osoba == 0) return(0);		//takovy tvar neexistuje
+        switch(pad) {
+          case 1: switch(rodpredmetu) {
+            case 1: if (zivotnost == 1) PRIDEJ_DO_FRONTY("aši");
+                    else PRIDEJ_DO_FRONTY("aše"); break;
+            case 2:
+            case 3:
+                    PRIDEJ_DO_FRONTY("aše"); break;
+           } break;
+          case 2:
+          case 6:
+                  PRIDEJ_DO_FRONTY("aši*"); break;
+          case 3: PRIDEJ_DO_FRONTY("ašim"); break;
+          case 4: PRIDEJ_DO_FRONTY("aše"); break;
+          case 7: PRIDEJ_DO_FRONTY("ašimi,ašemi,ašima,ašema"); break;
+         } goto PRIDANIKMNOZNEMUCISLU;
+        PRIDANIKMNOZNEMUCISLU:
+        if (osoba == 1) PRIDEJ_PRED_KAZDE_SLOVO("n");
+        else PRIDEJ_PRED_KAZDE_SLOVO("v");
+        break;
+       }
+     }
+    return(1);
+
+    MNOZNECISLOPREDMETU012:
+
+    if (cislo == 2) goto MNOZNECISLOMNOZNEHOCISLA;
+
+    switch(rodpredmetu) {
+      case 1: switch(pad) {
+        case 1:
+                if (zivotnost == 1) PRIDEJ_DO_FRONTY("í,oji");
+                else PRIDEJ_DO_FRONTY("é,oje,ý"); break;
+        case 2: MN1_PAD2: PRIDEJ_DO_FRONTY("ý*,ej*,oji*"); break;
+        case 3: MN1_PAD3: PRIDEJ_DO_FRONTY("ým,ejm"); break;
+        case 4: MN1_PAD4: PRIDEJ_DO_FRONTY("é,oje,ý"); break;
+        case 6: goto MN1_PAD2;
+        case 7: MN1_PAD7: PRIDEJ_DO_FRONTY("ými,ýma,ejma"); break;
+       } goto PRIDEJ;
+      case 2: switch(pad) {
+        case 1:
+        case 4:
+                goto MN1_PAD4;
+        case 2:
+        case 6:
+                goto MN1_PAD2;
+        case 3: goto MN1_PAD3;
+        case 7: goto MN1_PAD7;
+       } goto PRIDEJ;
+      case 3: switch(pad) {
+        case 1:
+        case 4:
+                PRIDEJ_DO_FRONTY("á,oje,ý"); break;
+        case 2:
+        case 6:
+                goto MN1_PAD2;
+        case 3: goto MN1_PAD3;
+        case 7: goto MN1_PAD7;
+       } goto PRIDEJ;
+     }
+
+    PRIDEJ:
+    switch(osoba) {
+      case 0: PRIDEJ_PRED_KAZDE_SLOVO("sv"); break;
+      case 1: PRIDEJ_PRED_KAZDE_SLOVO("m"); break;
+      case 2: PRIDEJ_PRED_KAZDE_SLOVO("tv"); break;
+     }
+    return(1);
+   }
+  else if (osoba == 3) { //podminka je zde jen pro uplnost, stacilo by "else {"
+    if (cislo == 2) goto MNOZNECISLO3;
+    switch(rod) {
+      case 1:
+      case 3:
+              PRIDEJ_DO_FRONTY("jeho"); break;
+      case 2: if (rodpredmetu == 2) PRIDEJ_DO_FRONTY("její");
+              else {
+                strcpy(g_slovozaklad,"její");
+                SKLONUJ_VZOR_JARNI(pad,cislo,rodpredmetu,0,0,0);
+                break;
+               } //není-li podmìt ženský, skloòování podle vzoru "jarní"
+     } return(1);
+
+    MNOZNECISLO3:
+    if (rod != 2) { PRIDEJ_DO_FRONTY("jeji*"); return(1); }
+    else {
+      strcpy(g_slovozaklad,"její");
+      SKLONUJ_VZOR_JARNI(pad,cislo,rodpredmetu,0,0,0);
+		  //je-li podmìt ženský, skloòování podle vzoru "jarní"
+     }
+   }
+  return(0);
+ }
+
+//Rozsklonovani: 33
+void SKLONUJ_ZAJMENA_UKAZOVACI(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,BYTE tvar) {
+char *slovavefronte2=NULL;
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+// tvar mùže být v rozsahu 1 az 10 a znaèí:
+// 1 - ten, 2 - tento, 3 - tenhle, 4 - onen, 5 - takový, 6 - týž, 7 - tentýž,
+// 8 - sám, 9 - tenhleten (toto je nespisovný tvar od 3-tenhle), 10 - tamhleten
+// (taktéž nespisovný tvar)
+
+  if (pad == 5) pad=1;    //jsou stejne
+
+  switch(tvar) {
+    case 1: goto TEN;
+    case 2: goto TENTO;
+    case 3: goto TENHLE;
+    case 4: goto ONEN;
+    case 5: goto TAKOVY;
+    case 6:
+    case 7: goto TYZTENTYZ;
+    case 8: goto SAM;
+    case 9: goto TENHLETEN;
+    case 10: goto TAMHLETEN;
+   }
+
+  TEN:
+  if (cislo == 2) goto TENMNOZNECISLO;
+  switch(rod) {
+    case 1:
+    case 3:
+            switch(pad) {
+      case 1: if (rod == 1) PRIDEJ_DO_FRONTY("ten");
+              else PRIDEJ_DO_FRONTY("to"); break;
+      case 2: PRIDEJ_DO_FRONTY("toho"); break;
+      case 3: PRIDEJ_DO_FRONTY("tomu"); break;
+      case 4: if (rod == 1) {
+                if (zivotnost == 1) PRIDEJ_DO_FRONTY("toho");
+                else PRIDEJ_DO_FRONTY("ten");
+               }
+              else PRIDEJ_DO_FRONTY("to"); break;
+      case 6: PRIDEJ_DO_FRONTY("tom"); break;
+      case 7: PRIDEJ_DO_FRONTY("ím,im"); break;
+     } break;
+    case 2: switch(pad) {
+      case 1: PRIDEJ_DO_FRONTY("ta"); break;
+      case 2:
+      case 3:
+      case 6:
+              PRIDEJ_DO_FRONTY("té,tý,tej"); break;    //Medveduv prizvuk - k tej holce
+      case 4: PRIDEJ_DO_FRONTY("tu"); break;
+      case 7: PRIDEJ_DO_FRONTY("tou"); break;
+     } break;
+
+   }
+  goto UVOLNIPAMET;
+
+  TENMNOZNECISLO:
+
+  switch (pad) {
+    case 1: if (rod == 1) {
+              if (zivotnost == 1) PRIDEJ_DO_FRONTY("i,ty");
+              else PRIDEJ_DO_FRONTY("ty");
+             }
+            else if (rod == 2) {
+               PRIDEJ_DO_FRONTY("ty");
+              }
+            else {
+              PRIDEJ_DO_FRONTY("ta,ty");
+             } break;
+    case 2:
+    case 6:
+            PRIDEJ_DO_FRONTY("e*,te*"); break;
+    case 3: PRIDEJ_DO_FRONTY("em"); break;
+    case 4: if (rod != 3) PRIDEJ_DO_FRONTY("ty");
+            else PRIDEJ_DO_FRONTY("ta,ty"); break;
+    case 7: PRIDEJ_DO_FRONTY("emi,ema,tema"); break;
+   }
+  goto UVOLNIPAMET;
+
+  TENTO:
+  SKLONUJ_ZAJMENA_UKAZOVACI(pad,cislo,rod,zivotnost,1);	//rekurzivni volani (ten)
+  PRIDEJ_ZA_KAZDE_SLOVO("to");
+  goto UVOLNIPAMET;
+
+  TENHLE:
+  SKLONUJ_ZAJMENA_UKAZOVACI(pad,cislo,rod,zivotnost,1);	//rekurzivni volani (ten)
+  PRIDEJ_ZA_KAZDE_SLOVO("dle");   //tvar "tendle" atd. je jeste nespisovnejsi
+			//je zde uveden jako prvni pouze z praktickych duvodu,
+			//normalne se vyskytne na konci
+  strcpy(slovavefronte2,g_slovavefronte);
+  VYMAZ_FRONTU();
+  SKLONUJ_ZAJMENA_UKAZOVACI(pad,cislo,rod,zivotnost,1);	//rekurzivni volani (ten)
+  PRIDEJ_ZA_KAZDE_SLOVO("hle");
+  NAHRAD_CAST_CASTI("*h","h");
+  PRIDEJ_DO_FRONTY(slovavefronte2);
+  goto UVOLNIPAMET;
+
+  ONEN:
+  //Zde 1 výjimka u 7.p. množ. èísla:
+  if (pad == 7 && cislo == 2) {
+    PRIDEJ_DO_FRONTY("oòemi,oòema,onomi,onoma");
+    goto UVOLNIPAMET;
+   }
+  SKLONUJ_ZAJMENA_UKAZOVACI(pad,cislo,rod,zivotnost,1);	//rekurzivni volani (ten)
+
+  NAHRAD_ZACATEK_ZACATKEM("t","on");
+  NAHRAD_ZACATEK_ZACATKEM("","oò");
+  goto UVOLNIPAMET;
+
+  TAKOVY:
+  strcpy(g_slovozaklad,"takový");
+  if (pad == 1 && cislo == 2 && rod == 1 && zivotnost == 1)
+   strcpy(g_slovavefronte,"takový,tací");
+  else SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);
+  goto UVOLNIPAMET;
+
+
+  TYZTENTYZ:
+  if (cislo == 2) goto TYZTENTYZMNOZNECISLO;
+  switch(rod) {
+    case 1:
+    case 3:
+            switch(pad) {
+      case 1: TYZTENTYZPAD1_1: if (rod == 1) {
+                if (tvar == 6) PRIDEJ_DO_FRONTY("týž");
+                else PRIDEJ_DO_FRONTY("tentýž");
+               }
+              else PRIDEJ_DO_FRONTY("totéž");
+              break;
+      case 2: PRIDEJ_DO_FRONTY("téhož"); break;
+      case 3: PRIDEJ_DO_FRONTY("témuž"); break;
+      case 4: if (rod == 1 && zivotnost == 1) PRIDEJ_DO_FRONTY("téhož");
+              else goto TYZTENTYZPAD1_1;
+              break;
+      case 6: if (tvar == 6) PRIDEJ_DO_FRONTY("témž,týmž,témže");
+              else PRIDEJ_DO_FRONTY("tomtéž");
+              break;
+      case 7: if (tvar == 6) PRIDEJ_DO_FRONTY("týmž,témže");
+              else PRIDEJ_DO_FRONTY("ímtéž,imtéž");   //timtéž - nespisovný
+              break;
+     } break;
+    case 2: switch(pad) {
+      case 1: if (tvar == 6) PRIDEJ_DO_FRONTY("táž,táže");
+              else PRIDEJ_DO_FRONTY("tatáž");
+              break;
+      case 2:
+      case 3:
+      case 6:
+              PRIDEJ_DO_FRONTY("téže"); break;
+      case 4: if (tvar == 6) PRIDEJ_DO_FRONTY("touž,touže");
+              else PRIDEJ_DO_FRONTY("tutéž");
+              break;
+      case 7: if (tvar == 6) PRIDEJ_DO_FRONTY("touž,touže");
+              else PRIDEJ_DO_FRONTY("toutéž,toutýž");
+              break;
+     } break;
+
+   }
+  goto UVOLNIPAMET;
+
+  TYZTENTYZMNOZNECISLO:
+
+  switch (pad) {
+    case 1: TYZTENTYZPAD1_2: if (rod == 1) {
+              if (zivotnost == 1) {
+                if (tvar == 6) PRIDEJ_DO_FRONTY("íž");
+                else PRIDEJ_DO_FRONTY("iíž");
+               }
+              else PRIDEJ_DO_FRONTY("tytéž");
+             }
+            else if (rod == 2) {
+              PRIDEJ_DO_FRONTY("tytéž");
+             }
+            else {
+              if (tvar == 6) PRIDEJ_DO_FRONTY("táž,táže,týž,téže");
+              PRIDEJ_DO_FRONTY("tatáž,tytéž");
+             } break;
+    case 2:
+    case 6:
+            PRIDEJ_DO_FRONTY("tý*ž,e*že,téhže"); break;
+    case 3: PRIDEJ_DO_FRONTY("týmž,emže,témž"); break;
+    case 4: if (rod == 1) PRIDEJ_DO_FRONTY("tytéž");
+            else goto TYZTENTYZPAD1_2; break;
+    case 7: PRIDEJ_DO_FRONTY("týmiž,emiž"); break;
+   }
+  goto UVOLNIPAMET;
+
+  SAM:
+  if (pad == 1) {
+    switch(rod) {
+      case 1: if (cislo == 1) PRIDEJ_DO_FRONTY("sám");
+              else {
+                if (zivotnost == 1) PRIDEJ_DO_FRONTY("sami");
+                else PRIDEJ_DO_FRONTY("samy");
+               } break;
+      case 2: if (cislo == 1) PRIDEJ_DO_FRONTY("sama");
+              else PRIDEJ_DO_FRONTY("samy");
+              break;
+      case 3: if (cislo == 1) PRIDEJ_DO_FRONTY("samo");
+              else PRIDEJ_DO_FRONTY("sama,samy"); //samy není spisovné
+     }
+   }
+  else if (pad == 4) {
+    switch(rod) {
+      case 1: if (cislo == 1) {
+                if (zivotnost == 1) PRIDEJ_DO_FRONTY("samého,sama,samýho,sám,sama");
+                                          //samýho,sám,sama je nespisovne
+                else PRIDEJ_DO_FRONTY("sám");
+               }
+              else PRIDEJ_DO_FRONTY("samé,samy,samý"); //samý je nespisovne
+              break;
+      case 2: if (cislo == 1) PRIDEJ_DO_FRONTY("samou,samu");
+              else PRIDEJ_DO_FRONTY("samé,samy,samý"); //samý je nespisovne
+              break;
+      case 3: if (cislo == 1) PRIDEJ_DO_FRONTY("samo");
+              else PRIDEJ_DO_FRONTY("samá,sama,samy,samý");//samy,samý není spisovné
+     }
+   }
+  else {
+    strcpy(g_slovozaklad,"samý");
+    SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);
+    PRIDEJ_DO_FRONTY("sama");		//sebe sama - nespisovny tvar
+   }
+  strcpy(slovavefronte2,g_slovavefronte); VYMAZ_FRONTU();
+  strcpy(g_slovozaklad,"samotný");
+  SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);        //mozna nespisovne
+  PRIDEJ_DO_PRECHODNE_FRONTY(slovavefronte2,g_slovavefronte);
+  strcpy(g_slovavefronte,slovavefronte2);
+  goto UVOLNIPAMET;
+
+  TENHLETEN:
+ // Slova vzoru "tenhleten" se skládají ze 3 èástí:
+ // "ten + hle + ten" a to i "to + hle + to", "tím + hle + tím" atd.
+ // Tento vzor rozhodnì není spisovný! (nicménì se bìžnì používá)
+
+ //Zde 1 výjimka u 7.p. množ. èísla:
+  if (pad == 7 && cislo == 2) {
+    PRIDEJ_DO_FRONTY("emidleemi,emadleema,emidleema,emadleemi");
+    strcpy(slovavefronte2,g_slovavefronte);
+    NAHRAD_CAST_CASTI("dle","hle");
+    PRIDEJ_DO_FRONTY(slovavefronte2);
+    goto UVOLNIPAMET;
+   }
+
+  SKLONUJ_ZAJMENA_UKAZOVACI(pad,cislo,rod,zivotnost,3);	//rekurzivni volani (tenhle)
+  strcpy(slovavefronte2,g_slovavefronte);
+  VYMAZ_FRONTU();
+  SKLONUJ_ZAJMENA_UKAZOVACI(pad,cislo,rod,zivotnost,1);	//rekurzivni volani (ten)
+  SKLONUJ_ZAJMENA_UKAZOVACI(pad,cislo,rod,zivotnost,1);	//stejne rekurzivni volani,
+     //aby vsechna slova dvakrat (kvuli +hle+ a +dle+ u vzoru tenhleten)
+
+  PRIDEJ_ZA_KAZDE_SLOVO_JEDNOTLIVA_SLOVA(slovavefronte2,g_slovavefronte);
+  strcpy(g_slovavefronte,slovavefronte2);
+  goto UVOLNIPAMET;
+
+  TAMHLETEN:
+  SKLONUJ_ZAJMENA_UKAZOVACI(pad,cislo,rod,zivotnost,1);	//rekurzivni volani (ten)
+  PRIDEJ_PRED_KAZDE_SLOVO("tamdle");
+  strcpy(slovavefronte2,g_slovavefronte);
+  VYMAZ_FRONTU();
+  SKLONUJ_ZAJMENA_UKAZOVACI(pad,cislo,rod,zivotnost,1);	//rekurzivni volani (ten)
+  PRIDEJ_PRED_KAZDE_SLOVO("tamhle");
+  PRIDEJ_DO_FRONTY(slovavefronte2);
+  goto UVOLNIPAMET;
+
+  UVOLNIPAMET:
+  UVOLNI(slovavefronte2);
+ }
+
+//Rozsklonovani: 34
+void SKLONUJ_ZAJMENA_TAZACI(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,BYTE tvar) {
+  switch(tvar) {
+    case 1: goto KDO;
+    case 2: goto CO;
+    case 3: goto JAKY;
+    case 4: goto KTERY;
+    case 5: goto CI;
+    default: return;
+   }
+
+  KDO:
+ 
+  switch(pad) {
+    case 1:
+    case 5:
+            PRIDEJ_DO_FRONTY("kdo"); break;
+    case 2:
+    case 4:
+            PRIDEJ_DO_FRONTY("koho"); break;
+    case 3: PRIDEJ_DO_FRONTY("komu"); break;
+    case 6: PRIDEJ_DO_FRONTY("kom"); break;
+    case 7: PRIDEJ_DO_FRONTY("kým"); break;
+   }
+  return;
+ 
+ 
+  CO:
+ 
+  switch(pad) {
+    case 1:
+    case 4:
+    case 5:
+            PRIDEJ_DO_FRONTY("co"); break;
+    case 2: PRIDEJ_DO_FRONTY("èeho"); break;
+    case 3: PRIDEJ_DO_FRONTY("èemu"); break;
+    case 6: PRIDEJ_DO_FRONTY("èem,èom"); break;	//"èom" je náøeèný
+    case 7: PRIDEJ_DO_FRONTY("èím"); break;
+   }
+  return;
+ 
+  JAKY:
+  strcpy(g_slovozaklad,"jaký");
+  SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);
+  return;
+
+  KTERY:
+  strcpy(g_slovozaklad,"který");
+  SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);
+  return;
+
+  CI:
+  strcpy(g_slovozaklad,"èí");
+  SKLONUJ_VZOR_JARNI(pad,cislo,rod,zivotnost,0,0);
+  return;
+ }
+
+//Rozsklonovani: 35
+void SKLONUJ_ZAJMENA_VZTAZNA(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,BYTE umisteni,BYTE tvar) {
+// "umisteni" má smysl pouze, když je tvar 6 (jenž). Mùže být 1 (ne za pøedložkou)
+// a 2 (za pøedložkou). Je tedy èásteènì kompatibilní s "umisteni" u osobních
+// zájmen (tam je 5 tvarù umístìní).
+// tvar 7 je "což", "èímž" atd.
+
+  if (tvar <= 5) {
+    SKLONUJ_ZAJMENA_TAZACI(pad,cislo,rod,zivotnost,tvar); return;
+   }					//je to stejne
+  if (tvar == 7) {
+    SKLONUJ_ZAJMENA_TAZACI(pad,1,1,0,2);          //co
+    PRIDEJ_ZA_KAZDE_SLOVO("ž");                   //což
+    return;
+   }
+
+  //zbývá zájmeno "jenž"
+
+  switch(pad) {
+    case 1:
+    case 5:
+            if (cislo == 1) {
+              if (rod == 1) PRIDEJ_DO_FRONTY("jenž,jež"); //"jež" je nespisovné
+              else PRIDEJ_DO_FRONTY("jež");
+             }
+            else {
+              if (rod == 1) {
+                if (zivotnost == 1) PRIDEJ_DO_FRONTY("již");
+                else PRIDEJ_DO_FRONTY("jež");
+               }
+              else PRIDEJ_DO_FRONTY("jež");
+             }
+            break;
+    case 4: if (cislo == 1) {
+              if (rod == 1) {
+                if (zivotnost == 1) PRIDEJ_DO_FRONTY("jehož");
+                PRIDEJ_DO_FRONTY("jejž");       //zivotne i nezivotne
+               }
+              else if (rod == 2) {
+                PRIDEJ_DO_FRONTY("již");
+               }
+              else {
+                PRIDEJ_DO_FRONTY("jež");
+               }
+             }
+            else {
+              PRIDEJ_DO_FRONTY("jež");
+             }
+            break;
+    default: SKLONUJ_ZAJMENA_OSOBNI(3,pad,cislo,rod,zivotnost,umisteni);
+             PRIDEJ_ZA_KAZDE_SLOVO("ž");
+             return;                                  //ukonèení funkce
+   }
+
+  // Toto platí pouze pro 1., 4. a 5. pád
+
+  if (rod != 1 || cislo != 1) {
+    if (umisteni == 1) PRIDEJ_DO_FRONTY("jenž");            //nespisovne
+    else NAHRAD_ZACATEK_ZACATKEM("j","ò");
+   }
+ }
+
+//Rozsklonovani: 36
+BYTE SKLONUJ_ZAJMENA_NEURCITA(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,BYTE tvar,BYTE pridavek) {
+BYTE navrat=0;
+char *slovavefronte2=NULL;
+  slovavefronte2=ALOKUJ_RETEZEC(DELKA_FRONTY);
+
+
+//"tvar": 1 - kdo, 2 - co, 3 - jaký, 4 - který, 5 - èí, 6 - každý, 7 - všechen
+//"pridavek": 1 - nì..., 2 - leda..., 3 - ...koli(v), 4 - ...si, 5 - lec...,
+//            6 - (nespisovný)kde..., 7 - (nespisovný)...pak
+// parametr "pridavek" je dùležitý pouze tehdy, je-li tvar 1 až 5, jinak mùže
+// být jakýkoli
+// Je-li "pridavek" 6 (kdekdo), musi byt tvar v rozsahu 1 až 4
+// Je-li "pridavek" 7 (kdopak), musi byt tvar v rozsahu 1 až 5
+// Je-li "tvar" 6 nebo 7, na "pridavek" nezalezi
+
+  if (pridavek == 6 && (tvar < 1 || tvar > 4)) {
+    navrat=0; goto UVOLNIPAMET;                     //neexistuje tvar
+   }
+
+  if (tvar == 6) {
+    strcpy(g_slovozaklad,"každý");
+    navrat=SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);
+    goto UVOLNIPAMET;
+   }
+  if (tvar == 7) {
+    if (cislo == 1) {
+      switch(pad) {
+        case 1:
+        case 5:
+                if (rod == 1) PRIDEJ_DO_FRONTY("vše*en");
+                else if (rod == 2) PRIDEJ_DO_FRONTY("vše*na");
+                else PRIDEJ_DO_FRONTY("vše*no,vše"); break;
+        case 2: if (rod != 2) PRIDEJ_DO_FRONTY("všeho");
+                else if (rod == 2) PRIDEJ_DO_FRONTY("vší"); break;
+        case 3: if (rod != 2) PRIDEJ_DO_FRONTY("všemu");
+                else if (rod == 2) PRIDEJ_DO_FRONTY("vší"); break;
+        case 4: if (rod == 1) PRIDEJ_DO_FRONTY("vše*en");
+                else if (rod == 2) PRIDEJ_DO_FRONTY("vši,vše*nu,vší");//vší-nespisovné?
+                else PRIDEJ_DO_FRONTY("vše*no,vše"); break;
+        case 6: if (rod != 2) PRIDEJ_DO_FRONTY("všem,všom"); //všom-náøeènì
+                else if (rod == 2) PRIDEJ_DO_FRONTY("vší"); break;
+        case 7: if (rod != 2) PRIDEJ_DO_FRONTY("vším");
+                else if (rod == 2) PRIDEJ_DO_FRONTY("vší"); break;
+       }
+     }
+    else {                                    //mnozne cislo
+      switch(pad) {
+        case 1:
+        case 5:
+                if (rod == 1) {
+                  if (zivotnost == 1) PRIDEJ_DO_FRONTY("vši*òi");
+                  else PRIDEJ_DO_FRONTY("vše*ny");
+                 }
+                else if (rod == 2) PRIDEJ_DO_FRONTY("vše*ny");
+                else PRIDEJ_DO_FRONTY("vše*na,vše*ny");//všechny-nespisovne
+                break;
+        case 2: PRIDEJ_DO_FRONTY("vše*"); break;
+        case 3: PRIDEJ_DO_FRONTY("všem"); break;
+        case 4: if (rod != 3) PRIDEJ_DO_FRONTY("vše*ny");
+                else PRIDEJ_DO_FRONTY("vše*na,vše*ny");//všechny-nespisovne
+        case 6: PRIDEJ_DO_FRONTY("vše*"); break;
+        case 7: PRIDEJ_DO_FRONTY("všemi,všema"); break;  //všema-nespisovne
+       }
+     }
+    navrat=1; goto UVOLNIPAMET;
+   }
+
+  SKLONUJ_ZAJMENA_TAZACI(pad,cislo,rod,zivotnost,tvar);
+
+  switch (pridavek) {
+    case 1: PRIDEJ_PRED_KAZDE_SLOVO("òe"); break;
+    case 2: PRIDEJ_PRED_KAZDE_SLOVO("ledac");	//nespisovne (ledacjaký)
+            strcpy(slovavefronte2,g_slovavefronte); VYMAZ_FRONTU();
+            SKLONUJ_ZAJMENA_TAZACI(pad,cislo,rod,zivotnost,tvar);
+            PRIDEJ_PRED_KAZDE_SLOVO("ledas");	//nespisovné (ledasjaký)
+            PRIDEJ_DO_FRONTY(slovavefronte2);
+            strcpy(slovavefronte2,g_slovavefronte); VYMAZ_FRONTU();
+            SKLONUJ_ZAJMENA_TAZACI(pad,cislo,rod,zivotnost,tvar);
+            PRIDEJ_PRED_KAZDE_SLOVO("leda");
+            PRIDEJ_DO_FRONTY(slovavefronte2);
+            break;
+    case 3: PRIDEJ_ZA_KAZDE_SLOVO("koliv");	//kdokoliv
+            strcpy(slovavefronte2,g_slovavefronte); VYMAZ_FRONTU();
+            SKLONUJ_ZAJMENA_TAZACI(pad,cislo,rod,zivotnost,tvar);
+            PRIDEJ_ZA_KAZDE_SLOVO("koli");	//kdokoli
+            PRIDEJ_DO_FRONTY(slovavefronte2);
+            break;
+    case 4: PRIDEJ_ZA_KAZDE_SLOVO("jsi");	//hrube nespisovne (kterehojsi)
+            strcpy(slovavefronte2,g_slovavefronte); VYMAZ_FRONTU();
+            SKLONUJ_ZAJMENA_TAZACI(pad,cislo,rod,zivotnost,tvar);
+            PRIDEJ_ZA_KAZDE_SLOVO("si");
+            PRIDEJ_DO_FRONTY(slovavefronte2);
+            break;
+    case 5: PRIDEJ_PRED_KAZDE_SLOVO("lec"); break;
+    case 6: PRIDEJ_PRED_KAZDE_SLOVO("kde"); break;
+    case 7: PRIDEJ_ZA_KAZDE_SLOVO("pak"); break;
+   }
+  navrat=1;
+  goto UVOLNIPAMET;
+
+  UVOLNIPAMET:
+  UVOLNI(slovavefronte2);
+  return(navrat);
+ }
+
+//Rozsklonovani: 37
+void SKLONUJ_ZAJMENA_ZAPORNA(BYTE pad,BYTE cislo,BYTE rod,BYTE zivotnost,BYTE tvar) {
+//"tvar": 1 - nikdo, 2 - nic, 3 - nijaký, 4 - žádný, 5 - nièí
+
+  if (tvar == 2 && (pad == 1 || pad == 4 || pad == 5)) {
+    PRIDEJ_DO_FRONTY("òic"); return;
+   }
+  if (tvar == 4) {
+    strcpy(g_slovozaklad,"žádný");
+    SKLONUJ_VZOR_MLADY(pad,cislo,rod,zivotnost,0,0);
+    return;
+   }
+
+  SKLONUJ_ZAJMENA_TAZACI(pad,cislo,rod,zivotnost,tvar);
+
+  PRIDEJ_PRED_KAZDE_SLOVO("òi");
+
+  return;
+ }

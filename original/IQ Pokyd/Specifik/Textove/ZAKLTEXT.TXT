@@ -1,0 +1,40 @@
+IQ Pokyd - popis základního (dosud nerozskloòovaného) slovníku v textové
+           podobì
+Copyright (C) Aleš Janda - KÝBLSoft 2002 - 2003
+
+
+Struktura 1 øádku (každý øádek je stejný):
+------------------------------------------
+
+- pro podstatná jména, pøídavná jména:
+"[slovo]: [èíslo_slovního_druhu],[vzor]<,{výjimky}>\r\n"
+
+- pro slovesa:
+"[slovo]: 5,[vzor],vid<,{výjimky}>\r\n"
+
+- pro pøíslovce a spojky:
+"[slovo]: [èíslo_slovního_druhu],[druh]\r\n"
+
+- pro pøedložky:
+"[slovo]: 7,[výèet_pádù]\r\n"
+
+- pro èástice a citoslovce:
+"[slovo]: [èíslo_slovního_druhu]\r\n"
+
+
+Popis zvláštních parametrù:
+---------------------------
+
+"výjimky":
+Tento parametr je uzavøen ve složených závorkách {}.
+Struktura:
+"{[pøípad]:[správný_tvar],[pøípad]:[správný_tvar],...,[pøípad]:[správný_tvar]}"
+
+"správný tvar" má podobu jednoho slova èi více slov oddìlených èárkami.
+Popis parametru "pøípad":
+Je to výraz, který urèuje
+
+
+
+
+Nikde nesmí být žádná mezera èi znak navíc.

@@ -1,0 +1,1388 @@
+/* Tento zdrojov˝ kÛd je pod licencÌ GNU/GPL. M˘ûete ho pouûÌt k vlastnÌ
+   pot¯ebÏ, ale nesmÌte jej ani programy zaloûenÈ na tomto kÛdu vyuûÌt komerËnÏ!
+
+   Jedn· se o zdrojov˝ kÛd programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleöe Jandy
+*/
+
+/* IQ Pokyd - podstjm.sk - funkce na skloÚov·nÌ jednotliv˝ch vzor˘
+   Aleö Janda (C) K›BLSoft 2002-2005 (kÛdov·nÌ Windows 1250)
+*/
+
+
+void SKLONUJ_VZOR_PAN(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  if (pad != 1 || cislo != 1) {
+    PODM_ODSTRAN_E(g_slovodocasne);
+    ZMEN_PREDPOSLEDNI_U_NA_O(g_slovodocasne);
+    PODM_ODSTRAN_US(g_slovodocasne,1,2);
+   }
+
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("a");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ovi");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("a");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 5: strcpy(g_slovo,g_slovodocasne);
+            switch(POSLEDNI_ZNAK(g_slovo)) {
+              case 'k': case '*': case 'h': case 'g': PRIDEJ_NA_KONEC("u"); break;
+              case 'r': if (JELI_SOUHLASKA(g_slovo[strlen(g_slovo)-2]) == 1)
+                        ZJEMNI_SLOVO_PODSTJM(); //nap¯. brat¯e, ale ogare
+						//pokraËuje se na default
+              default: PRIDEJ_NA_KONEC("e");
+             }
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 6: goto PAD3_1;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("em");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: PAD1_2:
+            strcpy(g_slovo,g_slovodocasne);
+            if (ZJEMNI_SLOVO_PODSTJM() == 1) {
+              PRIDEJ_NA_KONEC("i");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            if (POSLEDNI_PISMENA(g_slovo,"an") == 1
+             || POSLEDNI_PISMENA(g_slovo,"t") == 1)
+             PRIDEJ_NA_KONEC("È");
+            else PRIDEJ_NA_KONEC("ovÈ");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 5: goto PAD1_2;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            switch(POSLEDNI_ZNAK(g_slovo)) {
+              case 'k': case '*': case 'h':
+                PRIDEJ_NA_KONEC("·*");
+                PRIDEJ_DO_FRONTY();
+                strcpy(g_slovo,g_slovodocasne);
+                ZJEMNI_SLOVO_PODSTJM();
+                PRIDEJ_NA_KONEC("Ì*");
+                PRIDEJ_DO_FRONTY();
+                break;
+              default:
+                PRIDEJ_NA_KONEC("e*");
+                PRIDEJ_DO_FRONTY();
+                break;
+             }
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ama");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_HRAD(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  if ((pad != 1 && pad != 4) || cislo != 1) {
+    OREZ_O_SAMOHLASKU(g_slovodocasne);
+    PODM_ODSTRAN_E(g_slovodocasne);
+    PODM_ODSTRAN_US(g_slovodocasne,2,2);
+   }
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: goto PAD1_1;
+    case 5: strcpy(g_slovo,g_slovodocasne);
+            switch(POSLEDNI_ZNAK(g_slovo)) {
+              case 'k': case '*': case 'h': case 'g': PRIDEJ_NA_KONEC("u"); break;
+              default: PRIDEJ_NA_KONEC("e");
+             }
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            if (POSLEDNI_PISMENA(g_slovo,"k") == 0) {  //mÌËek
+              ZJEMNI_SLOVO_PODSTJM();
+              PRIDEJ_NA_KONEC("e");
+//#              if (POSLEDNI_ZNAK(g_slovo) != 'e');   //...tak je to asi nespisovn˝
+                                          // tvar (nap¯. hotel => (o) hotele)
+              PRIDEJ_DO_FRONTY();
+             }
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("em");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: PAD1_2:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD1_2;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            switch(POSLEDNI_ZNAK(g_slovo)) {
+              case 'k': case '*': case 'h': case 'g':
+                PRIDEJ_NA_KONEC("·*");
+                PRIDEJ_DO_FRONTY();
+                strcpy(g_slovo,g_slovodocasne);
+                ZJEMNI_SLOVO_PODSTJM();
+                PRIDEJ_NA_KONEC("Ì*");
+                PRIDEJ_DO_FRONTY();
+                break;
+              case 'l': case 's': case 'z':
+                PRIDEJ_NA_KONEC("e*");
+                PRIDEJ_DO_FRONTY();
+                strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("Ì*");
+                PRIDEJ_DO_FRONTY();
+                break;
+              default:
+                PRIDEJ_NA_KONEC("e*");
+                PRIDEJ_DO_FRONTY();
+                break;
+             }
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ama");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_MUZ(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  if (pad != 1 || cislo != 1) PODM_ODSTRAN_E_C(g_slovodocasne);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ovi");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: goto PAD2_1;
+    case 5: strcpy(g_slovo,g_slovodocasne);
+            switch(POSLEDNI_ZNAK(g_slovo)) {
+              case 'c':
+                ZJEMNI_SLOVO_PODSTJM();
+                PRIDEJ_NA_KONEC("e");
+                break;
+              default:
+                ZJEMNI_SLOVO_PODSTJM();
+                PRIDEJ_NA_KONEC("i");
+                break;
+             }
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 6: goto PAD3_1;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("em");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: PAD1_2:
+            strcpy(g_slovo,g_slovodocasne);
+            if (POSLEDNI_PISMENA(g_slovo,"el") == 1) PRIDEJ_NA_KONEC("È");
+            else PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ovÈ");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: goto PAD2_1;
+    case 5: goto PAD1_2;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ì*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ema");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+
+void SKLONUJ_VZOR_STROJ(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  if ((pad != 1 && pad != 4) || cislo != 1) PODM_ODSTRAN_E_C(g_slovodocasne);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: goto PAD1_1;
+    case 5:
+    case 6:
+            goto PAD3_1;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("em");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: goto PAD2_1;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD2_1;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ì*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ema");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_PREDSEDA(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("a");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            if (MEKKA_SOUHLASKA(POSLEDNI_ZNAK(g_slovo)) == 1) PRIDEJ_NA_KONEC("i");
+            else PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ovi");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 5: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("o");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 6: goto PAD3_1;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ou");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: PAD1_2:
+            strcpy(g_slovo,g_slovodocasne);
+            if (POSLEDNI_PISMENA(g_slovozaklad,"ta") == 1 || POSLEDNI_PISMENA(g_slovozaklad,"da") == 1) {
+              ZJEMNI_SLOVO_PODSTJM();
+              PRIDEJ_NA_KONEC("i");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+              if (POSLEDNI_PISMENA(g_slovozaklad,"eta") == 1 || POSLEDNI_PISMENA(g_slovozaklad,"ota") == 1)
+               PRIDEJ_NA_KONEC("ovÈ");
+              else PRIDEJ_NA_KONEC("È");
+             }
+            else {
+              PRIDEJ_NA_KONEC("ovÈ");
+             }
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: goto PAD2_1;
+    case 5: goto PAD1_2;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ama");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_SOUDCE(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: goto PAD1_1;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ovi");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: goto PAD1_1;
+    case 5: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            if (ZJEMNI_SLOVO_PODSTJM() == 1) {      //nespisovne, ale pouzivane
+              PRIDEJ_NA_KONEC("e");
+              PRIDEJ_DO_FRONTY();
+             }
+            break;
+    case 6: goto PAD3_1;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("em");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: PAD1_2:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ovÈ");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: goto PAD1_1;
+    case 5: goto PAD1_2;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ì*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ema");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_ZENA(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("a");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            if (MEKKA_SOUHLASKA(POSLEDNI_ZNAK(g_slovo)) == 1) {
+              PRIDEJ_NA_KONEC("i");
+              PRIDEJ_DO_FRONTY();
+             }
+            break;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            ZJEMNI_SLOVO_PODSTJM();
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 5: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("o");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 6: goto PAD3_1;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,1) == 1) {
+              PRIDEJ_NA_KONEC("ou");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            PRIDEJ_NA_KONEC("ou");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: goto PAD2_1;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,1+8) == 1) {
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);		//hrubÏ nespisovnÈ
+             }
+            else PODM_VLOZ_E(g_slovo,1,2);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,1) == 1) {
+              PRIDEJ_NA_KONEC("·m");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            PRIDEJ_NA_KONEC("·m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: goto PAD2_1;
+    case 5: goto PAD2_1;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,1) == 1) {
+              PRIDEJ_NA_KONEC("·*");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            PRIDEJ_NA_KONEC("·*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,1) == 1) {
+              PRIDEJ_NA_KONEC("ami");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            PRIDEJ_NA_KONEC("ami");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,1) == 1) {
+              PRIDEJ_NA_KONEC("ama");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            PRIDEJ_NA_KONEC("ama");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_RUZE(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: goto PAD1_1;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: goto PAD3_1;
+    case 5: goto PAD1_1;
+    case 6: goto PAD3_1;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,2) == 1) {
+              PRIDEJ_NA_KONEC("Ì");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            PRIDEJ_NA_KONEC("Ì");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: goto PAD1_1;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            if (POSLEDNI_PISMENA(g_slovo,"ic") == 1) {      //ice (nap¯. ulice)
+              PRIDEJ_DO_FRONTY();
+             }
+            else if (POSLEDNI_PISMENA(g_slovo,"Ìc") == 1) { //Ìce (nap¯. plÌce)
+              PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,2);
+              PRIDEJ_DO_FRONTY();
+             }
+            else if (POSLEDNI_PISMENA(g_slovo,"yÚ") == 1) { //ynÏ (nap¯. jeskynÏ)
+              PRIDEJ_NA_KONEC("Ì");
+              PRIDEJ_DO_FRONTY();
+             }
+            else if (POSLEDNI_PISMENA(g_slovo,"Ìl") == 1) { //Ìle (nap¯. chvÌle, mÌle)
+              PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,2);
+              PRIDEJ_DO_FRONTY();
+             }
+            else {
+              if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,2) == 1) {
+                PRIDEJ_NA_KONEC("Ì");
+                PRIDEJ_DO_FRONTY();
+        //n·sledujÌcÌ tvar dole bude hrubÏ nespisovn˝ (nap¯. pr·ce-(bez)pr·cÌ)
+               }
+             }
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ì");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,2) == 1) {
+              PRIDEJ_NA_KONEC("Ìm");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            PRIDEJ_NA_KONEC("Ìm");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD1_1;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,2) == 1) {
+              PRIDEJ_NA_KONEC("Ì*");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            PRIDEJ_NA_KONEC("Ì*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,2) == 1) {
+              PRIDEJ_NA_KONEC("emi");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            PRIDEJ_NA_KONEC("emi");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,2) == 1) {
+              PRIDEJ_NA_KONEC("ema");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            PRIDEJ_NA_KONEC("ema");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_PISEN(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  if ((pad != 1 && pad != 4) || cislo != 1) {
+    PODM_ODSTRAN_E(g_slovodocasne);
+    ZMEN_PREDPOSLEDNI_U_NA_O(g_slovodocasne);
+   }
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            switch(POSLEDNI_ZNAK(g_slovodocasne)) {	//(bez) tratÏ i trati
+              case 'Ô': case 'ù':
+                strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("i");
+                PRIDEJ_DO_FRONTY();
+             }
+            break;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: goto PAD1_1;
+    case 5:
+    case 6:
+            goto PAD3_1;
+    case 7: PAD7_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ì");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: goto PAD2_1;
+    case 2: goto PAD7_1;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ìm");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD2_1;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ì*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("emi");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ema");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_KOST(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1:
+            strcpy(g_slovo,g_slovodocasne);
+			ZJEMNI_KONCOVKU_SLOVESA_1();
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: goto PAD2_1;
+    case 4: goto PAD1_1;
+    case 5:
+    case 6:
+            goto PAD2_1;
+    case 7: PAD7_1:
+            strcpy(g_slovo,g_slovodocasne);
+			ZJEMNI_KONCOVKU_SLOVESA_1();
+            PRIDEJ_NA_KONEC("Ì");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: goto PAD2_1;
+    case 2: goto PAD7_1;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("em");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+			ZJEMNI_KONCOVKU_SLOVESA_1();
+            PRIDEJ_NA_KONEC("Ìm");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD2_1;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("mi");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ma");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_MESTO(BYTE pad,BYTE cislo) {
+BYTE koncovkaum;
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+  koncovkaum=PODM_ODSTRAN_UM(g_slovodocasne,2);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1:
+    case 4:
+    case 5:
+            strcpy(g_slovo,g_slovodocasne);
+            if (koncovkaum == 0) PRIDEJ_NA_KONEC("o");
+            else PRIDEJ_NA_KONEC("um");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("a");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();
+
+            if (POSLEDNI_ZNAK(g_slovo) != 'h'  //polÌnko - jen (o) polÌnku
+             && POSLEDNI_ZNAK(g_slovo) != '*'
+             && POSLEDNI_ZNAK(g_slovo) != 'k'
+             && koncovkaum == 0) {
+              strcpy(g_slovo,g_slovodocasne);
+              ZJEMNI_SLOVO_PODSTJM();
+              PRIDEJ_NA_KONEC("e");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("em");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: goto PAD2_1;
+    case 2: if (koncovkaum == 1 && JELI_SAMOHLASKA(POSLEDNI_ZNAK(g_slovodocasne)) == 1) {
+              SKLONUJ_VZOR_MORE(2,2); break;
+             }
+            strcpy(g_slovo,g_slovodocasne);
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,4+16) == 1) {
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+             }
+            else PODM_VLOZ_E(g_slovo,2,2);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: if (koncovkaum == 1 && JELI_SAMOHLASKA(POSLEDNI_ZNAK(g_slovodocasne)) == 1) {
+              SKLONUJ_VZOR_MORE(3,2); break;
+             }
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("˘m");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("·m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD2_1;
+    case 6: if (koncovkaum == 1 && JELI_SAMOHLASKA(POSLEDNI_ZNAK(g_slovodocasne)) == 1) {
+              SKLONUJ_VZOR_MORE(6,2); break;
+             }
+            strcpy(g_slovo,g_slovodocasne);
+            if (POSLEDNI_ZNAK(g_slovo) == 'h'  //polÌnko - jen (o) polÌnku
+             || POSLEDNI_ZNAK(g_slovo) == '*'
+             || POSLEDNI_ZNAK(g_slovo) == 'k') {
+              PRIDEJ_NA_KONEC("·*");
+              PRIDEJ_DO_FRONTY();
+              strcpy(g_slovo,g_slovodocasne);
+              if (POSLEDNI_ZNAK(g_slovo) != 'k') {
+                ZJEMNI_SLOVO_PODSTJM();
+                PRIDEJ_NA_KONEC("Ì*");
+                PRIDEJ_DO_FRONTY();
+               }
+             }
+            else {
+              strcpy(g_slovo,g_slovodocasne);
+              PRIDEJ_NA_KONEC("e*");
+              PRIDEJ_DO_FRONTY();
+             }
+            break;
+    case 7: if (koncovkaum == 1 && JELI_SAMOHLASKA(POSLEDNI_ZNAK(g_slovodocasne)) == 1) {
+              SKLONUJ_VZOR_MORE(7,2); break;
+             }
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ama");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ami");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_MORE(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+  PODM_ODSTRAN_UM(g_slovodocasne,2);     //kvuli volani funkce z funkce
+                                       //SKLONUJ_VZOR_MESTO v nekterych padech
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: goto PAD1_1;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD1_1;
+    case 6: goto PAD3_1;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("em");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: goto PAD1_1;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            if (POSLEDNI_PISMENA(g_slovo,"iöù") == 1) {
+              PRIDEJ_DO_FRONTY(); break;        //h¯iötÏ => (bez) h¯iöù atd.
+             }
+            if (PODM_ZKRAT_SAMOHLASKU_ODZADU(g_slovo,2,4) == 1) {
+              PRIDEJ_NA_KONEC("Ì");
+              PRIDEJ_DO_FRONTY();
+             }
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ì");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ìm");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD1_1;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ì*");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e*");               //nespisovny tvar
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ema");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("emi");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_KURE(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ete");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("eùi");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD1_1;
+    case 6: goto PAD3_1;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("etem");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: PAD1_2:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ata");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("at");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("at˘m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD1_2;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ate*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("aty");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("atama");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_STAVENI(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+            PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("m");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1:
+    case 2:
+            goto PAD1_1;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD1_1;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("mi");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ma");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_RONY(BYTE pad,BYTE cislo) {        //skloÚuje divnÏ
+  strcpy(g_slovodocasne,g_slovozaklad);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ho");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("mu");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: goto PAD2_1;
+    case 5: goto PAD1_1;
+    case 6: PAD6_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: goto PAD6_1;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1:
+    case 2: goto PAD1_1;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD1_1;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("mi");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ma");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+ }
+
+void SKLONUJ_VZOR_IDEA(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("a");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("je");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("i");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ji");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ji");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("e");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("u");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 5: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("o");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 6: goto PAD3_1;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ou");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("jÌ");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ì");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: PAD1_2:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("y");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("je");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("jÌ");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("Ì");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("·m");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("jÌm");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD1_2;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("·*");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("jÌ*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ami");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("jemi");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("jema");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("emi");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ema");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+void SKLONUJ_VZOR_TEMA(BYTE pad,BYTE cislo) {
+  strcpy(g_slovodocasne,g_slovozaklad);
+  if (cislo == 2) goto MNOZNECISLO;
+  switch(pad) {
+    case 1: PAD1_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 2: PAD2_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ta");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: PAD3_1:
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("tu");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD1_1;
+    case 6: goto PAD3_1;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("tem");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+  return;
+  MNOZNECISLO:
+  switch(pad) {
+    case 1: goto PAD2_1;
+    case 2: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("t");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 3: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("t˘m");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("t·m");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 4:
+    case 5:
+            goto PAD2_1;
+    case 6: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("te*");
+            PRIDEJ_DO_FRONTY();
+            break;
+    case 7: strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("ty");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("tama");
+            PRIDEJ_DO_FRONTY();
+            strcpy(g_slovo,g_slovodocasne);
+            PRIDEJ_NA_KONEC("tami");
+            PRIDEJ_DO_FRONTY();
+            break;
+   }
+ }
+
+
+void SKLONUJ_VZOR_KALHOTY(BYTE pad) {
+  SKLONUJ_VZOR_ZENA(pad,2);
+
+  if (pad == 3) {
+    strcpy(g_slovo,g_slovozaklad);
+    OREZ_O_SAMOHLASKU(g_slovo);
+    PRIDEJ_NA_KONEC("˘m");
+    PRIDEJ_DO_FRONTY();
+   }
+  if (pad == 6) {
+    strcpy(g_slovo,g_slovozaklad);
+    OREZ_O_SAMOHLASKU(g_slovo);
+    switch (POSLEDNI_ZNAK(g_slovo)) {
+      case 'h': case '*': case 'k':
+        break;                                //(o) »echech atd. je blbost
+      case 'l': case 's': case 'z':           //(o) NeumÏtelÌch, ale m˘ûou b˝t
+                                              //i ostatnÌ tvary
+        strcpy(g_slovo,g_slovozaklad);
+        OREZ_O_SAMOHLASKU(g_slovo);
+        PRIDEJ_NA_KONEC("Ì*");
+        PRIDEJ_NA_ZACATEK_FRONTY();
+        goto ECH;
+      case 'n': case 'd': VYMAZ_FRONTU();     //(o) Vinohrad·ch je blbost
+                          goto ECH;
+      default: ECH:
+        strcpy(g_slovo,g_slovozaklad);
+        OREZ_O_SAMOHLASKU(g_slovo);
+        PRIDEJ_NA_KONEC("e*");
+        PRIDEJ_DO_FRONTY();
+     }
+   }
+  if (pad == 7) {
+    strcpy(g_slovo,g_slovozaklad);
+    OREZ_O_SAMOHLASKU(g_slovo);
+    PRIDEJ_NA_KONEC("y");
+    PRIDEJ_NA_ZACATEK_FRONTY();
+   }
+ }
+
+void SKLONUJ_VZOR_DATA(BYTE pad) {
+  SKLONUJ_VZOR_MESTO(pad,2);
+ }
+
+void SKLONUJ_VZOR_HOUSLE(BYTE pad) {
+  SKLONUJ_VZOR_RUZE(pad,2);
+
+  strcpy(g_slovo,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovo);
+  if (POSLEDNI_PISMENA(g_slovo,"oc") == 1) {      //v·noce, velikonoce
+    if (pad == 2) {
+      PRIDEJ_NA_ZACATEK_FRONTY();
+     }
+    if (pad == 3) {
+      PRIDEJ_NA_KONEC("˘m");
+      PRIDEJ_NA_ZACATEK_FRONTY();
+     }
+    if (pad == 7) {
+      PRIDEJ_NA_KONEC("i");
+      PRIDEJ_DO_FRONTY();
+     }
+   }
+ }
+
+void SKLONUJ_VZOR_KUPE(void) {
+  strcpy(g_slovavefronte,g_slovozaklad);
+ }

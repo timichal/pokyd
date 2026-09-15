@@ -1,0 +1,1484 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Mùžete ho použít k vlastní
+   potøebì, ale nesmíte jej ani programy založené na tomto kódu využít komerènì!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - vstup.fu - funkce pro vstupní operace (pøeètení uživatelovy vìty)
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+
+BYTE JELI_ZNELA_SOUHLASKA(char znak) {
+  switch(znak) {
+    case 'r': case 'l': case 'm': case 'n': case 'ò':   //toto je typ "sonor"
+    case 'b': case 'd': case 'ï': case 'g': case 'v':
+    case 'z': case 'ž': case 'h': return(1);
+    default: return(0);
+   }
+ }
+
+char *HLEDEJ_SLOVO_S_PREDPONOU(char *slovo,char *predpona,char *predpona_s_e,char *nespisovnapredpona,BYTE atributy) {
+   //funkce vraci pouzitou predponu a informace v promenne "informaceoslove"
+   //pri nenalezeni vraci NULL
+int delkapredpony=strlen(predpona),delkapredpony_s_e=strlen(predpona_s_e),delkanespisovnepredpony=strlen(nespisovnapredpona),testkonce;
+char *navrat=NULL;
+  testkonce=0;
+  if (strncmp(slovo,predpona,delkapredpony) == 0) {
+    if (predpona_s_e[0] != 0 && strncmp(slovo,predpona_s_e,delkapredpony_s_e) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo+delkapredpony_s_e,0,atributy+4,0);
+      if (g_nalezeneinformaceoslove[0] != 0) { navrat=predpona_s_e; testkonce=strlen(g_nalezeneinformaceoslove); }
+     }
+    VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo+delkapredpony,0,atributy+4,0);
+    if (g_nalezeneinformaceoslove[testkonce] != 0) navrat=predpona;
+   }
+  else if (nespisovnapredpona[0] != 0 && strncmp(slovo,nespisovnapredpona,delkanespisovnepredpony) == 0) {
+    VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo+delkanespisovnepredpony,0,atributy+4,0);
+    if (g_nalezeneinformaceoslove[0] != 0) navrat=predpona;
+   }
+  return(navrat);
+ }
+
+Typ_slova KOMPLETNE_VRAT_INFORMACE_O_SLOVU_Z_UPLNEHO_SLOVNIKU(char *hledaneslovo,BYTE atributy) {
+                     //toto je funkce pro bezne pouziti
+                     //hleda slovo i s toleranci, i vcetne predpon
+                     //"atributy" jsou spise z rekurzivnich duvodu, standardne 0
+Typ_slova navrat,novynavrat;
+WORD pozice;
+char *predpona=NULL;
+
+  if (strcmp(hledaneslovo,"neòí") == 0 || strcmp(hledaneslovo,"neòi") == 0) {
+    //u slova "není" je výjimka jako prase - je to totiž nestandardní
+    // zápor slova "je". Takže se najde "je" a zápor se potom pøidá
+
+    VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU("je",0,atributy,0);
+                               //napred se zkusi najit slovo i vcetne pripony
+    OREZ_FRONTU_NA_1_SLOVO(g_nalezeneinformaceoslove,1);
+    navrat=PREVED_NA_TRIDU_TYP_SLOVA(g_nalezeneinformaceoslove,0,"",1);
+    navrat.zapor[0]=1;
+  
+    return(navrat);
+
+   }
+  else {                //všechna ostatní normální slova
+
+    VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(hledaneslovo,0,atributy,0);
+                                 //napred se zkusi najit slovo i vcetne pripony
+    navrat=PREVED_NA_TRIDU_TYP_SLOVA(g_nalezeneinformaceoslove,0,"",1);
+    g_nalezeneinformaceoslove[0]=0;
+
+   }
+
+  if (atributy == 0 && strncmp(hledaneslovo,"nej",3) == 0) {
+    novynavrat=KOMPLETNE_VRAT_INFORMACE_O_SLOVU_Z_UPLNEHO_SLOVNIKU(hledaneslovo+3,1);
+    for (pozice=0; pozice < novynavrat.pocetslov; pozice++) {
+      switch(novynavrat.tvar[pozice]) {   //pøidání údaje o 3. stupni
+        case 0: novynavrat.tvar[pozice]=5; break;  //normální tøetí stupeò
+        case 1: novynavrat.tvar[pozice]=6; break;  //tøetí stupeò tvaru pøíslovce
+       }
+     }
+    navrat.PRIPOJ(novynavrat);
+    novynavrat.VYMAZ_OBSAH(); g_nalezeneinformaceoslove[0]=0;
+   }
+  if ((atributy&2) == 0 && strncmp(hledaneslovo,"ne",2) == 0) {
+    novynavrat=KOMPLETNE_VRAT_INFORMACE_O_SLOVU_Z_UPLNEHO_SLOVNIKU(hledaneslovo+2,atributy+2);
+    for (pozice=0; pozice < novynavrat.pocetslov; pozice++) {
+      novynavrat.zapor[pozice]=1;
+     }
+    navrat.PRIPOJ(novynavrat);
+    novynavrat.VYMAZ_OBSAH(); g_nalezeneinformaceoslove[0]=0;
+   }
+
+  for (pozice=1; pozice <= 20; pozice++) {
+    switch(pozice) {
+      case 1: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"do","","",atributy); break;
+      case 2: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"na","","",atributy); break;
+      case 3: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"nad","nade","nat",atributy); break;
+      case 4: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"o","","",atributy); break;
+      case 5: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"ob","obe","op",atributy); break;
+      case 6: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"od","ode","ot",atributy); break;
+      case 7: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"po","","",atributy); break;
+      case 8: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"pod","pode","pot",atributy); break;
+      case 9: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"pro","","",atributy); break;
+      case 10: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"pøe","","",atributy); break;
+      case 11: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"pøed","pøede","pøet",atributy); break;
+      case 12: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"pøi","","",atributy); break;
+      case 13: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"roz","roze","ros",atributy); break;
+      case 14: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"s","se","",atributy); break;
+      case 15: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"u","","",atributy); break;
+      case 16: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"v","ve","",atributy); break;
+      case 17: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"vy","","vi",atributy); break;
+      case 18: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"vz","vze","vs",atributy); break;
+      case 19: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"z","ze","",atributy); break;
+      case 20: predpona=HLEDEJ_SLOVO_S_PREDPONOU(hledaneslovo,"za","","",atributy); break;
+     }
+                         //zpracovani pripadnych dalsich slov s predponami
+    if (g_nalezeneinformaceoslove[0] != 0 && predpona != NULL) { //tady kdyz neni jedno, neni ani druhy
+      novynavrat=PREVED_NA_TRIDU_TYP_SLOVA(g_nalezeneinformaceoslove,0,predpona,1);
+      navrat.PRIPOJ(novynavrat);
+      novynavrat.VYMAZ_OBSAH();
+      g_nalezeneinformaceoslove[0]=0;
+     }
+   }
+
+                                   //doplneni chybejiciho atributu "zapor"
+  for (pozice=0; pozice < navrat.pocetslov; pozice++) {
+    if (navrat.zapor[pozice] == 255) navrat.zapor[pozice]=0;
+   }
+
+  return(navrat);
+ }
+
+void VRAT_INFORMACE_O_SLOVU_Z_UPLNEHO_SLOVNIKU(char *hledaneslovo,BYTE atributy) {
+signed long minimum,maximum,pozice;
+char *zakodovaneslovo=NULL,*nalezeneinfo=NULL;
+
+          //zapise nalezene informace do g_nalezeneinformaceoslove (najde-li)
+
+          //princip hledani: Slovo se porovna s prostrednim slovem, tim se
+          //vylouci polovina, pak dalsi polovina atd., az se dojde k hledanemu
+          //slovu (a nebo taky ne :-) )
+
+  VRAT_HODNOTU_PROMENNE_AKTUALNIPISMENO(hledaneslovo);
+  zakodovaneslovo=ALOKUJ_RETEZEC(strlen(hledaneslovo)+2);
+  strcpy(zakodovaneslovo,hledaneslovo);
+  strcat(zakodovaneslovo,":"); //aby byly hodnoty stejne jako pri rozsklonovani
+  ZAKODUJ_SLOVO_V_PAMETI(zakodovaneslovo);
+
+  for (minimum=0,maximum=g_pocetslovvuplnedatabazi[g_aktualnipismeno]-1;
+       minimum <= maximum; ) {
+    pozice=(minimum+maximum)/2;
+    switch(POROVNEJ_DVE_SLOVA(g_databazeuplnychslov[g_aktualnipismeno][pozice],zakodovaneslovo)) {
+      case -1: minimum=pozice+1; goto NOVEHLEDANI;
+      case  1: maximum=pozice-1; goto NOVEHLEDANI;
+      case  0: nalezeneinfo=ALOKUJ_RETEZEC(strlen(g_databazeuplnychslov[g_aktualnipismeno][pozice])+1);
+               strcpy(nalezeneinfo,g_databazeuplnychslov[g_aktualnipismeno][pozice]+strlen(zakodovaneslovo));
+                     //nalezeno (pointer poposunuty o delku slova (vcetne dvojtecky))
+               DEKODUJ_SLOVO_V_PAMETI(nalezeneinfo);
+               PROCISTI_SLOVA_PODLE_ATRIBUTU(nalezeneinfo,atributy);
+               PRIDEJ_DO_PRECHODNE_FRONTY(g_nalezeneinformaceoslove,nalezeneinfo);
+               UVOLNI(nalezeneinfo);
+               goto KONEC;
+     }
+    NOVEHLEDANI:;
+   }
+
+                          //nenalezeno
+
+  KONEC:
+  UVOLNI(zakodovaneslovo);
+ }
+
+void VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(char *slovo,int pozice,BYTE atributy,BYTE pocetrekurzi) {
+         //Tato funkce rekurzivne zjisti vsechny mozne pravopisne chyby a
+         //informace o slove ve vsech nespisovnych tvarech vrati do
+         //g_nalezeneinformaceoslove.
+         //"pozice" je z duvodu rekurzivnich, na zacatku se vzdy dava 0.
+
+int celkem=strlen(slovo);
+char *pointer=NULL,*utvoreneslovo=NULL;
+
+  if (slovo[0] == 0) return;            //prazdne slovo
+
+// následující pøípad nijak nesouvisí s kontrolou pravopisu. Musí se ovšem
+// zjistit obì možnosti typu [statyv] nebo [stái se]
+
+  if (pocetrekurzi >= g_nastaveni.debug_pravopisnarekurze) {
+                                         //pocet rekurzi za limitem
+    pozice=celkem; pointer=slovo+celkem; goto ZA_KONTROLAMI;
+   }
+
+  for (pointer=slovo+pozice; pozice < celkem; pozice++,pointer=slovo+pozice) {
+  
+    if ((pointer[0] == 'ï' || pointer[0] == '' || pointer[0] == 'ò')
+     && pointer[1] == 'i') {      //'di'=>'Di', 'ti'=>'Ti', 'ni'=>'Ni'
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+2);
+      strcpy(utvoreneslovo,slovo);
+      switch(slovo[pozice]) {
+        case 'ï': utvoreneslovo[pozice]='D'; break;
+        case '': utvoreneslovo[pozice]='T'; break;
+        case 'ò': utvoreneslovo[pozice]='N'; break;
+       }
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+2,atributy,pocetrekurzi+1);
+
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (g_nastaveni.debug_tolerancepravopisu == 0) continue;
+        //Pokud se nekontroluje pravopis, uz se nepokracuje v podminkach
+
+    if (pointer[0] == 'i') {                       // 'i' => 'y'
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+                                             //prvni hledani neupraveneho slova
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      if (pozice > 0) {               //pokud 'i' neni prvni pismeno ve slovu
+        switch(pointer[-1]) {
+          case 'ï': utvoreneslovo[pozice]='d'; break;
+          case '': utvoreneslovo[pozice]='t'; break;
+          case 'ò': utvoreneslovo[pozice]='n'; break;
+         }
+       }
+      pointer[0]='y';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+                                             //druhe hledani upraveneho slova
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'y') {                       // 'y' => 'i'
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      if (pozice > 0) {               //pokud 'y' neni prvni pismeno ve slovu
+        if (pointer[-1] == 'd') pointer[-1]='D';
+        else if (pointer[-1] == 't') pointer[-1]='T';
+        else if (pointer[-1] == 'n') pointer[-1]='N';
+       }
+      pointer[0]='i';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'í') {                       // 'í' => 'ý'
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      if (pozice > 0) {            //pokud 'í' neni prvni pismeno ve slovu
+        if (pointer[-1] == 'ï') pointer[-1]='d';
+        else if (pointer[-1] == '') pointer[-1]='t';
+        else if (pointer[-1] == 'ò') goto UVOLNIPAMET1;  //po "n" by snad nikdo mekke dlouhe i nenapsal
+       }
+      pointer[0]='ý';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNIPAMET1:
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'ý') {                       // 'ý' => 'í'
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      if (pozice > 0) {               //pokud 'ý' neni prvni pismeno ve slovu
+        if (pointer[-1] == 'd') pointer[-1]='D';
+        else if (pointer[-1] == 't') pointer[-1]='T';
+        else if (pointer[-1] == 'n') pointer[-1]='N';
+       }
+      pointer[0]='í';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if ((pointer[0] == 'B' || pointer[0] == 'F' || pointer[0] == 'M' || pointer[0] == 'V')
+     && pointer[1] == 'e') {  //'bì'=>'bje','fì'=>'fje','vì'=>'vje','mì'=>'mnì'
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+2,atributy,pocetrekurzi+1);
+
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+2);
+      strncpy(utvoreneslovo,slovo,pozice);
+      utvoreneslovo[pozice]=slovo[pozice]+32;
+      strcpy(utvoreneslovo+pozice+1,pointer[0] == 'M' ? "òe" : "je");
+      strcpy(utvoreneslovo+pozice+3,slovo+pozice+2);
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+3,atributy,pocetrekurzi+1);
+
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (((pointer[0] == 'b' || pointer[0] == 'f' || pointer[0] == 'p' || pointer[0] == 'v')
+      && pointer[1] == 'j' && pointer[2] == 'e')
+      || (pointer[0] == 'm' && pointer[1] == 'ò' && pointer[2] == 'e')) {
+                //'bje'=>'bì','fje'=>'fì','pje'=>'pì','vje'=>'vì','mnì'=>'mì'
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+3,atributy,pocetrekurzi+1);
+
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem);
+      strncpy(utvoreneslovo,slovo,pozice);
+      utvoreneslovo[pozice]=slovo[pozice]-32; utvoreneslovo[pozice+1]='e';
+      strcpy(utvoreneslovo+pozice+2,pointer+3);
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+                                             //druhe hledani upraveneho slova
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'b'                         // 'b' => 'p'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='p';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'p'                         // 'p' => 'b'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='b';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'd'                         // 'd' => 't'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='t';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 't'                         // 't' => 'd'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='d';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'ï'                         // 'ï' => ''
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == ''                         // '' => 'ï'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='ï';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'f'                         // 'f' => 'v'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='v';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'v'                         // 'v' => 'f'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='f';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'g'                         // 'g' => 'k'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='k';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'k'                         // 'k' => 'g'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && (JELI_ZNELA_SOUHLASKA(pointer[1]) == 0 || pointer[1] == 'd')) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='g';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'h'                         // 'h' => 'ch'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && (JELI_ZNELA_SOUHLASKA(pointer[1]) == 0 || pointer[1] == 'd')) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='*';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == '*'                         // 'ch' => 'h'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='h';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 's'                         // 's' => 'z'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='z';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'z'                         // 'z' => 's'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='s';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'š'                         // 'š' => 'ž'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='ž';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'ž'                         // 'ž' => 'š'
+     && JELI_SAMOHLASKA(pointer[1]) == 0 && JELI_ZNELA_SOUHLASKA(pointer[1]) == 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='š';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'ú'                         // 'ú' => 'ù'
+     && pozice > 0) {                 //pokud to neni na zacatku slova
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='ù';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'ù') {                      // 'ú' => 'ù'
+      if (pozice > 0) {                 //pokud to neni na zacatku slova
+        VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+       }                                //...jinak je zmena vzdycky
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+      strcpy(utvoreneslovo,slovo); pointer=utvoreneslovo+pozice;
+      pointer[0]='ú';
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+1,atributy,pocetrekurzi+1);
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'š'                         // 'š' => 'zš', 'š' => 'šš'
+     && JELI_SAMOHLASKA(pointer[1]) == 1 && pozice > 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+2);
+      strncpy(utvoreneslovo,slovo,pozice);
+      utvoreneslovo[pozice]='z';                     //napø. snazší
+      strcpy(utvoreneslovo+pozice+1,slovo+pozice);
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+2,atributy,pocetrekurzi+1);
+
+      utvoreneslovo[pozice]='š';                     //napø. jednodušší
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+2,atributy,pocetrekurzi+1);
+
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'n'                         // 'n' => 'nn'
+     && JELI_SAMOHLASKA(pointer[1]) == 1 && pozice > 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+2);
+      strncpy(utvoreneslovo,slovo,pozice);
+      utvoreneslovo[pozice]='n';
+      strcpy(utvoreneslovo+pozice+1,slovo+pozice);
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+2,atributy,pocetrekurzi+1);
+
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'ò'                         // 'ò' => 'nò'
+     && JELI_SAMOHLASKA(pointer[1]) == 1 && pozice > 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem+2);
+      strncpy(utvoreneslovo,slovo,pozice);
+      utvoreneslovo[pozice]='n';
+      strcpy(utvoreneslovo+pozice+1,slovo+pozice);
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+2,atributy,pocetrekurzi+1);
+
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'n' && pointer[1] == 'n'           // 'nn' => 'n'
+     && JELI_SAMOHLASKA(pointer[2]) == 1) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem);
+      strncpy(utvoreneslovo,slovo,pozice);
+      strcpy(utvoreneslovo+pozice,slovo+pozice+1);
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+2,atributy,pocetrekurzi+1);
+
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+
+    if (pointer[0] == 'n' && pointer[1] == 'ò'           // 'nò' => 'ò'
+     && JELI_SAMOHLASKA(pointer[2]) == 1 && pozice > 0) {
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(slovo,pozice+1,atributy,pocetrekurzi+1);
+
+      utvoreneslovo=ALOKUJ_RETEZEC(celkem);
+      strncpy(utvoreneslovo,slovo,pozice);
+      strcpy(utvoreneslovo+pozice,slovo+pozice+1);
+      VRAT_INFORMACE_O_SLOVU_S_TOLERANCI_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,pozice+2,atributy,pocetrekurzi+1);
+
+      UVOLNI(utvoreneslovo);
+      return;
+     }
+                         //zadna mozna zmena, jde se na dalsi pismeno
+   }
+
+  ZA_KONTROLAMI:
+
+  if (pointer[-2] == 'a' && pointer[-1] == 't') {
+//pokud slovo konèí na "at", mùže to být i "át" (napø. nabrat - brát)
+    VRAT_INFORMACE_O_SLOVU_Z_UPLNEHO_SLOVNIKU(slovo,atributy);
+     
+    utvoreneslovo=ALOKUJ_RETEZEC(celkem+1);
+    strcpy(utvoreneslovo,slovo);
+    utvoreneslovo[celkem-2]='á';
+    VRAT_INFORMACE_O_SLOVU_Z_UPLNEHO_SLOVNIKU(utvoreneslovo,atributy+8);
+    UVOLNI(utvoreneslovo);
+   }
+  else         //ve všech ostatních pøípadech
+   VRAT_INFORMACE_O_SLOVU_Z_UPLNEHO_SLOVNIKU(slovo,atributy);
+                            //nic jiz nenalezeno, vyhleda se slovo ve slovniku
+
+  return;
+ }
+
+void PROCISTI_SLOVA_PODLE_ATRIBUTU(char *informace,BYTE atributy) {
+     //Tuto funkci je nutno spouštìt, i když jsou atributy 0.
+     //To taky nìco znamená! (vypuštìní slov závislých na pøíponì)
+  //"Atributy":   bity: 0 0 0 0 ? ? ? ?
+  //                            | | | |- superlativ "nej"
+  //                            | | |--- zaporka "ne"
+  //                            | |----- jina predpona (vy, za, pred atd.)
+  //                            |------- "..at" -> "..át" (pouze vzory bere, dìlá)
+
+WORD pozice1,pozice2,pozice3,celkem;
+
+  if ((atributy&1) == 1) {                //superlativ "nej"
+            //muzou mit pouze pridavna jmena 2. stupne jakehokoli puvodu
+    celkem=strlen(informace);
+    for (pozice1=0,pozice2=0; pozice1 < celkem; pozice1++) {
+      if (VRAT_SLOVNI_DRUH(informace[pozice1+2]) == 2) {
+                  //pozice1+2(3) bajty  =  2 bajty (cislo slova) + 1 bajt (vzor)
+        for (pozice3=pozice1+3; informace[pozice3] != ',' && pozice3 < celkem; pozice3++) {
+          if (strncmp(informace+pozice3,"4>",2) == 0) goto DALNEJ;   //odpovida
+         }
+        pozice1=pozice3;                                   //neodpovida
+        for ( ; informace[pozice3] != '>' && pozice3 < celkem; pozice3++);
+                                                       //dojetí na konec
+        continue;
+         
+        DALNEJ:
+        informace[pozice2++]=informace[pozice1++];
+        informace[pozice2++]=informace[pozice1++];   //zkopirovani prvnich 3 bajtu
+        informace[pozice2++]=informace[pozice1++];
+        for (; informace[pozice1] != ',' && pozice1 < celkem; pozice1++,pozice2++)
+         informace[pozice2]=informace[pozice1];
+        informace[pozice2++]=informace[pozice1];
+       }                                            //zkopiruji slovo
+      else {
+        for (pozice1+=3; informace[pozice1] != ',' && pozice1 < celkem; pozice1++);
+       }                                            //dojedu na konec slova
+     }
+	if (pozice2 > 0) pozice2--;        //pokud nejsi na zacatku, smaz carku na konci
+    informace[pozice2]=0;
+   }
+
+  if ((atributy&2) == 2) {                //zaporka "ne"
+            //muzou mit pouze slovesa, pridavna jmena, popr. jejich odvozeniny
+    celkem=strlen(informace);
+    for (pozice1=0,pozice2=0; pozice1 < celkem; pozice1++) {
+      if (informace[pozice1+3] == '5' || informace[pozice1+3] == '2' || VRAT_SLOVNI_DRUH(informace[pozice1+2]) == 12 /* byt */) {
+                  //pozice1+3 bajty  =  2 bajty (cislo slova) + 1 bajt (vzor)
+        informace[pozice2++]=informace[pozice1++];
+        informace[pozice2++]=informace[pozice1++];   //zkopirovani prvnich 3 bajtu
+        informace[pozice2++]=informace[pozice1++];
+        for (; informace[pozice1] != ',' && pozice1 < celkem; pozice1++,pozice2++)
+         informace[pozice2]=informace[pozice1];
+        informace[pozice2++]=informace[pozice1];
+       }                                            //zkopiruji slovo
+      else {
+        for (pozice1+=3; informace[pozice1] != ',' && pozice1 < celkem; pozice1++);
+       }                                            //dojedu na konec slova
+     }
+	if (pozice2 > 0) pozice2--;        //pokud nejsi na zacatku, smaz carku na konci
+    informace[pozice2]=0;
+   }
+
+  if ((atributy&4) == 4) {                //predpona
+                           //muzou mit pouze slovesa v jakemkoli tvaru
+    celkem=strlen(informace);
+    for (pozice1=0,pozice2=0; pozice1 < celkem; pozice1++) {
+      if (informace[pozice1+3] == '5') {
+                  //pozice1+3 bajty  =  2 bajty (cislo slova) + 1 bajt (vzor)
+        informace[pozice2++]=informace[pozice1++];
+        informace[pozice2++]=informace[pozice1++];   //zkopirovani prvnich 3 bajtu
+        informace[pozice2++]=informace[pozice1++];
+        for (; informace[pozice1] != ',' && pozice1 < celkem; pozice1++,pozice2++)
+         informace[pozice2]=informace[pozice1];
+        informace[pozice2++]=informace[pozice1];
+       }                                            //zkopiruji slovo
+      else {
+        for (pozice1+=3; informace[pozice1] != ',' && pozice1 < celkem; pozice1++);
+       }                                            //dojedu na konec slova
+     }
+    if (pozice2 > 0) pozice2--;   //pokud nejsi na zacatku, smaz carku na konci
+    informace[pozice2]=0;
+   }
+  else {//pokud slovo predponu nema, vynechaji se vsechna slova na predpone zavisla
+    celkem=strlen(informace);
+    for (pozice1=0,pozice2=0; pozice1 < celkem; pozice1++) {
+      if (informace[pozice1+3] != '5' || informace[pozice1+4] != 'E') {
+                  //pozice1+3 bajty  =  2 bajty (cislo slova) + 1 bajt (vzor)
+        for (; informace[pozice1] != ',' && pozice1 < celkem; pozice1++,pozice2++)
+         informace[pozice2]=informace[pozice1];
+        informace[pozice2++]=informace[pozice1];
+       }                                            //zkopiruji slovo
+      else {
+        for (; informace[pozice1] != ',' && pozice1 < celkem; pozice1++);
+       }                                      //dojedu na konec slova
+     }
+    if (pozice2 > 0) pozice2--;        //pokud nejsi na zacatku, smaz carku na konci
+    informace[pozice2]=0;
+   }
+  
+  if ((atributy&8) == 8) {        //vytøídìní po zmìnì "-at" na "-át"
+  //muzou mit pouze slovesa vzoru bere a dìlá (napø. sebrat - brát)
+                //a musí mít slabikotvornou pøedponu
+    celkem=strlen(informace);
+    for (pozice1=0,pozice2=0; pozice1 < celkem; pozice1++) {
+      if (informace[pozice1+2] == _bere_ || informace[pozice1+2] == _dela_) {
+                  //pozice1+2(3) bajty  =  2 bajty (cislo slova) + 1 bajt (vzor)
+        informace[pozice2++]=informace[pozice1++];
+        informace[pozice2++]=informace[pozice1++];   //zkopirovani prvnich 3 bajtu
+        informace[pozice2++]=informace[pozice1++];
+        for (; informace[pozice1] != ',' && pozice1 < celkem; pozice1++,pozice2++)
+         informace[pozice2]=informace[pozice1];
+        informace[pozice2++]=informace[pozice1];
+       }                                            //zkopiruji slovo
+      else {
+        for (pozice1+=3; informace[pozice1] != ',' && pozice1 < celkem; pozice1++);
+       }                                            //dojedu na konec slova
+     }
+	if (pozice2 > 0) pozice2--;        //pokud nejsi na zacatku, smaz carku na konci
+    informace[pozice2]=0;
+   }
+
+
+ }
+
+void VYMAZ_FRONTU_UPLNEHO_SLOVNIKU(void) {
+  g_nalezeneinformaceoslove[0]=0;
+ }
+
+void POROZUMEJ_VETE_NAPSANE_CLOVEKEM(char *veta) {
+char *slovo=NULL,pismena,znak;
+WORD pocetslov,poziceslova,pozicecislo,pozice1,pozice2,celkem=strlen(veta),*cislaslov=NULL;
+Typ_slova novevyznamy;
+
+  g_vetacloveka.VYNULUJ_HODNOTY();
+
+  for (pozice1=0,pocetslov=0,pismena=0; pozice1 < celkem; pozice1++) {
+    znak=veta[pozice1];
+    if (JELI_PISMENO(znak) == 1 && pismena == 0) {
+      pocetslov++; pismena=1;
+     }
+    else if (JELI_PISMENO(znak) == 0 && pismena == 1) {
+      pismena=0;
+     }
+    if (znak == '?') g_vetacloveka.typ_vety=_veta_tazaci_;
+    if (znak == '!') g_vetacloveka.typ_vety=_veta_rozkazovaci_;
+   }                                     //spocitani poctu slov
+
+  if (pocetslov > MAX_POCET_SLOV_CLOVEKA) pocetslov=MAX_POCET_SLOV_CLOVEKA;
+
+  slovo=ALOKUJ_RETEZEC(strlen(veta)+1);
+
+  for (pozice1=0,poziceslova=0; poziceslova < pocetslov; poziceslova++) {
+    for (pozice2=0,pismena=0; ; pozice1++) {
+      znak=veta[pozice1];
+      if (JELI_PISMENO(znak) == 0) {
+        if (pismena == 1) { slovo[pozice2]=0; break; }
+       }
+      else {
+        slovo[pozice2]=znak; pozice2++; pismena=1;
+        if (znak == 0) break;
+       }
+     }
+    if (strlen(slovo) >= DELKA_JEDNODUCHEHO_SLOVA) slovo[DELKA_JEDNODUCHEHO_SLOVA-1]=0;
+
+    VYMAZ_FRONTU_UPLNEHO_SLOVNIKU();
+
+    novevyznamy=KOMPLETNE_VRAT_INFORMACE_O_SLOVU_Z_UPLNEHO_SLOVNIKU(slovo,0);
+
+    if (novevyznamy.pocetslov == 0) {
+//      ZAPIS_INFORMACI_O_NEZNAMEM_SLOVE(slovo);
+     }
+
+    g_vetacloveka.slova[poziceslova].PRIPOJ(novevyznamy);
+    g_vetacloveka.pocetslov=poziceslova+1;
+    sprintf(g_vetacloveka.slova[poziceslova].vlastnislovo,slovo);
+    novevyznamy.VYMAZ_OBSAH();
+   }                            //zkopirovani vyznamu slov do "g_vetacloveka.slova"
+
+  UVOLNI(slovo);
+
+  cislaslov=(WORD *)ALOKUJ_PAMET(DELKA_INFORMACI*sizeof(WORD));
+  for (poziceslova=0; poziceslova < pocetslov; poziceslova++) {
+    for (pozicecislo=0; pozicecislo < g_vetacloveka.slova[poziceslova].pocetslov; pozicecislo++) {
+      cislaslov[pozicecislo]=g_vetacloveka.slova[poziceslova].id_slova[pozicecislo];
+     }                                     //zjisteni vsech cisel slov
+
+    for (pozice1=0; pozice1 < pozicecislo; pozice1++) {
+      if (cislaslov[pozice1] == 0xFFFF) continue;          //zde uz bylo cislo vyhozeno
+      for (pozice2=pozice1+1; pozice2 < pozicecislo; pozice2++) {
+        if (cislaslov[pozice2] == cislaslov[pozice1]) cislaslov[pozice2]=0xFFFF;
+       }
+     }                                 //vsechna cisla slov at jsou jen jednou
+
+    for (pozice1=0,pozice2=0; pozice1 < pozicecislo; pozice1++) {
+      if (cislaslov[pozice1] != 0xFFFF) {
+        cislaslov[pozice2]=cislaslov[pozice1]; pozice2++;
+       }
+     }                           //seskupeni cisel dohromady
+    pozicecislo=pozice2;
+
+    for (pozice1=0; pozice1 < pozicecislo; pozice1++) {
+      if (cislaslov[pozice1] == 0) NAPIS_TEXT_V_LATIN_2("Speciální_slovo ");
+      else {
+        VRAT_SLOVO_ZE_ZAKLADNIHO_SLOVNIKU(cislaslov[pozice1]);
+        ODUPRAV_SLOVO_PRO_IQPOKYD(g_slovozaklad);
+        NAPIS_TEXT_V_LATIN_2(g_slovozaklad); printf(" ");
+       }
+     }
+   }
+  UVOLNI(cislaslov);
+ }
+
+void ZPRACUJ_VETU(void) {
+
+  ROZEBER_NEINTELIGENTNE_VETU();
+
+  ODPOVEZ_PODLE_IQ_PODMINEK();
+
+/*  if (g_vetacloveka.podmet.pocetslov != 0) {
+    NAPIS_TEXT_V_LATIN_2("   Podmìt: ");
+    SKLONUJ_JAKEKOLI_SLOVO(g_vetacloveka.podmet,0);
+    OREZ_FRONTU_NA_1_SLOVO(1);
+    ODUPRAV_SLOVO_PRO_IQPOKYD(g_slovavefronte);
+    NAPIS_TEXT_V_LATIN_2(g_slovavefronte); printf(" ");
+   }
+
+  if (g_vetacloveka.prisudek.pocetslov != 0) {
+    NAPIS_TEXT_V_LATIN_2("   Pøísudek: ");
+    SKLONUJ_JAKEKOLI_SLOVO(g_vetacloveka.prisudek,0);
+    OREZ_FRONTU_NA_1_SLOVO(1);
+    ODUPRAV_SLOVO_PRO_IQPOKYD(g_slovavefronte);
+    if (g_pomocnesloveso[0] != 0) { ODUPRAV_SLOVO_PRO_IQPOKYD(g_pomocnesloveso); NAPIS_TEXT_V_LATIN_2(g_pomocnesloveso); printf(" "); }
+    NAPIS_TEXT_V_LATIN_2(g_slovavefronte); printf(" ");
+   }
+
+  if (g_vetacloveka.predmet.pocetslov != 0) {
+    NAPIS_TEXT_V_LATIN_2("   Pøedmìt: ");
+    SKLONUJ_JAKEKOLI_SLOVO(g_vetacloveka.predmet,0);
+    OREZ_FRONTU_NA_1_SLOVO(1);
+    ODUPRAV_SLOVO_PRO_IQPOKYD(g_slovavefronte);
+    NAPIS_TEXT_V_LATIN_2(g_slovavefronte); printf(" ");
+   }
+
+  printf("\r\n");
+
+  if (g_vetacloveka.podmet.pocetslov != 0) {
+    SKLONUJ_JAKEKOLI_SLOVO(g_vetacloveka.podmet,0);
+    OREZ_FRONTU_NA_1_SLOVO(1);
+    ODUPRAV_SLOVO_PRO_IQPOKYD(g_slovavefronte);
+    NAPIS_TEXT_V_LATIN_2(g_slovavefronte); printf(" ");
+   }
+
+  if (g_vetacloveka.prisudek.pocetslov != 0) {
+    SKLONUJ_JAKEKOLI_SLOVO(g_vetacloveka.prisudek,0);
+    OREZ_FRONTU_NA_1_SLOVO(1);
+    if (g_pomocnesloveso[0] != 0) { ODUPRAV_SLOVO_PRO_IQPOKYD(g_pomocnesloveso); NAPIS_TEXT_V_LATIN_2(g_pomocnesloveso); printf(" "); }
+    ODUPRAV_SLOVO_PRO_IQPOKYD(g_slovavefronte);
+    NAPIS_TEXT_V_LATIN_2(g_slovavefronte); printf(" ");
+   }
+
+  if (g_vetacloveka.predmet.pocetslov != 0) {
+    SKLONUJ_JAKEKOLI_SLOVO(g_vetacloveka.predmet,0);
+    OREZ_FRONTU_NA_1_SLOVO(1);
+    ODUPRAV_SLOVO_PRO_IQPOKYD(g_slovavefronte);
+    NAPIS_TEXT_V_LATIN_2(g_slovavefronte); printf(" ");
+   }
+*/
+//  POUZIJ_INTELIGENCI_IQPOKYDU();
+
+//  POUZIJ_PRIMITIVNI_INTELIGENCI();
+
+  if (g_vetacloveka.podmet.pocetslov > 0) strcpy(debug_poslednipodmetcloveka,g_vetacloveka.podmet.vlastnislovo);
+  else strcpy(debug_poslednipodmetcloveka,"-");
+  if (g_vetacloveka.prisudek.pocetslov > 0) strcpy(debug_posledniprisudekcloveka,g_vetacloveka.prisudek.vlastnislovo);
+  else strcpy(debug_posledniprisudekcloveka,"-");
+  if (g_vetacloveka.predmet.pocetslov > 0) strcpy(debug_poslednipredmetcloveka,g_vetacloveka.predmet.vlastnislovo);
+  else strcpy(debug_poslednipredmetcloveka,"-");
+
+  VYNULUJ_VSECHNY_PRVKY_G_VETACLOVEKA();
+ }
+
+WORD DOPLN_DO_TYP_SLOVA_ATRIBUTY_DANE_RETEZCEM(Typ_slova trida,WORD poziceslova,char *atributy) {
+ //"trida" musi byt jiz vytvoreny Typ_slova, atributy jsou atributy v retezci
+  //atributy uz musi obsahovat jen samotne atributy bez binarnich informaci
+  //(tedy bez vzoru, cisla slova, predpony atd.), ale vcetne vnoreni
+ //"atributy" muzou koncit znaky '\x0', ',' nebo '}'.
+
+//Funkce vraci pocet prectenych znaku (pro snadne pokracovani v textu)
+
+WORD pozice1,pozice2;
+
+  pozice1=0;
+  if (atributy[pozice1] == '(') {   //na zacatku je textovy "id_cisla"
+    pozice1++;   //posun za znak '('
+    for (trida.id_slova[poziceslova]=0; atributy[pozice1] != ')'; pozice1++) {
+      trida.id_slova[poziceslova]*=10;
+      trida.id_slova[poziceslova]+=atributy[pozice1]-'0';
+     }
+    pozice1++;   //posun za znak ')'
+
+    VRAT_SLOVO_ZE_ZAKLADNIHO_SLOVNIKU(trida.id_slova[poziceslova]);
+    trida.UPRAV_VZOR(g_informaceoslove[0],poziceslova);   //vzor
+   }
+  for (pozice2=0; atributy[pozice1] != '>'; pozice1++,pozice2++) {  //vnoreni
+    if (atributy[pozice1] == '?') {
+      if (atributy[pozice1+1] != '>') {
+        NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Otaznik muze byt ve vnoreni pouze na konci!")
+       }
+      if (pozice1 == 0) { //pokud je zde otaznik sam, necha se tam
+                          //to, co zde bylo. Pokud je az za nejakym
+                          //cislem, je to v podmince a napise se
+                          //i s otaznikem
+        if (trida.vnoreni[poziceslova][0] == 0) {
+          strcpy(trida.vnoreni[poziceslova],"?");  //jedna se o relativni atribut pro porovnavani
+          trida.tvar[poziceslova]=255;       //take tvar je v tomto pripade libovolny
+         }
+        pozice1++; goto DAL;     //ve vnoreni se necha to, co tam uz bylo
+       }
+     }
+    trida.vnoreni[poziceslova][pozice2]=atributy[pozice1];
+   }
+  trida.vnoreni[poziceslova][pozice2]=0;
+DAL:
+  pozice1++;                      //preskoceni znaku '>' (konec vnoreni)
+
+                         //doplneni slovniho druhu podle vnoreni
+  switch(trida.vnoreni[poziceslova][0]) {
+    case 'C': trida.slovnidruh[poziceslova]=12; break;   //zajmeno "byt"
+    case '0': trida.slovnidruh[poziceslova]=10; break;   //citoslovce
+    default: if (trida.vnoreni[poziceslova][0] >= '1' && trida.vnoreni[poziceslova][0] <= '9')
+              trida.slovnidruh[poziceslova]=trida.vnoreni[poziceslova][0]-'0';
+                                             //slovni druhy 0-9
+             else if (trida.vnoreni[poziceslova][0] == '?');
+                      //nespecifikovany slovni druh
+             else NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+             break;
+   }
+
+  //pokud je to zajmeno, urci se vzor z vnoreni (a vnoreni ma dokonce prednost)
+  if (trida.vnoreni[poziceslova][0] == '3') {
+    if (trida.vnoreni[poziceslova][1] >= '1' && trida.vnoreni[poziceslova][1] <= '7')
+     trida.vzor[poziceslova]=trida.vnoreni[poziceslova][1]-'0'-1+_osobni_;
+    else NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  for (; atributy[pozice1] != ',' && atributy[pozice1] != '}' && atributy[pozice1] != 0; pozice1++) {
+    switch(atributy[pozice1]) {
+      case '1': case '2': case '3': case '4': case '5': case '6': case '7':  //pad
+        trida.pad[poziceslova]=atributy[pozice1]-'0'; break;
+      case 'n': case 'o': case 'p': case 'q':                       //osoba
+        trida.osoba[poziceslova]=atributy[pozice1]-'n'; break;
+      case 'y': trida.cislo[poziceslova]=1; break;             //cislo
+      case 'Y': trida.cislo[poziceslova]=2; break;
+      case 'i': case 'j': case 'k': case 'l': case 'm':             //cas
+        trida.cas[poziceslova]=atributy[pozice1]-'i'+1; break;
+      case 'r': case 's': case 't':                                 //rod
+        trida.rod[poziceslova]=atributy[pozice1]-'r'+1; break;
+      case 'z': trida.zivotnost[poziceslova]=0; break;         //zivotnost
+      case 'Z': trida.zivotnost[poziceslova]=1; break;
+      case 'x': trida.cislopredmetu[poziceslova]=1; break;     //cislopredmetu
+      case 'X': trida.cislopredmetu[poziceslova]=2; break;
+      case 'a': case 'b': case 'c':                                 //rodpredmetu
+        trida.rodpredmetu[poziceslova]=atributy[pozice1]-'a'+1; break;
+      case 'd': case 'e': case 'f':                             //vid
+        trida.vid[poziceslova]=atributy[pozice1]-'d'; break;
+      case 'V': trida.vid[poziceslova]=1; break;
+      case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G': case 'H': case 'I': case 'J': case 'K': //tvar
+        trida.tvar[poziceslova]=atributy[pozice1]-'A'; break;
+      case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R': case 'S': case 'T': //pridavek
+        trida.pridavek[poziceslova]=atributy[pozice1]-'M'; break;
+      case 'w': trida.zapor[poziceslova]=0; break;         //zapor
+      case 'W': trida.zapor[poziceslova]=1; break;
+      default:
+        NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_); // printf("Chyba!!! Spatny znak v retezci atributy o slove.");
+     }
+   }
+  return(pozice1);
+ }
+
+void VYMAZ_NEPODSTATNE_ATRIBUTY_PRO_PREVOD_SLOVA(Typ_slova atributy,Typ_slova zcehovzniklo,WORD pozicevpuvodnim) {
+//Pokud chceme pøevést 1 slovo na jiné a "zdìdit" jeho vlastnosti,
+//mùžou být nìkteré atributy nechtìné (napø. "tvar" pøi pøevodu
+//pøídavného jména na zájmeno).
+//Tato funkce se volá PO KONVERZI, ale PRED UMELYMI UPRAVAMI
+//Parametr "zcehovzniklo" je zde proto, aby funkce vìdìla, co všechno
+//je nežádoucí.
+  if (atributy.slovnidruh[0] != zcehovzniklo.slovnidruh[pozicevpuvodnim]) {
+    atributy.tvar[0]=0;       //tvar je standardne 0
+    atributy.pridavek[0]=255;
+   }
+
+  if (atributy.osoba[0] == 1) atributy.osoba[0]=2;
+  else if (atributy.osoba[0] == 2) atributy.osoba[0]=1;
+   //1. osoba se pøevede na 2. a naopak
+   //Je to proto, že když øeknu "nemám nic", poèítaè odpoví "nemáš nic"
+   //Pokud je osoba pevnì definována, pøepíše se znova ve funkci
+   //DOPLN_DO_TYP_SLOVA_ATRIBUTY_DANE_RETEZCEM volané hned za touto funkcí
+ }
+
+Typ_slova PREVED_NA_TRIDU_TYP_SLOVA(char *informace,BYTE dalsiatributy,char *predpona,BYTE binarniinformace) {
+   //tato funkce prevede retezec obsahujici informace o slove, ktery je napsany
+   //v uplne databazi slov, na strukturovanou tridu typu "Typ_slova".
+   //"dalsiatributy" urcuji dalsi atributy, ktere se pridaji ke vsem slovum
+   //a jsou uvedeny ve funkci KOMPLETNE_VRAT_INFORMACE_O_SLOVU_Z_UPLNEHO_SLOVNIKU.
+   //"binarniinformace" muze byt 1 nebo 0. Pokud je 1, "informace"
+   //obsahuji i cislo slova a vzor
+   //POKUD NEJSOU BINARNI INFORMACE, MUZE BYT POUZE 1 SLOVO
+Typ_slova nova_trida;
+WORD pocetslov,poziceslova;
+BYTE slovnidruh;
+int pozice;
+
+  if (informace[0] == 0) {
+    nova_trida.VYTVOR_NOVY(0);          //aby se vytvorila alespon kostra tridy
+    return(nova_trida);
+   }
+
+  if (binarniinformace == 1) {
+    for (pozice=3,pocetslov=1; informace[pozice] != 0; pozice++) {
+      if (informace[pozice] == ',') {
+        pocetslov++; pozice+=3;          //preskoc cislo slova a vzor
+       }
+     }                                                 //spocitani poctu slov
+   }
+  else pocetslov=1;
+  nova_trida.VYTVOR_NOVY(pocetslov);
+
+  for (poziceslova=0,pozice=0; poziceslova < pocetslov; poziceslova++,pozice++) {
+    nova_trida.NASTAV_POCATECNI_HODNOTY(poziceslova);
+
+    if (binarniinformace == 1) {
+      nova_trida.id_slova[poziceslova]=(WORD)((BYTE)(informace[pozice++]-1));
+      nova_trida.id_slova[poziceslova]*=255;
+      nova_trida.id_slova[poziceslova]+=(WORD)((BYTE)(informace[pozice++]-1));
+
+      slovnidruh=(BYTE)informace[pozice++];
+     }
+    else {
+      nova_trida.id_slova[poziceslova]=65535;
+      slovnidruh=255;
+     }
+
+    strcpy(nova_trida.predpona[poziceslova],predpona);
+
+    pozice+=DOPLN_DO_TYP_SLOVA_ATRIBUTY_DANE_RETEZCEM(nova_trida,poziceslova,informace+pozice);
+
+    nova_trida.UPRAV_VZOR(slovnidruh,poziceslova);
+
+    if (nova_trida.slovnidruh[poziceslova] == 1) {
+                   //u podstatnych jmen se doplni rod, ktery je zrejmy ze vzoru
+      switch(nova_trida.vzor[poziceslova]) {
+        case _pan_: case _hrad_: case _muz_: case _stroj_: case _predseda_: case _soudce_: case _rony_:
+          nova_trida.rod[poziceslova]=1; break;              //muzsky rod
+        case _zena_: case _ruze_: case _pisen_: case _kost_: case _idea_: case _madam_: case _kalhoty_: case _housle_:
+          nova_trida.rod[poziceslova]=2; break;              //zensky rod
+        case _mesto_: case _more_: case _kure_: case _staveni_: case _tema_: case _kupe_: case _data_:
+          nova_trida.rod[poziceslova]=3; break;              //stredni rod
+        default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+       }
+      switch(nova_trida.vzor[poziceslova]) {
+        case _pan_: case _muz_: nova_trida.zivotnost[poziceslova]=1; break; //zivotne
+        case _hrad_: case _stroj_: nova_trida.zivotnost[poziceslova]=0; break; //nezivotne
+       }
+      nova_trida.osoba[poziceslova]=3;     //podstatné jméno je vždy 3. osoby
+     }
+    if (nova_trida.slovnidruh[poziceslova] == 5
+     && nova_trida.rod[poziceslova] == 255) {
+      //u sloves se doplni rod podle puvodce deje (tedy u 1. osoby
+      // rod cloveka, u 2. osoby rod pocitace)
+      if (nova_trida.osoba[poziceslova] == 1) nova_trida.rod[poziceslova]=g_nastaveni.pohlavicloveka;
+      if (nova_trida.osoba[poziceslova] == 2) nova_trida.rod[poziceslova]=g_nastaveni.pohlavipocitace;
+     }
+    if (nova_trida.slovnidruh[poziceslova] == 6) {
+  //u prislovci se doplni tvar, ktery odpovida vzoru (kvuli snazsi identifikaci)
+      switch(nova_trida.vzor[poziceslova]) {
+        case _mista_kde_: nova_trida.tvar[poziceslova]=1; break;
+        case _mista_kam_: nova_trida.tvar[poziceslova]=2; break;
+        case _casu_: nova_trida.tvar[poziceslova]=3; break;
+        case _zpusobu_: nova_trida.tvar[poziceslova]=4; break;
+        case _otazky_: nova_trida.tvar[poziceslova]=5; break;
+        default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+       }
+     }      
+   }
+  return(nova_trida);
+ }
+
+char *PREVED_Z_TRIDY_TYP_SLOVA_NA_RETEZEC(Typ_slova slovo,WORD poziceslova) {
+   //tato funkce prevede slovo "Typ_slova" na retezec urcene "pozici"
+   //(vraci pointer, ktery alokuje)
+   //VRACI POUZE ATRIBUTOVE INFORMACE O SLOVE, V ZADNEM PRIPADE TO NENI OPAK
+   //K PREDCHOZI FUNKCI
+char *informace=NULL;
+int pozice;
+
+  informace=ALOKUJ_RETEZEC(MAX_DELKA_SLOVA);
+
+  if (poziceslova >= slovo.pocetslov) {
+    informace[0]=0; return(informace);         //vrat prazdny retezec
+   }
+
+  pozice=0;
+  if (slovo.pad[poziceslova] != 255) informace[pozice++]=slovo.pad[poziceslova]+'0';
+  if (slovo.osoba[poziceslova] != 255) informace[pozice++]=slovo.osoba[poziceslova]+'n';
+  if (slovo.cislo[poziceslova] != 255) informace[pozice++]='y'-(slovo.cislo[poziceslova]-1)*32;
+  if (slovo.cas[poziceslova] != 255) informace[pozice++]=slovo.cas[poziceslova]+'i'-1;
+  if (slovo.rod[poziceslova] != 255) informace[pozice++]=slovo.rod[poziceslova]+'r'-1;
+  if (slovo.zivotnost[poziceslova] != 255) informace[pozice++]='z'-slovo.zivotnost[poziceslova]*32;
+  if (slovo.cislopredmetu[poziceslova] != 255) informace[pozice++]='x'-(slovo.cislopredmetu[poziceslova]-1)*32;
+  if (slovo.rodpredmetu[poziceslova] != 255) informace[pozice++]=slovo.rodpredmetu[poziceslova]+'a'-1;
+  if (slovo.vid[poziceslova] != 255) informace[pozice++]='d'+slovo.vid[poziceslova];
+  if (slovo.tvar[poziceslova] != 0) informace[pozice++]=slovo.tvar[poziceslova]+'A';
+  if (slovo.pridavek[poziceslova] != 255) informace[pozice++]=slovo.pridavek[poziceslova]+'M';
+  informace[pozice]=0;
+
+  return(informace);
+ }
+
+void ALOKUJ_VSECHNY_PRVKY_G_VETACLOVEKA(void) {
+WORD poziceslova;
+  for (poziceslova=0; poziceslova < MAX_POCET_SLOV_CLOVEKA; poziceslova++) {
+    g_vetacloveka.slova[poziceslova].VYTVOR_NOVY(0);
+   }
+  g_vetacloveka.pocetslov=0;
+
+  g_vetacloveka.podmet.VYTVOR_NOVY(0);
+  g_vetacloveka.podmet.pocetslov=0;
+
+  g_vetacloveka.prisudek.VYTVOR_NOVY(0);
+  g_vetacloveka.prisudek.pocetslov=0;
+
+  g_vetacloveka.predmet.VYTVOR_NOVY(0);
+  g_vetacloveka.predmet.pocetslov=0;
+ }
+
+void VYNULUJ_VSECHNY_PRVKY_G_VETACLOVEKA(void) {
+WORD poziceslova;
+  for (poziceslova=0; poziceslova < g_vetacloveka.pocetslov; poziceslova++) {
+    g_vetacloveka.slova[poziceslova].VYNULUJ_POCET_SLOV();
+   }
+  g_vetacloveka.podmet.VYNULUJ_POCET_SLOV();
+  g_vetacloveka.prisudek.VYNULUJ_POCET_SLOV();
+  g_vetacloveka.predmet.VYNULUJ_POCET_SLOV();
+ }
+
+void PREVED_Z_LATIN_2_NA_WINDOWS_1250(char *slovo) {
+char znak;
+WORD pozice,celkem=strlen(slovo);
+  for (pozice=0; pozice < celkem; pozice++) {
+    znak=slovo[pozice];
+    if ((znak >= 'A' && znak <= 'Z') || (znak >= 'a' && znak <= 'z')) {}
+    else if (znak < 0) switch(znak) {
+      case ' ': znak='á'; break;
+      case 'µ': znak='Á'; break;
+      case '‚': znak='é'; break;
+      case '': znak='É'; break;
+      case 'Ø': znak='ì'; break;
+      case '·': znak='Ì'; break;
+      case '¡': znak='í'; break;
+      case 'Ö': znak='Í'; break;
+      case '¢': znak='ó'; break;
+      case 'à': znak='Ó'; break;
+      case '£': znak='ú'; break;
+      case 'é': znak='Ú'; break;
+      case '…': znak='ù'; break;
+      case 'Þ': znak='Ù'; break;
+      case 'ì': znak='ý'; break;
+      case 'í': znak='Ý'; break;
+      case '§': znak='ž'; break;
+      case '¦': znak='Ž'; break;
+      case 'ç': znak='š'; break;
+      case 'æ': znak='Š'; break;
+      case 'Ÿ': znak='è'; break;
+      case '¬': znak='È'; break;
+      case 'ý': znak='ø'; break;
+      case 'ü': znak='Ø'; break;
+      case 'Ô': znak='ï'; break;
+      case 'Ò': znak='Ï'; break;
+      case 'œ': znak=''; break;
+      case '›': znak=''; break;
+      case 'å': znak='ò'; break;
+      case 'Õ': znak='Ò'; break;
+     }
+    slovo[pozice]=znak;
+   }
+ }
+
+void PREVED_Z_WINDOWS_1250_NA_LATIN_2(char *slovo) {
+char znak;
+WORD pozice,celkem=strlen(slovo);
+  for (pozice=0; pozice < celkem; pozice++) {
+    znak=slovo[pozice];
+    if ((znak >= 'A' && znak <= 'Z') || (znak >= 'a' && znak <= 'z')) {}
+    else if (znak < 0) switch(znak) {
+      case 'á': znak=' '; break;
+      case 'Á': znak='µ'; break;
+      case 'é': znak='‚'; break;
+      case 'É': znak=''; break;
+      case 'ì': znak='Ø'; break;
+      case 'Ì': znak='·'; break;
+      case 'í': znak='¡'; break;
+      case 'Í': znak='Ö'; break;
+      case 'ó': znak='¢'; break;
+      case 'Ó': znak='à'; break;
+      case 'ú': znak='£'; break;
+      case 'Ú': znak='é'; break;
+      case 'ù': znak='…'; break;
+      case 'Ù': znak='Þ'; break;
+      case 'ý': znak='ì'; break;
+      case 'Ý': znak='í'; break;
+      case 'ž': znak='§'; break;
+      case 'Ž': znak='¦'; break;
+      case 'š': znak='ç'; break;
+      case 'Š': znak='æ'; break;
+      case 'è': znak='Ÿ'; break;
+      case 'È': znak='¬'; break;
+      case 'ø': znak='ý'; break;
+      case 'Ø': znak='ü'; break;
+      case 'ï': znak='Ô'; break;
+      case 'Ï': znak='Ò'; break;
+      case '': znak='œ'; break;
+      case '': znak='›'; break;
+      case 'ò': znak='å'; break;
+      case 'Ò': znak='Õ'; break;
+     }
+    slovo[pozice]=znak;
+   }
+ }
+
+void NAPIS_TEXT_V_LATIN_2(char *text) {
+char *novytext=NULL;
+  novytext=ALOKUJ_RETEZEC(strlen(text)+1);
+  strcpy(novytext,text);
+  PREVED_Z_WINDOWS_1250_NA_LATIN_2(novytext);
+  printf(novytext);
+  UVOLNI(novytext);
+ }
+
+void PRIDEJ_PRED_ZAKLADNI_TVAR_PREDPONU(char *predpona) {
+char *docasneslovo=NULL;
+  if (predpona[0] != 0) {             //pridani predpony pred slovo
+    if ((strlen(predpona)+strlen(g_slovozaklad)) >= (DELKA_JEDNODUCHEHO_SLOVA-1)) {
+      NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+     }
+    docasneslovo=ALOKUJ_RETEZEC(DELKA_JEDNODUCHEHO_SLOVA);
+    strcpy(docasneslovo,predpona);
+    strcat(docasneslovo,g_slovozaklad);
+    strcpy(g_slovozaklad,docasneslovo);
+    UVOLNI(docasneslovo);
+   }
+ }
+
+BYTE POROVNEJ_DVA_ATRIBUTY_Z_TYPU_SLOVA(BYTE atribut1,BYTE atribut2) {
+ //Porovná atributy s ohledem na to, že nìkterý nemusí být urèen (hodnota 255)
+ //vrací: 0 - atributy nejsou stejné
+ //       1 - atributy jsou stejné
+ //       2 - min. jeden z atributù není uveden, není vylouèena ani jedna možnost
+
+  if (atribut1 == 255 || atribut2 == 255) return(2);
+  else if (atribut1 == atribut2) return(1);
+  else return(0);
+ }
+
+BYTE POROVNEJ_DVA_ID_SLOVA_Z_TYPU_SLOVA(WORD atribut1,WORD atribut2) {
+ //Porovná atributy s ohledem na to, že nìkterý nemusí být urèen (hodnota 255)
+ //vrací: 0 - atributy nejsou stejné
+ //       1 - atributy jsou stejné
+ //       2 - min. jeden z atributù není uveden, není vylouèena ani jedna možnost
+
+  if (atribut1 == 65535 || atribut2 == 65535) return(2);
+  else if (atribut1 == atribut2) return(1);
+  else return(0);
+ }
+
+BYTE URCITE_POROVNEJ_DVA_ATRIBUTY_Z_TYPU_SLOVA(BYTE atribut1,BYTE atribut2) {
+ //Porovná atributy s ohledem na to, že DRUHÝ Z NICH nemusí být urèen (hodnota 255)
+ //vrací: 0 - atributy nejsou stejné
+ //       1 - atributy jsou stejné
+ //       2 - druhý atribut není uveden, není vylouèena ani jedna možnost
+
+  if (atribut2 == 255) return(2);
+  else if (atribut1 == atribut2) return(1);
+  else return(0);
+ }
+
+BYTE POROVNEJ_VNORENI_Z_TYPU_SLOVA(char *vnoreni1,char *vnoreni2) {
+ //Porovná dva atributy s vnoøením s ohledem na to, že nìkterý nebo
+ //jeho èást nemusí být urèena (znak "?")
+ //vrací: 0 - vnoøení nejsou stejná
+ //       1 - vnoøení jsou stejná
+ //       2 - vnoøení se shodují, nicménì nemusí být úplnì stejné (s "?")
+WORD pozice=0;
+  do {
+    if (vnoreni1[pozice] == '?' || vnoreni2[pozice] == '?') return(2);
+    if (vnoreni1[pozice] != vnoreni2[pozice]) return(0);
+   } while (vnoreni1[pozice] != 0 && vnoreni2[ pozice++ ] != 0);
+  return(1);
+ }
+
+
+BYTE POROVNEJ_MNOZINU_ATRIBUTU_Z_TYPU_SLOVA(WORD pocetslov2,BYTE atribut1A,BYTE *atributy1B) {
+  return(POROVNEJ_MNOZINU_ATRIBUTU_Z_TYPU_SLOVA(pocetslov2,atribut1A,atributy1B,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL));
+ }
+BYTE POROVNEJ_MNOZINU_ATRIBUTU_Z_TYPU_SLOVA(WORD pocetslov2,BYTE atribut1A,BYTE *atributy1B,BYTE atribut2A,BYTE *atributy2B) {
+  return(POROVNEJ_MNOZINU_ATRIBUTU_Z_TYPU_SLOVA(pocetslov2,atribut1A,atributy1B,atribut2A,atributy2B,NULL,NULL,NULL,NULL,NULL,NULL));
+ }
+BYTE POROVNEJ_MNOZINU_ATRIBUTU_Z_TYPU_SLOVA(WORD pocetslov2,BYTE atribut1A,BYTE *atributy1B,BYTE atribut2A,BYTE *atributy2B,BYTE atribut3A,BYTE *atributy3B) {
+  return(POROVNEJ_MNOZINU_ATRIBUTU_Z_TYPU_SLOVA(pocetslov2,atribut1A,atributy1B,atribut2A,atributy2B,atribut3A,atributy3B,NULL,NULL,NULL,NULL));
+ }
+BYTE POROVNEJ_MNOZINU_ATRIBUTU_Z_TYPU_SLOVA(WORD pocetslov2,BYTE atribut1A,BYTE *atributy1B,BYTE atribut2A,BYTE *atributy2B,BYTE atribut3A,BYTE *atributy3B,BYTE atribut4A,BYTE *atributy4B) {
+  return(POROVNEJ_MNOZINU_ATRIBUTU_Z_TYPU_SLOVA(pocetslov2,atribut1A,atributy1B,atribut2A,atributy2B,atribut3A,atributy3B,atribut4A,atributy4B,NULL,NULL));
+ }
+BYTE POROVNEJ_MNOZINU_ATRIBUTU_Z_TYPU_SLOVA(WORD pocetslov2,BYTE atribut1A,BYTE *atributy1B,BYTE atribut2A,BYTE *atributy2B,BYTE atribut3A,BYTE *atributy3B,BYTE atribut4A,BYTE *atributy4B,BYTE atribut5A,BYTE *atributy5B) {
+ //Porovná atributy jednoho významu s množinou atributù (jejich poèet je dán poètem
+ //parametrù) více významù (hledá tedy napø. shodu podmìtu
+ //s pøísudkem v jednom významu podmìtu) na zadané atributy
+
+ //Vrací: 0 - v množinì nejsou žádná shodná slova
+ //       1 - alespoò 1 slovo je shodné nebo je prázdná množina (a tudíž vyhovuje)
+
+char *shodnaslova=NULL;
+WORD pozice;
+BYTE navrat;
+
+  if (pocetslov2 == 0) return(1);         //pokud 1 z nic neexistuje, není
+                                          //dùvod, proè by tam ten druhý nemìl být
+
+  shodnaslova=ALOKUJ_RETEZEC(pocetslov2+1);
+
+  for (pozice=0; pozice < pocetslov2; pozice++)
+   shodnaslova[pozice]='*';        //nastavení shodných slov
+  shodnaslova[pozice]=0;    //aby to bylo hezké :-)
+
+  if (atribut1A == NULL) goto SPOCITEJ;
+  for (pozice=0; pozice < pocetslov2; pozice++) {
+    if (POROVNEJ_DVA_ATRIBUTY_Z_TYPU_SLOVA(atribut1A,atributy1B[pozice]) == 0)
+     shodnaslova[pozice]=' ';   //"vymazání" nevyhovujících slov
+   }
+
+  if (atribut2A == NULL) goto SPOCITEJ;
+  for (pozice=0; pozice < pocetslov2; pozice++) {
+    if (POROVNEJ_DVA_ATRIBUTY_Z_TYPU_SLOVA(atribut2A,atributy2B[pozice]) == 0)
+     shodnaslova[pozice]=' ';   //"vymazání" nevyhovujících slov
+   }
+
+  if (atribut3A == NULL) goto SPOCITEJ;
+  for (pozice=0; pozice < pocetslov2; pozice++) {
+    if (POROVNEJ_DVA_ATRIBUTY_Z_TYPU_SLOVA(atribut3A,atributy3B[pozice]) == 0)
+     shodnaslova[pozice]=' ';   //"vymazání" nevyhovujících slov
+   }
+
+  if (atribut4A == NULL) goto SPOCITEJ;
+  for (pozice=0; pozice < pocetslov2; pozice++) {
+    if (POROVNEJ_DVA_ATRIBUTY_Z_TYPU_SLOVA(atribut4A,atributy4B[pozice]) == 0)
+     shodnaslova[pozice]=' ';   //"vymazání" nevyhovujících slov
+   }
+
+  if (atribut5A == NULL) goto SPOCITEJ;
+  for (pozice=0; pozice < pocetslov2; pozice++) {
+    if (POROVNEJ_DVA_ATRIBUTY_Z_TYPU_SLOVA(atribut5A,atributy5B[pozice]) == 0)
+     shodnaslova[pozice]=' ';   //"vymazání" nevyhovujících slov
+   }
+
+  SPOCITEJ:
+  navrat=0;
+  for (pozice=0; pozice < pocetslov2; pozice++) {
+    if (shodnaslova[pozice] == '*') { navrat=1; break; }
+   }                                //spoèítání návratové hodnoty
+  UVOLNI(shodnaslova);
+  return(navrat);
+ }
+
+BYTE PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(Typ_slova slova1,WORD pocetslov1,WORD pocetslov2,BYTE *atributy1A,BYTE *atributy1B) {
+  return(PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(slova1,pocetslov1,pocetslov2,atributy1A,atributy1B,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL));
+ }
+BYTE PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(Typ_slova slova1,WORD pocetslov1,WORD pocetslov2,BYTE *atributy1A,BYTE *atributy1B,BYTE *atributy2A,BYTE *atributy2B) {
+  return(PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(slova1,pocetslov1,pocetslov2,atributy1A,atributy1B,atributy2A,atributy2B,NULL,NULL,NULL,NULL,NULL,NULL));
+ }
+BYTE PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(Typ_slova slova1,WORD pocetslov1,WORD pocetslov2,BYTE *atributy1A,BYTE *atributy1B,BYTE *atributy2A,BYTE *atributy2B,BYTE *atributy3A,BYTE *atributy3B) {
+  return(PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(slova1,pocetslov1,pocetslov2,atributy1A,atributy1B,atributy2A,atributy2B,atributy3A,atributy3B,NULL,NULL,NULL,NULL));
+ }
+BYTE PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(Typ_slova slova1,WORD pocetslov1,WORD pocetslov2,BYTE *atributy1A,BYTE *atributy1B,BYTE *atributy2A,BYTE *atributy2B,BYTE *atributy3A,BYTE *atributy3B,BYTE *atributy4A,BYTE *atributy4B) {
+  return(PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(slova1,pocetslov1,pocetslov2,atributy1A,atributy1B,atributy2A,atributy2B,atributy3A,atributy3B,atributy4A,atributy4B,NULL,NULL));
+ }
+
+BYTE PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(Typ_slova slova1,WORD pocetslov1,WORD pocetslov2,BYTE *atributy1A,BYTE *atributy1B,BYTE *atributy2A,BYTE *atributy2B,BYTE *atributy3A,BYTE *atributy3B,BYTE *atributy4A,BYTE *atributy4B,BYTE *atributy5A,BYTE *atributy5B) {
+ //Porovná dva "Typ_slova" v množinì atributù (jejich poèet je dán poètem
+ //parametrù) v celé délce parametrù obou množin (hledá tedy napø. shodu podmìtu
+ //s pøísudkem v množinì slov na zadané atributy
+ //Ve slova1 zùstanou v výrazy PRVNÍHO slova, které se vyskytují i v druhém výrazu.
+
+ //Vrací: 0 - v množinì nejsou žádná shodná slova
+ //       1 - alespoò 1 slovo je shodné
+
+char *shodnaslovated=NULL,*shodnaslovacelkove=NULL;
+WORD pozice,poz1,poz2;
+BYTE navrat;
+
+  shodnaslovacelkove=ALOKUJ_RETEZEC(pocetslov1+1);
+
+  for (pozice=0; pozice < pocetslov1; pozice++)
+   shodnaslovacelkove[pozice]='*';        //nastavení shodných slov
+  shodnaslovacelkove[pozice]=0;    //aby to bylo hezké :-)
+
+  if (atributy1A == NULL) goto PREVED_NA_TYP_SLOVA;
+  shodnaslovated=X_PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(pocetslov1,pocetslov2,atributy1A,atributy1B);
+  for (pozice=0; pozice < pocetslov1; pozice++) {
+    if (shodnaslovated[pozice] == ' ') shodnaslovacelkove[pozice]=' ';
+   }                                //"vymazání" nevyhovujících slov
+  UVOLNI(shodnaslovated);
+
+  if (atributy2A == NULL) goto PREVED_NA_TYP_SLOVA;
+  shodnaslovated=X_PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(pocetslov1,pocetslov2,atributy2A,atributy2B);
+  for (pozice=0; pozice < pocetslov1; pozice++) {
+    if (shodnaslovated[pozice] == ' ') shodnaslovacelkove[pozice]=' ';
+   }                                //"vymazání" nevyhovujících slov
+  UVOLNI(shodnaslovated);
+
+  if (atributy3A == NULL) goto PREVED_NA_TYP_SLOVA;
+  shodnaslovated=X_PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(pocetslov1,pocetslov2,atributy3A,atributy3B);
+  for (pozice=0; pozice < pocetslov1; pozice++) {
+    if (shodnaslovated[pozice] == ' ') shodnaslovacelkove[pozice]=' ';
+   }                                //"vymazání" nevyhovujících slov
+  UVOLNI(shodnaslovated);
+
+  if (atributy4A == NULL) goto PREVED_NA_TYP_SLOVA;
+  shodnaslovated=X_PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(pocetslov1,pocetslov2,atributy4A,atributy4B);
+  for (pozice=0; pozice < pocetslov1; pozice++) {
+    if (shodnaslovated[pozice] == ' ') shodnaslovacelkove[pozice]=' ';
+   }                                //"vymazání" nevyhovujících slov
+  UVOLNI(shodnaslovated);
+
+  if (atributy5A == NULL) goto PREVED_NA_TYP_SLOVA;
+  shodnaslovated=X_PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(pocetslov1,pocetslov2,atributy5A,atributy5B);
+  for (pozice=0; pozice < pocetslov1; pozice++) {
+    if (shodnaslovated[pozice] == ' ') shodnaslovacelkove[pozice]=' ';
+   }                                //"vymazání" nevyhovujících slov
+  UVOLNI(shodnaslovated);
+
+  PREVED_NA_TYP_SLOVA:
+  navrat=0;
+  for (pozice=0; pozice < pocetslov1; pozice++) {
+    if (shodnaslovacelkove[pozice] == '*') { navrat=1; break; }
+   }                                //spoèítání návratové hodnoty
+
+  for (poz1=0,poz2=0; poz1 < pocetslov1; poz1++) {
+    if (shodnaslovacelkove[poz1] == '*') {
+      slova1.ZKOPIRUJ_JEDNO_SLOVO_Z_TYP_SLOVA(poz2,poz1);
+      poz2++;
+     }
+   }
+  for (; poz2 < pocetslov1++; poz2++) {
+    slova1.VYMAZ_POSLEDNI_POZICI();        //smazání zbývajících slov
+   }
+
+  return(navrat);
+ }
+
+char *X_PROTRID_SLOVA_DLE_JINEHO_SLOVA_S_ATRIBUTY(WORD pocetslov1,WORD pocetslov2,BYTE *atributy1,BYTE *atributy2) {
+ // tato funkce je "podfunkcí" pøedchozí funkce, RADÌJI NEPOUŽÍVAT SAMOSTATNÌ!
+ // vrací alokovaný øetìzec obsahující mezery (nic) a hvìzdièky (shoda)
+char *stejneatributy=NULL;
+WORD pozice1,pozice2;
+
+  stejneatributy=ALOKUJ_RETEZEC(pocetslov1+1);
+
+  for (pozice1=0; pozice1 < pocetslov1; pozice1++) {
+    stejneatributy[pozice1]=' ';
+    for (pozice2=0; pozice2 < pocetslov2; pozice2++) {
+      if (POROVNEJ_DVA_ATRIBUTY_Z_TYPU_SLOVA(atributy1[pozice1],atributy2[pozice2]) != 0) {
+        stejneatributy[pozice1]='*'; break;
+       }
+     }
+   }
+  stejneatributy[pozice1]=0;
+
+  return(stejneatributy);
+ }
+
+void DOPLN_ATRIBUTY_TYPU_SLOVA(BYTE &atribut1,BYTE &atribut2) {
+ //Doplní atributy jednoho slova podle atributù druhého slova a naopak
+  if (atribut1 == 255 && atribut2 != 255) atribut1=atribut2;
+  else if (atribut2 == 255 && atribut1 != 255) atribut2=atribut1;
+ }
