@@ -63,6 +63,21 @@ SHIM = ROOT / "src" / "shim"
 DRIVER = ROOT / "src" / "driver"             # phase 1.5 lives here; absent until then
 CP1250 = ROOT / "build" / "cp1250"
 OUT = ROOT / "build" / "native"
+RUN = ROOT / "build" / "run"                 # where the driver is meant to be run
+
+# What the engine expects to find next to itself, and where we take it from.
+# The names are KONSTANT.K's (JMENO_ZAKLADNIHO_SLOVNIKU, JMENO_SOUBORU_S_INTELIGENCI)
+# and OTEVRI_SOUBOR opens them by bare name in the current directory.
+#
+# slovnik.iqp is the full 11,207-word dictionary lifted from the released binary,
+# not the 301-word remnant in the source drop -- see PLAN.md 2.2, which is where
+# that choice gets made for good.  IQPOKYD.IQP is the shipped compiled rule base;
+# PLAN.md 2.3-2.5 may replace it with one rebuilt from GRAMATIK.IQZ.
+DATA = {
+    "SLOVNIK.IQP": ROOT / "original" / "slovnik.iqp",
+    "IQPOKYD.IQP": ROOT / "original" / "IQ Pokyd" / "Data" / "Intelig" / "IQPOKYD.IQP",
+}
+CACHE = "SLOVNIK.TMP"        # the inflected dictionary, written by the engine
 
 CXX = "g++"
 
@@ -87,6 +102,36 @@ int main(void) {
   return 0;
  }
 """
+
+
+def priprav_run_adresar():
+    """Lay out build/run/ -- the working directory the driver is run in.
+
+    The engine opens its data files by bare name in the current directory, so
+    they have to be somewhere writable: SLOVNIK.TMP, the inflected dictionary,
+    is written next to them and is 17 MB.  original/ is the archive and read
+    only, hence a copy.
+
+    The copy is refreshed whenever the source differs, and changing the base
+    dictionary drops the cache.  It has to: nothing in SLOVNIK.TMP identifies
+    which dictionary it was built from, so a stale one is silently the wrong
+    vocabulary.  (Phase 4.4 keys the IndexedDB copy by dictionary hash for the
+    same reason.)
+    """
+    RUN.mkdir(parents=True, exist_ok=True)
+    for jmeno, zdroj in DATA.items():
+        cil = RUN / jmeno
+        if not zdroj.is_file():
+            print(f"missing {zdroj.relative_to(ROOT)}")
+            return 1
+        if cil.is_file() and cil.read_bytes() == zdroj.read_bytes():
+            continue
+        cil.write_bytes(zdroj.read_bytes())
+        print(f"data    {cil.relative_to(ROOT)}  <- {zdroj.relative_to(ROOT)}")
+        if jmeno == "SLOVNIK.IQP" and (RUN / CACHE).is_file():
+            (RUN / CACHE).unlink()
+            print(f"        dropped {CACHE}, it was built from the old dictionary")
+    return 0
 
 
 def run(cmd, verbose):
@@ -131,6 +176,15 @@ def main() -> int:
         return 1
 
     print(f"ok -> {exe}")
+
+    if entry == "driver":
+        if priprav_run_adresar():
+            return 1
+        prvni = not (RUN / CACHE).is_file()
+        print(f"\nrun it with:  {exe.relative_to(ROOT)} --data {RUN.relative_to(ROOT)}")
+        if prvni:
+            print("the first run inflects the whole dictionary -- ~5 s, 11,207 words into\n"
+                  f"402,252 forms -- and after that {CACHE} makes startup instant")
     return 0
 
 

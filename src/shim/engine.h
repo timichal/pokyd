@@ -49,6 +49,15 @@ extern DWORD g_pocetslovvzakladnidatabazi,g_pocetiqpodminek;
 extern DWORD g_pocetodpovedipocitace,g_pocetrecenychvet;
 extern long double g_procentanacitani;   /* 0..100, drives the loading bar */
 
+/* Three the original did not list, because nothing outside vsechno.in needed
+   them: the MFC code never loaded a dictionary itself, PROSTRED.FU did, and
+   PROSTRED.FU is inside the same translation unit.  A BEZ_PROSTREDI driver has
+   to do that loading, so it needs the answer table it is expected to allocate
+   (Intelig/INTELIG.PR:22-25) and the field IQ_POKYDE_ODPOVEZ writes last. */
+extern char **g_odpovedipocitace;
+extern WORD *g_idodpovedipocitace;
+extern BYTE g_smyslposlednivetypocitace;
+
 extern DWORD debug_pocetalokovani,debug_maxpocetvsechslov;
 extern char *debug_poslednipodmetcloveka,*debug_posledniprisudekcloveka,*debug_poslednipredmetcloveka;
 

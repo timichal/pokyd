@@ -68,6 +68,47 @@ Compiling `Aplikace/` without `!Prostre/` means bringing them back. They live in
 `src/shim/tridy.h` rather than in `src/engine/`, which keeps that tree a byte-exact
 mirror of the original — `transcode.py --check` still reports it clean.
 
+## `src/driver/` — the console driver
+
+`pokyd.cpp`, a `main()` that loads the dictionaries, reads sentences from stdin
+and prints what IQ Pokyd answers. A dev tool, not part of the exhibit; ours, not
+ported. `tools/build.py` links it automatically because the directory exists.
+
+```sh
+python3 tools/build.py                                   # also lays out build/run/
+build/native/pokyd.exe --data build/run                  # talk to it
+build/native/pokyd.exe --data build/run --help           # every option
+```
+
+`--data` is the working directory, because the engine opens `SLOVNIK.IQP` and
+`IQPOKYD.IQP` by bare name in the current directory (`OTEVRI_SOUBOR`, the
+`IQPOKYDWINMFC != 1` branch) — so the driver `chdir`s there. It must be
+writable: the first run inflects all 11,207 words — about five seconds, 402,252
+forms, 37 MB peak — and leaves a 17 MB `SLOVNIK.TMP` next to them, after which
+startup is 0.4 s. `build.py` fills
+`build/run/` from `original/` and drops the cache if the dictionary underneath it
+changed.
+
+Three things worth knowing before reading the code, all of them the original's:
+
+- **The entry point had to be brought back.** `IQ_POKYDE_ODPOVEZ` lives in
+  `Prostred/PROSTRED.FU`, which `BEZ_PROSTREDI` removes, so the driver carries a
+  copy — and so will `pokyd_api.c`. The same goes for the loading sequence, which
+  is `VLAKNO__NACITEJ_JAK_DIVEJ` minus the window.
+- **The pre-processing around it is not optional.** `CMfcDlg::OnNovaveta` lowercases,
+  normalizes phonemically and expands *ses* / *bych* into two words before the
+  engine sees a sentence, and reverses the last step on the answer. Skip any of it
+  and the answers change.
+- **stdout is noisy on purpose.** `vstup.fu:801-809` prints every base form it
+  recognises, on every sentence — a debug leftover `PATCHES.md` explains we are not
+  deleting. `--transcript FILE` is how you get a clean conversation out.
+
+Encodings: the engine is CP1250 end to end. The console gets CP852, because that
+is what the engine's own `printf`s produce (`NAPIS_TEXT_V_LATIN_2`) and what a
+Czech Windows console expects; `--cp1250` turns that off for pipes. A
+`--transcript` file is always CP1250 with CRLF, so phase 1.6 and phase 3.3 can
+diff byte for byte.
+
 ## Building
 
 ```sh

@@ -9,16 +9,21 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 1 — building the engine natively. 1.1 through 1.4 done. **The engine
-compiles and links**, as `build/native/pokyd.exe`, via `python3 tools/build.py`. The
-patch set against the original is one line, recorded in `PATCHES.md`.
+**Phase:** 1 — building the engine natively. 1.1 through 1.5 done. **The engine runs
+and answers in Czech.** `python3 tools/build.py` builds `build/native/pokyd.exe` and
+lays out `build/run/`; `build/native/pokyd.exe --data build/run` holds a conversation.
+The patch set against the original is still one line, recorded in `PATCHES.md`.
 
-**Next action:** Phase 1, step 1.5 — the console driver in `src/driver/`, the first time
-any of this code will actually run. Read the two warnings in 1.5 below before starting:
-`IQ_POKYDE_ODPOVEZ` does not exist in a `BEZ_PROSTREDI` build, and
-`NACTI_A_ROZSKLONUJ_ZAKLADNI_SLOVNIK` has a DOS test-harness tail that frees the
-dictionary again. Also expect stdout to be noisy — see the `vstup.fu:801-809` note in
-`PATCHES.md`.
+Measured on the way: cold start **4.5 s** (11,207 base words → **402,252** forms,
+37 MB peak working set, a 17.3 MB `SLOVNIK.TMP`), warm start **0.4 s**, and a clean
+teardown — zero unfreed blocks after a ten-sentence conversation. That is hazard 5
+answered, and answered much more cheaply than it was written.
+
+**Next action:** Phase 1, step 1.6 — sit down and have a real conversation, save it to
+`test/golden/`. Use `--transcript` (clean CP1250, CRLF) rather than piping stdout, which
+is noisy by design. Before writing the golden file, settle the `rand()` question in
+hazard 10: as things stand a transcript is only reproducible on the toolchain that
+produced it, which is exactly what 3.3 wants to diff across.
 
 ---
 
@@ -210,11 +215,18 @@ Specific things that will bite. Each has a task attached in the phases below.
    least one uninitialized read (`nejlepsiodpoved` in `VRAT_CISLO_ODPOVEDI_PODLE_HISTORIE`
    when every variant is in history). Build `-O1 -fno-strict-aliasing -fwrapv` and do not
    reach for `-O2` without re-diffing output.
-5. **Startup cost.** 11,207 base words inflected into every form, capped at
-   `MAX_POCET_VSECH_SLOV 500000`. Needs `ALLOW_MEMORY_GROWTH` and probably a few hundred MB
-   of heap. Mitigation is built in: the engine already writes and reads a `SLOVNIK.TMP` cache
-   (`ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU` / `PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU`).
-   Persist that blob to IndexedDB and later loads skip the whole thing.
+5. **Startup cost.** ~~Probably a few hundred MB of heap.~~ **Measured in 1.5 and much
+   smaller than that.** 11,207 base words inflect into **402,252** forms — against a
+   `MAX_POCET_VSECH_SLOV` of 500,000, so the cap has only 20% of headroom and a bigger
+   dictionary would hit it — in **4.5 s**, peaking at **37 MB** of working set, and the
+   `SLOVNIK.TMP` it leaves behind is **17.3 MB**. Warm start is **0.4 s**. Native x64
+   numbers; wasm will differ, but not by the order of magnitude this was budgeted for.
+   `ALLOW_MEMORY_GROWTH` still wanted. The mitigation is built in: the engine already
+   writes and reads that cache (`ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU` /
+   `PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU`), so persisting the blob to IndexedDB skips
+   the whole thing — but read hazard 10 first, because the read side of it is broken in a
+   way that only luck is fixing. A 4.5 s cold start is also cheap enough that 3.4 may
+   reasonably decide the cache is an optimization, not a launch requirement.
 6. **Source encoding.** ~~Mixed: `VSTUP.FU` fails CP1250 decoding at line 1156, Latin-2
    bytes mixed in.~~ **Investigated in 1.2 and that reading was wrong.** The corpus is
    uniformly CP1250; nothing in it is Latin-2 text. What fails to decode is *data*: 60
@@ -250,6 +262,43 @@ Specific things that will bite. Each has a task attached in the phases below.
    to change: MSVC6 accepted a member declared `void Typ_slova::ZKOPIRUJ_...` *inside*
    `class Typ_slova`; ISO C++ calls that an extra qualification. Dropping the qualifier
    declares the same member function.
+
+10. **The cache path reads a `FILE *` that was already `fclose`d.** Found in 1.5 and the
+    most dangerous thing in this list, because it currently works.
+    `PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU` opens `SLOVNIK.TMP` into `g_uplnyslovnik`,
+    then reads its padding-length byte and the padding itself from **`g_zakladnislovnik`**
+    (`SLOVNIK.FU:1102-1105`) — the base dictionary, which
+    `PRECTI_DATABAZI_SLOV_ZE_ZAKLADNIHO_SLOVNIKU` closed at `:1070`. A plain typo, one
+    identifier wrong, on the fast path of every warm start.
+
+    It survives because the C runtime hands the freed `FILE` slot straight back to the
+    next `fopen`: measured on this MinGW/UCRT, `fopen`→`fclose`→`fopen` returns *the
+    identical pointer*, so `g_zakladnislovnik` and `g_uplnyslovnik` are the same stream
+    and the code does what the author meant. MSVC 6 pooled `FILE`s the same way, which is
+    why this was never visible.
+
+    Two consequences, both for phase 3. **Nothing may `fopen` between those two calls** —
+    the accident only holds while the cache file is the very next thing opened, so the
+    loader's order in `pokyd_api.c` is load-bearing. And **under Emscripten the `FILE` is
+    `malloc`ed and `fclose` frees it**, so this is a use-after-free; musl will probably
+    hand back the same block and it will probably keep working, but if it ever does not,
+    the failure is silent — the header checksum mismatches, the engine reports
+    `_SPATNY_UPLNY_SLOVNIK_` and re-inflects, and hazard 5's whole mitigation is quietly
+    gone. Test for it at 3.3 by timing the *second* run, not the first. If it breaks,
+    the fix is a one-identifier patch with a strong argument behind it.
+
+11. **`rand()` is the C runtime's, and the toolchains do not agree.** Also 1.5.
+    `VRAT_CISLO_ODPOVEDI_PODLE_HISTORIE` picks between equally-unheard answers with
+    `rand()%pocetabsolutnichvitezu` (`INTELIG.FU:111`), which happens on most sentences,
+    so the conversation is a function of the seed *and of whose `rand()` it is*. Same seed
+    on the same binary reproduces exactly (verified); MinGW's LCG and Emscripten's musl
+    will diverge on the first tie. That directly contradicts 3.3's "they must match
+    exactly", so one of the two has to give: either the shim supplies its own `rand`/`srand`
+    to both builds — cheap, and it is our code, not the engine's — or 3.3 compares
+    transcripts per-toolchain and loses its sharpest test. Leaning to the shim `rand`.
+    Note also that seeding must happen *after* loading:
+    `ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU` reseeds from the clock on its way out
+    (`SLOVNIK.FU:1732`), so a seed set before a cold start does not survive it.
 
 ---
 
@@ -399,16 +448,61 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
         recognised base form, via `NAPIS_TEXT_V_LATIN_2`. A debug leftover the author
         commented out in the block just below (819-867) but not here. 1.5 and 1.6 have to
         cope with the noise rather than delete it.
-- [ ] 1.5 Console driver in `src/driver/` (build.py links it automatically once it exists):
-      load `slovnik.iqp` + `IQPOKYD.IQP`, read stdin lines, print replies. Two things 1.3
-      turned up that this step has to handle. **`IQ_POKYDE_ODPOVEZ` lives in
-      `Prostred/PROSTRED.FU`**, so `BEZ_PROSTREDI` removes the documented entry point and
-      the driver has to call the pipeline itself (`POROZUMEJ_VETE_NAPSANE_CLOVEKEM` →
-      `ZPRACUJ_VETU` → `VYBER_JEDNU_ODPOVED_Z_ODPOVEDI_PODLE_HISTORIE`) — which is also
-      exactly the surface phase 3.1 has to export. And **`NACTI_A_ROZSKLONUJ_ZAKLADNI_SLOVNIK`
-      is not a plain loader under `IQPOKYDWINMFC != 1`**: `SLOVNIK.FU:3344-3357` is the
-      author's own DOS test-harness tail, which frees the entire dictionary again and waits
-      for a keypress. Read that block before calling the function.
+- [x] 1.5 **Done — it talks.** `src/driver/pokyd.cpp` loads the dictionaries, reads stdin
+      and prints replies; `tools/build.py` links it and lays out `build/run/` (the data
+      files copied out of the read-only archive, because the engine writes `SLOVNIK.TMP`
+      next to them). `src/engine/` was not touched — `transcode.py --check` still names
+      exactly the one 1.4 file — so `PATCHES.md` has nothing new to say.
+
+      ```
+      > ahoj
+      < Tě péro! Dobře, že se tu zase ukazuješ.
+      > jak se máš?
+      < Za moc to nestojí, ale nijak si nestěžuju. Co ty?
+      ```
+
+      Both warnings above held, and the answers to them are the reusable part:
+
+      - **`IQ_POKYDE_ODPOVEZ` is gone with `Prostred/`**, so the driver carries a verbatim
+        copy of `PROSTRED.FU:212`, and the loader is `VLAKNO__NACITEJ_JAK_DIVEJ`
+        (`PROSTRED.FU:550`) minus the window. Both are written to be lifted into
+        `pokyd_api.c` as they stand.
+      - **The pre-processing around the entry point is not optional, and it is not in
+        `Prostred/` either** — it is in `CMfcDlg::OnNovaveta` (`mfcDlg.cpp:596-607`):
+        `PREVED_NA_MALA_PISMENA` → `UPRAV_DLOUHE_SLOVO_PRO_IQPOKYD` →
+        `UPRAV_VETU_PRO_IQPOKYD` → `IQ_POKYDE_ODPOVEZ` → `ODUPRAV_VETU_PRO_IQPOKYD`.
+        That is the engine being handed lowercase, phonemically normalized text with
+        *ses*/*bych* split into two words. **`pokyd_say` is this whole sequence, not
+        `IQ_POKYDE_ODPOVEZ` alone** — dropping any of it changes the answers. Note
+        `UPRAV_VETU_PRO_IQPOKYD` frees its argument and returns a new pointer.
+      - **`NACTI_A_ROZSKLONUJ_ZAKLADNI_SLOVNIK`'s DOS tail is handled by giving in to
+        it.** Under `IQPOKYDWINMFC != 1` it re-reads the base dictionary itself and then
+        frees *everything* and checks the block counter, so the driver hands it a clean
+        slate (`UVOLNI_VESKEROU_DYNAMICKOU_PAMET` first) and re-loads from the cache it
+        just wrote. Left as-is, the first load would leak 11,207 strings past its block
+        check and turn it into a fatal `NAHLAS_CHYBU`.
+      - The five globals `mfcDlg.cpp:405-418` allocates (`g_aktualnivetacloveka`,
+        `g_predchozivetacloveka`, the three `debug_poslední*`) have to exist before
+        anything runs and be rebuilt after anything frees them: `UVOLNI_VESKEROU_DYNAMICKOU_PAMET`
+        frees all five unconditionally and `UVOLNI_X(NULL)` is fatal.
+      - `engine.h` gained three externs the original never needed (`g_odpovedipocitace`,
+        `g_idodpovedipocitace`, `g_smyslposlednivetypocitace`): the MFC code never loaded a
+        dictionary itself, `PROSTRED.FU` did, from inside the same translation unit.
+
+      And two findings that outlive this step — **hazard 10 below, the `FILE *` the cache
+      path reads after closing it**, which is the one to worry about in phase 3; and
+      **hazard 5 turning out to be cheap**: 4.5 s and 37 MB, not the minutes and hundreds
+      of megabytes it was written up as. Also confirmed empirically, at last: typing
+      `%s %d %n %%` comes back as *"S d n? Aha, tak to mi nějak uniklo."* — `%` is a word
+      separator and never reaches a format string, which is exactly what 1.4's corrected
+      hazard 2 argued on paper.
+
+      The driver itself: `--data DIR` (it `chdir`s, since `OTEVRI_SOUBOR` opens bare names
+      in the cwd), `--transcript FILE` for a clean CP1250/CRLF conversation away from the
+      `vstup.fu:801-809` noise, `--seed N`, `--character`/`--mood`/`--human`/`--computer`,
+      `--state` to watch the mood drift (it does: ten sentences moved it 46 → 20 points).
+      The console gets CP852 both ways, because that is what the engine's own `printf`s
+      already produce; `--cp1250` turns that off for pipes.
 - [ ] 1.6 **Milestone: hold a conversation in Czech in a terminal.** Save a transcript to
       `test/golden/` as the reference for later diffs.
 
@@ -433,7 +527,11 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
 
 ## Phase 3 — WebAssembly
 
-- [ ] 3.1 `src/engine/pokyd_api.c` — the exported surface. Keep it minimal:
+- [ ] 3.1 `src/engine/pokyd_api.c` — the exported surface. `src/driver/pokyd.cpp` is the
+      rehearsal: its `NACTI_SLOVNIKY` and the `ODPOVEZ_NA_VETU` sequence are what
+      `pokyd_load_dictionaries` and `pokyd_say` have to be, in that order, including the
+      `OnNovaveta` pre-processing and the two calls hazard 10 says must stay adjacent.
+      Keep it minimal:
       `pokyd_init`, `pokyd_load_dictionaries`, `pokyd_say` (CP1250 in → CP1250 out),
       `pokyd_get_settings` / `pokyd_set_settings`, `pokyd_progress`,
       `pokyd_export_cache` / `pokyd_import_cache`.
@@ -441,8 +539,12 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       `ALLOW_MEMORY_GROWTH`, `MODULARIZE`, preload `slovnik.iqp` + `IQPOKYD.IQP` into MEMFS.
 - [ ] 3.3 Node smoke test: same inputs as 1.6, diff against the native transcript.
       **They must match exactly.** Any divergence is a hazard-1/4 bug — fix before moving on.
-- [ ] 3.4 Measure cold-start time and peak heap. Decide whether the `SLOVNIK.TMP` cache is
-      required for launch or a later optimization.
+      Settle hazard 11 first or this test cannot pass: the answer picker calls `rand()`,
+      and MinGW's and musl's disagree. Time the *second* run too, not just the first —
+      that is the only way hazard 10 shows itself.
+- [ ] 3.4 Measure cold-start time and peak heap; compare against 1.5's native 4.5 s /
+      37 MB / 402,252 forms. Decide whether the `SLOVNIK.TMP` cache is required for launch
+      or a later optimization — at 4.5 s native it may well be the latter.
 
 ## Phase 4 — JS boundary
 
@@ -517,7 +619,12 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
   (`build/src/` ⇄ `src/engine/` → `build/cp1250/`), `tools/dump-dict.py` (dictionary decoder).
 - Building: `python3 tools/build.py`. Every flag is justified in that file's docstring, and
   the Win32/MFC replacement it compiles against is `src/shim/`, described in `src/README.md`.
-- Engine entry point: `IQ_POKYDE_ODPOVEZ` — `Aplikace/Prostred/PROSTRED.FU:212`.
+  It also lays out `build/run/`, the working directory the driver wants.
+- Running it: `build/native/pokyd.exe --data build/run` (`--help` for the options).
+  `src/driver/pokyd.cpp` says at each call site which line of the original it mirrors.
+- Engine entry point: `IQ_POKYDE_ODPOVEZ` — `Aplikace/Prostred/PROSTRED.FU:212`, and it is
+  not the whole story: `!Prostre/mfcDlg.cpp:596-607` wraps it in the pre-processing the
+  engine assumes has happened. Both are reproduced in `src/driver/pokyd.cpp`.
   Pipeline is `POROZUMEJ_VETE_NAPSANE_CLOVEKEM` → `ZPRACUJ_VETU`
   (= `ROZEBER_NEINTELIGENTNE_VETU` + `ODPOVEZ_PODLE_IQ_PODMINEK`) →
   `VYBER_JEDNU_ODPOVED_Z_ODPOVEDI_PODLE_HISTORIE`.
