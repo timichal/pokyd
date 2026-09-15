@@ -46,6 +46,7 @@ static unsigned o_seed = 0;
 static int o_seed_zadan = 0;
 static int o_cp1250 = 0;                /* console encoding: CP852 unless set */
 static int o_stav = 0;                  /* print mood/character after each line */
+static int o_cas = 0;                   /* report load and answer timings */
 static const char *o_vyvez = NULL;      /* write SLOVNIK.TMP's bytes here after loading */
 static const char *o_dovez = NULL;      /* install this as SLOVNIK.TMP before loading */
 
@@ -68,6 +69,7 @@ static void NAPOVEDA(const char *jmeno) {
     "  --seed N          seed rand() with N instead of time(NULL)\n"
     "  --cp1250          read and write CP1250 on the console instead of CP852\n"
     "  --state           print mood and character after every answer\n"
+    "  --time            report load and answer timings on stderr\n"
     "  --export-cache F  after loading, write the SLOVNIK.TMP bytes to F\n"
     "  --import-cache F  before loading, install F as SLOVNIK.TMP\n"
     "\n"
@@ -245,6 +247,8 @@ char *radek=NULL;
 const char *odpoved;
 unsigned long neuvolneno;
 pokyd_settings nastaveni;
+double t_start,cas_nacitani=0.0,cas_odpovedi=0.0;
+unsigned long pocet_odpovedi=0;
 
   for (i=1; i < argc; i++) {
     if (strcmp(argv[i],"--help") == 0 || strcmp(argv[i],"-h") == 0) {
@@ -257,6 +261,7 @@ pokyd_settings nastaveni;
      }
     else if (strcmp(argv[i],"--cp1250") == 0) o_cp1250=1;
     else if (strcmp(argv[i],"--state") == 0) o_stav=1;
+    else if (strcmp(argv[i],"--time") == 0) o_cas=1;
     else if (strcmp(argv[i],"--export-cache") == 0 && i+1 < argc) o_vyvez=argv[++i];
     else if (strcmp(argv[i],"--import-cache") == 0 && i+1 < argc) o_dovez=argv[++i];
     else if (strcmp(argv[i],"--character") == 0 && i+1 < argc) o_charakter=atoi(argv[++i]);
@@ -299,6 +304,11 @@ pokyd_settings nastaveni;
      and the order is still the API's.  See pokyd_api.h. */
   if (o_dovez != NULL && DOVEZ_CACHE(o_dovez) != 0) return(1);
 
+  /* clock() is a millisecond on this runtime and the load is seconds, so it is
+     the right size of instrument here; the answers below are near its floor and
+     --time says so.  No windows.h for a QueryPerformanceCounter: src/shim/win32.h
+     keeps the engine free of it and the driver has no better claim. */
+  t_start=(double)clock();
   if (pokyd_load_dictionaries() != 0) {
     fprintf(stderr,
       "pokyd: %s\n"
@@ -306,6 +316,9 @@ pokyd_settings nastaveni;
       pokyd_error());
     return(1);
    }
+
+  cas_nacitani=((double)clock()-t_start)*1000.0/CLOCKS_PER_SEC;
+  if (o_cas) fprintf(stderr,"pokyd: load %.0f ms\n",cas_nacitani);
 
   if (o_vyvez != NULL && VYVEZ_CACHE(o_vyvez) != 0) return(1);
 
@@ -340,7 +353,10 @@ pokyd_settings nastaveni;
     if (interaktivni == 0) NAPIS_NA_KONZOLI("> ",radek);
     ZAPIS_DO_PREPISU("> ",radek);
 
+    t_start=(double)clock();
     odpoved=pokyd_say(radek);
+    cas_odpovedi+=((double)clock()-t_start)*1000.0/CLOCKS_PER_SEC;
+    pocet_odpovedi++;
     NAPIS_NA_KONZOLI("< ",odpoved);
     ZAPIS_DO_PREPISU("< ",odpoved);
 
@@ -354,6 +370,9 @@ pokyd_settings nastaveni;
 
     free(radek);
    }
+
+  if (o_cas) fprintf(stderr,"pokyd: %lu answers %.0f ms (clock(), 1 ms resolution)\n",
+                    pocet_odpovedi,cas_odpovedi);
 
   if (f_prepis != NULL) fclose(f_prepis);
 

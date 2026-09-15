@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>IQ Pokyd - wasm start-up bench</title>
+<!--
+  IQ Pokyd - test/wasm/bench.html - phase 3.4 of PLAN.md, the browser half.
+
+  node test/wasm/bench.mjs --browser serves this page over 127.0.0.1, launches
+  headless Chrome or Edge at it, and waits for the POST at the bottom.  Opening
+  it by hand works too, as long as something is serving the repo: file:// cannot
+  load an ES module's wasm and cannot be cross-origin isolated.
+
+  It runs test/wasm/bench-core.mjs, the same driving code the node bench runs, so
+  the two tables measure the same calls in the same order.  The reason this page
+  exists at all is that node is not the target: the plan's question is what a
+  browser tab costs, and only a browser can answer it -- especially
+  performance.measureUserAgentSpecificMemory(), which needs the cross-origin
+  isolation the bench server sends and which is the only per-tab figure a browser
+  will hand over.
+
+  Written by us, not ported.  ASCII only, like the rest of the non-engine code.
+-->
+<style>
+  body { background: #111; color: #ddd; font: 14px/1.5 Consolas, monospace;
+         margin: 2rem; }
+  h1 { font-size: 1rem; font-weight: normal; color: #9c9; }
+  table { border-collapse: collapse; margin: 1rem 0; }
+  th, td { padding: .2rem 1rem .2rem 0; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: #888; font-weight: normal; border-bottom: 1px solid #333; }
+  .ok { color: #9c9; } .fail { color: #c99; }
+  #stav { color: #cc9; }
+</style>
+
+<h1>IQ Pokyd 0.15 &mdash; WebAssembly start-up cost (PLAN.md 3.4)</h1>
+<p id="stav">starting...</p>
+<div id="tabulka"></div>
+
+<script type="module">
+import { zmer } from "./bench-core.mjs";
+
+const parametry = new URLSearchParams(location.search);
+const OPAKOVANI = parseInt(parametry.get("n") || "1", 10);
+const HLUK = parametry.get("noise") === "1";
+
+const stav = document.getElementById("stav");
+function rekni(text) { stav.textContent = text; }
+
+function mb(b) { return b === null || b === undefined ? "--" : (b / 1048576).toFixed(1) + " MB"; }
+
+async function bajty(cesta) {
+  const odpoved = await fetch(cesta, { cache: "no-store" });
+  if (!odpoved.ok) throw new Error(cesta + ": " + odpoved.status);
+  return new Uint8Array(await odpoved.arrayBuffer());
+}
+
+function na_vety(vstup) {
+  /* The driver's own loop: strip the CR, drop empty lines (mfcDlg.cpp:556),
+     keep every other byte as it lies.  CP1250 in, CP1250 out, no decoding. */
+  const vety = [];
+  let zacatek = 0;
+  for (let i = 0; i <= vstup.length; i++) {
+    if (i === vstup.length || vstup[i] === 0x0a) {
+      let konec = i;
+      while (konec > zacatek && vstup[konec - 1] === 0x0d) konec--;
+      if (konec > zacatek) vety.push(vstup.slice(zacatek, konec));
+      zacatek = i + 1;
+    }
+  }
+  return vety;
+}
+
+async function pamet_tabu() {
+  /* Chrome only, and only when crossOriginIsolated -- which is what the bench
+     server's Cross-Origin-Opener/Embedder-Policy headers are for.  It may take
+     a few seconds: the browser waits for a garbage collection before it
+     answers, which is also what makes the answer worth having. */
+  if (!self.crossOriginIsolated || !performance.measureUserAgentSpecificMemory) return null;
+  try {
+    const m = await performance.measureUserAgentSpecificMemory();
+    return m.bytes;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function main() {
+  rekni("fetching the module and the golden conversation...");
+  const { default: PokydModule } = await import("../../build/wasm/pokyd.mjs");
+  const vety = na_vety(await bajty("../golden/rozhovor.in"));
+  const zlate = await bajty("../golden/rozhovor.txt");
+
+  const behy = [];
+  let blob = null;
+
+  for (const studeny of [true, false]) {
+    for (let i = 0; i < OPAKOVANI; i++) {
+      if (!studeny && blob === null) break;
+      rekni((studeny ? "cold" : "warm") + " run " + (i + 1) + " of " + OPAKOVANI
+        + (studeny ? " -- inflecting 11,207 words, this is the 14 s one..." : "..."));
+      /* A turn of the event loop first, so the status above is painted before a
+         synchronous load freezes the tab -- which it does, and phase 4.2's
+         worker is the answer to that. */
+      await new Promise((a) => setTimeout(a, 50));
+
+      const beh = await zmer(PokydModule, {
+        vety, zlate, hluk: HLUK,
+        cache: studeny ? null : blob,
+        vyvez: studeny && blob === null,
+        /* At the peak, not after the run: by the time zmer returns, the module
+           is shut down and what it measures is the residue.  This is the whole
+           tab with the dictionary loaded, which is what the plan is asking. */
+        sonda: async () => ({
+          tab: await pamet_tabu(),
+          js: performance.memory ? performance.memory.usedJSHeapSize : null,
+        }),
+      });
+      if (beh.cache) blob = beh.cache;
+      behy.push({
+        druh: studeny ? "cold" : "warm",
+        host: beh.host && beh.host.tab !== null ? beh.host.tab
+              : (beh.host ? beh.host.js : null),
+        tab: beh.host ? beh.host.tab : null,
+        js: beh.host ? beh.host.js : null,
+        nacitani_ms: beh.nacitani_ms, odpovedi_ms: beh.odpovedi_ms,
+        cas_modulu: beh.cas_modulu, cas_importu: beh.cas_importu,
+        cas_exportu: beh.cas_exportu, pamet: beh.pamet, memfs: beh.memfs,
+        neuvolneno: beh.neuvolneno, poctvet: beh.poctvet,
+        prepis_sedi: beh.prepis_sedi,
+      });
+      vykresli(behy);
+    }
+  }
+
+  /* The headline tab figure is the cold run's, taken while it was loaded. */
+  const tab = behy.length ? behy[0].tab : null;
+  vykresli(behy, tab);
+
+  const chyby = behy.filter((b) => b.prepis_sedi === false || b.neuvolneno !== 0).length;
+  rekni(chyby === 0
+    ? "done -- every run reproduced test/golden/rozhovor.txt and freed every block."
+    : "done -- " + chyby + " run(s) did not reproduce the golden transcript.");
+
+  /* Back to node, which is what launched this and what prints the table that
+     goes in PLAN.md.  Failing to report is not fatal: the page is readable. */
+  try {
+    await fetch("/vysledek", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ behy, tab, kde: navigator.userAgent }),
+    });
+  } catch (e) { /* opened by hand, with nobody listening */ }
+}
+
+function vykresli(behy, tab) {
+  const radky = behy.map((b) => `<tr>
+    <td>${b.druh}</td>
+    <td>${b.nacitani_ms.toFixed(0)}</td>
+    <td>${b.odpovedi_ms.toFixed(1)}</td>
+    <td>${mb(b.pamet.po_nacteni)}</td>
+    <td>${mb(b.memfs)}</td>
+    <td>${mb(b.js)}</td>
+    <td>${mb(b.tab)}</td>
+    <td class="${b.prepis_sedi && b.neuvolneno === 0 ? "ok" : "fail"}">${
+      b.prepis_sedi === false ? "DIFFERS"
+        : b.neuvolneno !== 0 ? "leaked " + b.neuvolneno : "identical"}</td>
+  </tr>`).join("");
+
+  document.getElementById("tabulka").innerHTML = `
+    <table>
+      <tr><th>run</th><th>load ms</th><th>answers ms</th><th>wasm heap</th>
+          <th>memfs</th><th>js heap</th><th>tab</th><th>transcript</th></tr>
+      ${radky}
+    </table>
+    ${tab ? "<p>tab total, per measureUserAgentSpecificMemory(): <b>" + mb(tab)
+            + "</b></p>" : ""}
+    <p>wasm heap is the linear memory, which only grows &mdash; so it is also the
+       peak. MEMFS holds SLOVNIK.TMP outside it, in JS arrays.</p>`;
+}
+
+main().catch((e) => {
+  rekni("FAILED: " + (e && e.message ? e.message : e));
+  console.error(e);
+  fetch("/vysledek", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chyba: String(e && e.stack || e) }),
+  }).catch(() => {});
+});
+</script>
+</html>

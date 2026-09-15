@@ -9,8 +9,8 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 3 — WebAssembly. **3.1, 3.2 and 3.3 are done**; the gate is passed.
-Phases 1 and 2 are complete, 1.1–1.6 and 2.1–2.5.
+**Phase:** 3 — WebAssembly — **is complete: 3.1 through 3.4.** The gate is passed and
+the numbers are in. Phases 1 and 2 are complete, 1.1–1.6 and 2.1–2.5.
 **The engine runs, answers in Czech, and the conversation is on disk.**
 `python3 tools/build.py` builds `build/native/pokyd.exe` and lays out `build/run/`;
 `build/native/pokyd.exe --data build/run` holds a conversation. The patch set against
@@ -95,11 +95,20 @@ It cost one patch to the engine, and it is the one hazard 10 predicted: the cach
 is a typo. The patch set is now two lines in two files, and it is still provably
 answer-preserving: the native transcript and the native `SLOVNIK.TMP` are unchanged by it.
 
-**Next action:** 3.4, which is now mostly bookkeeping — the numbers are already in hand
-and only the peak-heap figure and the decision are missing. The wasm cold start is
-**14.2 s** against 4.5–5.7 s native, and a warm start from an imported cache blob is
-**0.12 s**. At 14 s the cache stops looking like an optimization and starts looking like
-a launch requirement, which is 3.4's question and 4.4's mechanism.
+**3.4 is done, and it decided something.** `python3 tools/bench-native.py` and
+`node test/wasm/bench.mjs [--browser]` measure the same bracketed call — the driver grew
+a `--time` for it — on all three runtimes. A first visit costs **15.3 s in Chrome**,
+3.6× the native 4.30 s, and the load is a *synchronous* call, so that is a frozen tab
+rather than a progress bar; a warm start from the cache is **0.11 s**. So **the
+`SLOVNIK.TMP` cache is a launch requirement**, which makes 4.4 load-bearing for 5.2, and
+4.2 not optional either. Memory turned out unremarkable: 28.3 MB of wasm heap plus
+17.4 MB of MEMFS held outside it, **48.7 MB for the whole tab**, against 38.0 MB of
+native working set. And the browser bench reproduces the golden transcript byte for byte
+in Chrome 152, cold and warm — 5.1's riskiest assumption retired before 5.1 starts.
+
+**Next action:** 4.1, the CP1250 codec — the last thing standing between the engine and
+a page. Then 4.2 and 4.4, in that order and both for reasons 3.4 measured, before the
+5.1 slice.
 
 ---
 
@@ -112,6 +121,13 @@ On this machine `python3` is 3.14.7 as before, but bare `python` resolves to a m
 3.12.7 that is first on `PATH`. The tools are stdlib-only and work under both, but the
 commands throughout this file say `python3` so the recorded toolchain is the one actually
 used.
+
+**Chrome 152 is here too**, at the usual `C:/Program Files/Google/Chrome/`, and as of 3.4
+it is part of the toolchain rather than a browser that happens to be installed:
+`node test/wasm/bench.mjs --browser` launches it headless against a loopback server and
+takes the results back over HTTP. It looks for Edge in the same list — both are on this
+machine — and needs no driver, no puppeteer and no `npm install`; there is still no
+`package.json` in this repo and 3.4 did not need one.
 
 **`emcc` 6.0.9 is installed**, as of 3.2, at `C:/Program Files/emsdk` — the emsdk default
 on Windows. It is **not activated and not on `PATH`**, deliberately, and nothing needs it to
@@ -143,7 +159,10 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
 - **Two commands say whether the engine still answers the way it did.** The native one is
   in `test/golden/README.md`; the wasm one is `node test/wasm/smoke.mjs`, which needs
   `python3 tools/build.py --wasm` first and exits non-zero if anything moved. Run both
-  after touching `src/engine/`, the build flags, or the shim.
+  after touching `src/engine/`, the build flags, or the shim. The two benches added at 3.4
+  — `python3 tools/bench-native.py` and `node test/wasm/bench.mjs [--browser]` — diff the
+  same transcript on every run, so they are slower ways of asking the same question and
+  never a faster way of avoiding it.
 
 ---
 
@@ -312,9 +331,16 @@ Specific things that will bite. Each has a task attached in the phases below.
    writes and reads that cache (`ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU` /
    `PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU`), so persisting the blob to IndexedDB skips
    the whole thing — and as of 3.3 the read side of it is no longer held together by luck
-   (hazard 10). A 4.5 s cold start would have been cheap enough for 3.4 to call the cache
-   an optimization; the wasm cold start is **14.2 s** against a **0.12 s** warm one, which
-   is a different question.
+   (hazard 10).
+
+   **Closed at 3.4, on both sides, and the two halves of it came out differently.** Memory
+   is a non-issue: 28.3 MB of wasm linear memory plus 17.4 MB of MEMFS beside it, 48.7 MB
+   for the whole Chrome tab against 38.0 MB of native working set — 1.3×, not an order of
+   magnitude. Time is the problem that was hiding behind it. A 4.5 s cold start would have
+   been cheap enough to call the cache an optimization, but the browser's first run is
+   **15.3 s** against a **0.11 s** warm one, and it is synchronous. So the cache is a
+   launch requirement and 4.2's worker is not optional. See 3.4 for the table and for the
+   three measurements 4.4 needs.
 6. **Source encoding.** ~~Mixed: `VSTUP.FU` fails CP1250 decoding at line 1156, Latin-2
    bytes mixed in.~~ **Investigated in 1.2 and that reading was wrong.** The corpus is
    uniformly CP1250; nothing in it is Latin-2 text. What fails to decode is *data*: 60
@@ -910,30 +936,114 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       asks for it — 2.6 MB of progress bar and `vstup.fu:801-809` per run — which costs
       nothing measurable either way (14.15 s noisy, 14.21 s quiet), so the 14 s is real
       compute and not console traffic.
-- [ ] 3.4 Measure cold-start time and peak heap; compare against 1.5's native 4.5 s /
-      37 MB / 402,252 forms. Decide whether the `SLOVNIK.TMP` cache is required for launch
-      or a later optimization — ~~at 4.5 s native it may well be the latter~~.
+- [x] 3.4 **Measured on all three runtimes, and the decision is written down: the
+      `SLOVNIK.TMP` cache is a launch requirement.** ~~At 4.5 s native it may well be
+      the latter.~~ Three commands produce the numbers, and each of them is also a
+      test — every run diffs its own transcript against `test/golden/rozhovor.txt` and
+      reports a failure instead of a timing if it moved:
 
-      **3.3 brought back the timings and they change the answer.** Cold in node v24.20.0
-      is **14.2 s**, about 3× the native 4.5–5.7 s, and console noise is not the cause
-      (14.15 s noisy vs 14.21 s quiet). Warm, from an imported blob, is **0.12 s**. A
-      browser tab that thinks for fourteen seconds before its first word is not a museum
-      piece anybody waits for, so the cache looks like a launch requirement rather than an
-      optimization — which makes 4.4 load-bearing for 5.2 and not a nicety after it.
+      ```
+      python3 tools/bench-native.py            the native build, cold and warm
+      node test/wasm/bench.mjs                 the wasm build, in node
+      node test/wasm/bench.mjs --browser       the wasm build, in headless Chrome
+      ```
 
-      What is still missing here is **peak heap** (the native figure is 37 MB of working
-      set), a second reading on hardware that is not this laptop, and the decision itself
-      written down. `pokyd_export_cache` already hands over the exact blob 4.4 needs, and
-      3.3 proved importing it works in wasm.
+      One machine (AMD64, 16 cores, Windows 11), one build, one sitting. Every load
+      figure is a bracket around `pokyd_load_dictionaries()` and nothing else — the
+      driver grew a `--time` for exactly that, so the native and wasm numbers measure
+      the same call:
+
+      ```
+                             cold      cold     warm            peak memory
+                          1st run   settled
+      native                4.30 s    4.30 s   0.129 s   38.0 MB peak working set
+      node v24.20.0        13.9  s   10.6  s   0.115 s   28.3 MB wasm + 17.4 MB MEMFS
+      Chrome 152 headless  15.3  s    9.3  s   0.112 s   48.7 MB whole tab
+      ```
+
+      **The decision.** A first visit costs **15.3 s in a real browser**, 3.6× native,
+      and the load is a single synchronous call, so those fifteen seconds are a frozen
+      tab, not a progress bar. A warm start from the cache is **0.11 s**, 135× better,
+      and byte-identical in what it answers. Nobody waits fifteen seconds for a museum
+      piece. So **4.4 is load-bearing for 5.2, not a nicety after it**, and so is 4.2:
+      a synchronous fifteen-second call cannot run on the UI thread even once.
+
+      **The first run is the only honest cold number, and it is not the median.** Cold
+      runs 2 and 3 land at 9–10 s against the first one's 14–15 s, in node and in Chrome
+      alike: the first pass runs baseline-compiled wasm and the tier-up only pays off
+      afterwards. A visitor gets the first pass. `bench.mjs` prints both and says which
+      is which, because a median here would quietly report a number nobody experiences.
+
+      **Hazard 5 is fully answered, and the memory is unremarkable.** The wasm linear
+      memory peaks at **28.3 MB** — below the native process's 38.0 MB working set, which
+      carries a C runtime and a mapped executable the browser accounts for elsewhere.
+      MEMFS holds the 17.4 MB `SLOVNIK.TMP` in JS arrays *outside* that linear memory, so
+      the engine's real footprint is the two added: 45.7 MB, and Chrome's own
+      `measureUserAgentSpecificMemory()` says **48.7 MB for the whole tab** at the moment
+      the dictionary is loaded. That is 1.3× the native process, not the order of
+      magnitude this was once budgeted for. The `402,252` forms are the same number the
+      native build reports, which is the engine's own `MAX_POCET_VSECH_SLOV` printout and
+      not an inference.
+
+      **Three notes 4.4 will want**, all measured:
+
+      - The blob is **three copies at once** on a naive warm start — the caller's
+        `Uint8Array`, the `_malloc`ed copy `pokyd_import_cache` takes, and MEMFS's own.
+        The warm tab reads **64 MB** against the cold run's 48.7 MB purely because the
+        exported blob was still alive in JS. Hand it over and drop the reference.
+      - **Exporting the cache is the peak, not loading it.** `pokyd_export_cache`
+        `malloc`s 18 MB inside the heap: the linear memory goes 16.3 MB at start → 28.3 MB
+        loaded → **41.9 MB** the moment the blob is taken. Importing one into a fresh
+        instance is nearly free by comparison (16.3 → 19.6 MB), because the 18 MB fits in
+        the initial heap the dictionary has not claimed yet. Both calls themselves cost
+        ~6 ms.
+      - The blob **gzips to 11.3 MB, 62%** — the obfuscation padding is what stops it
+        going further. Which means shipping a prebuilt `SLOVNIK.TMP` as a static asset is
+        a live alternative to computing one, and a legitimate one: 3.3 proved the file is
+        byte-identical across toolchains, so a shipped cache is verifiable rather than
+        merely convenient. That trade — 11 MB over the wire against 15 s of frozen tab on
+        the first visit — is 4.4's to make, and 9.x's if the answer depends on hosting.
+
+      What is **still missing**: a reading on hardware that is not this laptop, and one on
+      a phone, where both the 15 s and the 48.7 MB matter more than they do here. Neither
+      changes the decision — the gap between 4.3 s and 15.3 s is far too wide for hardware
+      variance to close — so they are recorded here as wanted, not as blocking.
+
+      Two things the benches are careful about, for whoever edits them. They work in
+      `build/bench/run/`, never `build/run/`, because making a cold run means deleting
+      `SLOVNIK.TMP` and `test/wasm/smoke.mjs` diffs the wasm cache against the native one
+      in `build/run/`. And `test/wasm/bench-core.mjs` is shared verbatim between node and
+      the browser page, so the two tables cannot drift into measuring different call
+      sequences; `test/wasm/bench.html` is a page, served with COOP/COEP by the bench's
+      own loopback server, because `measureUserAgentSpecificMemory()` is only handed to a
+      cross-origin-isolated document.
+
+      **A side effect worth having: IQ Pokyd answers correctly in an actual browser.**
+      The browser bench reproduces `test/golden/rozhovor.txt` byte for byte in Chrome 152,
+      cold and warm, with zero unfreed blocks — which is 5.1's riskiest assumption
+      retired before 5.1 starts. The driver's `--time` is the only source change 3.4 made,
+      and the golden transcript is byte-identical with it.
 
 ## Phase 4 — JS boundary
 
+3.4 measured this phase into a priority order it did not have before: **4.1, then 4.2 and
+4.4, and only then 5.1.** A 15.3 s synchronous first load is a frozen tab, so the worker
+is not a refinement and the cache is not an optimization.
+
 - [ ] 4.1 CP1250 ⇄ UTF-16 codec, both directions, with the full 256-entry table. Unit tests
       covering `ě š č ř ž ý á í é ů ú ň ť ď ó`.
-- [ ] 4.2 Run the engine in a Web Worker; typed message protocol.
-- [ ] 4.3 Wire up loading progress (`g_procentanacitani`) to real UI feedback.
+- [ ] 4.2 Run the engine in a Web Worker; typed message protocol. **Required, not a
+      refinement** — 3.4 measured `pokyd_load_dictionaries()` at 15.3 s on a first visit,
+      and it is one synchronous call.
+- [ ] 4.3 Wire up loading progress (`g_procentanacitani`) to real UI feedback. Needs 4.2
+      first: the load is synchronous, so only another thread can read the counter. See the
+      note under `pokyd_phase` about 0–100 running three times over in a `BEZ_PROSTREDI`
+      build.
 - [ ] 4.4 Persist the `SLOVNIK.TMP` cache blob to IndexedDB, keyed by dictionary hash.
-      Restore on subsequent loads.
+      Restore on subsequent loads. **Load-bearing for 5.2** — 3.4's decision. Its three
+      measured constraints are there too: three copies of the blob live at once on a naive
+      warm start, the *export* is the memory peak (41.9 MB of linear memory, not 28.3),
+      and the blob gzips to 11.3 MB if shipping a prebuilt one ever beats computing it.
 
 ## Phase 5 — Vertical slice
 
