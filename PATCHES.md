@@ -37,9 +37,10 @@ Not covered here, because they are not changes to original code:
 | # | File | Line | Change | Net |
 |---|---|---|---|---|
 | 1 | `src/engine/vstup/vstup.fu` | 775 | `sprintf` → `strcpy` | −1 byte |
+| 2 | `src/engine/slovnik/slovnik.fu` | 1103, 1106 | `g_zakladnislovnik` → `g_uplnyslovnik` | −6 bytes |
 
-`transcode.py --check` reports exactly one file differing: `vstup/vstup.fu`. That
-matches the table.
+`transcode.py --check` reports exactly two files differing: `vstup/vstup.fu` and
+`slovnik/slovnik.fu`. That matches the table.
 
 ---
 
@@ -102,8 +103,116 @@ to spare — worth remembering if `DELKA_JEDNODUCHEHO_SLOVA` is ever touched.
 
 Build is unchanged in every observable way: 39 warnings, same seven categories in the
 same counts, link check reports the same `Nastaveni` 220 B / answer buffer 201 B /
-`Struktura_vety` 6568 B. `diff -r build/src build/cp1250` prints this one line and
-nothing else.
+`Struktura_vety` 6568 B. `diff -r build/src build/cp1250` prints this one line, and
+since phase 3.3 patch 2's two, and nothing else.
+
+---
+
+## 2. `slovnik.fu:1103,1106` — `g_zakladnislovnik` → `g_uplnyslovnik`
+
+**Phase 3.3. Hazard 10**, and the one patch this port was told in advance it might need:
+PLAN.md's hazard 10 ends "if it breaks, the fix is a one-identifier patch with a strong
+argument behind it." It broke, at the first wasm run, and this is that patch.
+
+```c
+// original                       PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU
+  pocetzbytecnosti=getc(g_zakladnislovnik);
+  hlavicka[pozice++]=pocetzbytecnosti;
+  pocetzbytecnosti^='I';
+  fread(hlavicka+pozice,pocetzbytecnosti,1,g_zakladnislovnik);
+// patched
+  pocetzbytecnosti=getc(g_uplnyslovnik);
+  hlavicka[pozice++]=pocetzbytecnosti;
+  pocetzbytecnosti^='I';
+  fread(hlavicka+pozice,pocetzbytecnosti,1,g_uplnyslovnik);
+```
+
+`PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU` opens `SLOVNIK.TMP` into `g_uplnyslovnik`
+(`:1081`), reads the identification text from it, and then reads the two obfuscation
+fields — the padding length and the padding — from `g_zakladnislovnik`, the base
+dictionary, which `PRECTI_DATABAZI_SLOV_ZE_ZAKLADNIHO_SLOVNIKU` closed at `:1069`. Every
+other read in the function uses `g_uplnyslovnik`, including the one immediately after.
+
+### That it is a typo is the author's own evidence, not our reading
+
+Three things say so, and none of them is an opinion about style:
+
+- **The bytes only exist in the file being opened here.** `ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU`
+  writes them into `SLOVNIK.TMP`'s header: `srand('0'+'1'+'5')`, then
+  `pocetzbytecnosti=rand()%100` stored as `pocetzbytecnosti^'I'`, then that many
+  `(char)rand()` bytes "pro zmatení hackera" (`:1578-1584`). The base dictionary has its
+  own, different padding.
+- **The author wrote the same reader correctly, forty lines further down.**
+  `PRECTI_PROFIL_ZE_SOUBORU` (`:1734`) reads an identical header — text, `pocetzbytecnosti`,
+  padding, key, eleven bytes, two checksums — and every one of those reads is from
+  `soubor`, the file it just opened.
+- **The checksum arithmetic only closes if the bytes came from `SLOVNIK.TMP`.** Both
+  checksums are accumulated over the header *including* the padding (`:1114-1118`) and
+  compared against the two bytes the writer appended. Reading another file's padding here
+  would fail that comparison, which is `_SPATNY_UPLNY_SLOVNIK_` and a full re-inflection.
+
+### Why it worked for twenty years, and why it stopped
+
+The two `FILE *`s are the same pointer. `fclose` returns the block to the C runtime and
+the very next `fopen` — which is this function's own, three lines earlier — gets it
+straight back, so `g_zakladnislovnik` and `g_uplnyslovnik` name one stream and the code
+does what the author meant. Measured on MinGW/UCRT at phase 1.5; MSVC 6 pooled `FILE`s
+the same way, which is why the author never saw it.
+
+Under Emscripten it is a use-after-free that **traps**:
+
+```
+RuntimeError: memory access out of bounds
+    at locking_getc / do_getc / getc
+    at PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU
+    at pokyd_load_dictionaries
+```
+
+Worth being precise about the cause, because the obvious summary is wrong. musl does
+*not* refuse to reuse the block: a three-line `fopen`/`fclose`/`fopen` compiled with the
+same emcc hands back the identical pointer — measured, not assumed. It is the engine's
+own sequence that stops getting it back. Instrumented, in the run that matters:
+
+```
+[dbg] base closed at 0x45780
+[dbg] cache opened at 0x50b40
+```
+
+The likely reason is what happens immediately before the `fclose`:
+`PRECTI_DATABAZI_SLOV_ZE_ZAKLADNIHO_SLOVNIKU` frees two buffers at `:1061-1062`, so the
+`FILE` block is freed with free neighbours and the allocator has choices it did not have
+in the three-line test. What is certain, and all the patch needs, is that the two
+pointers are not equal here: the accident depends on allocator state, and on this
+toolchain it does not hold.
+
+It failed **loudly**, which PLAN.md did not expect — it predicted a silent checksum
+mismatch and a quiet re-inflection. The better outcome, and worth recording: the freed
+block had been reused, so the `FILE` fields `getc` follows were somebody else's data and
+the pointer it dereferenced was nowhere near the heap. A native build would have read
+whatever was there; wasm's bounds check turned the use-after-free into a trap.
+
+### The criterion at the top of this file is met
+
+The code cannot be run without it: every warm start on the web — which is the whole of
+phase 4.4 and the reason the cache exists — hits this line. It is the smallest edit that
+clears it: one identifier, twice, no lines added or removed.
+
+### Verification
+
+The patch is **provably behaviour-preserving natively**, because the two pointers are the
+same object there, so the patched code reads the same bytes from the same offset of the
+same stream. Checked rather than argued:
+
+- `build/native/pokyd.exe` reproduces `test/golden/rozhovor.txt` byte for byte on the
+  **warm** path (which is the path this patch is on) and on the **cold** path;
+- the 18,131,435-byte `SLOVNIK.TMP` a cold run writes is byte-identical to the one built
+  before the patch (`md5 da61cabb8ea444833ffba09d363985fd`);
+- the wasm build now reproduces the same transcript, cold and warm, and exports a
+  `SLOVNIK.TMP` byte-identical to the native one — `node test/wasm/smoke.mjs`.
+
+The last of those is the strong check in both directions: 18 MB of obfuscated,
+checksummed, `rand()`-padded data agreeing across two toolchains says the read is correct
+and not merely quiet.
 
 ---
 

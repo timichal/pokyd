@@ -1100,10 +1100,10 @@ char *predchozislovo=NULL;
     if (znak == 0) { pozice++; break; }
    }
 
-  pocetzbytecnosti=getc(g_zakladnislovnik);
+  pocetzbytecnosti=getc(g_uplnyslovnik);
   hlavicka[pozice++]=pocetzbytecnosti;
   pocetzbytecnosti^='I';
-  fread(hlavicka+pozice,pocetzbytecnosti,1,g_zakladnislovnik);
+  fread(hlavicka+pozice,pocetzbytecnosti,1,g_uplnyslovnik);
   pozice+=pocetzbytecnosti;
 
   nahodnykodovaciklic=getc(g_uplnyslovnik)^'I';

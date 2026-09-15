@@ -117,8 +117,8 @@ int pokyd_load_dictionaries(void) {
      bar, the five SetWindowText calls, the cancel check between every step, the
      click sounds and the CTI_ME.HTM integrity check.  The order of what remains
      is the original's and it matters -- see the base dictionary note in the
-     cache-miss branch, and hazard 10 on the two reads that must stay adjacent.
-     The five `faze` assignments stand where those five SetWindowText calls did. */
+     cache-miss branch.  The five `faze` assignments stand where those five
+     SetWindowText calls did. */
 
 DWORD pozice;
 
@@ -129,7 +129,7 @@ DWORD pozice;
      MessageBox and then raise(SIGABRT) -- no use to a caller and no use at all in
      a worker.  Checking first turns the two cases that actually happen into a
      return value.  These two opens are before ALOKUJ_VSECHNY_PRVKY_G_VETACLOVEKA
-     and so nowhere near hazard 10's pair. */
+     and so before any of the loading proper. */
   if (JE_TAM(JMENO_ZAKLADNIHO_SLOVNIKU) == 0) {
     NAHLAS("no " JMENO_ZAKLADNIHO_SLOVNIKU " in the data directory");
     return(-1);
@@ -143,11 +143,14 @@ DWORD pozice;
   ALOKUJ_VSECHNY_PRVKY_G_VETACLOVEKA();
   PRECTI_DATABAZI_SLOV_ZE_ZAKLADNIHO_SLOVNIKU();
 
-  /* Hazard 10.  PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU reads its padding from
-     g_zakladnislovnik (SLOVNIK.FU:1102-1105), which the call above closed at
-     :1070 -- a one-identifier typo that works only because the C runtime hands
-     the freed FILE slot straight back to the next fopen.  Nothing may open a file
-     between these two lines.  Nothing does; keep it that way. */
+  /* Hazard 10, and the one place this port had to patch the engine to run at all.
+     PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU read its padding from
+     g_zakladnislovnik (SLOVNIK.FU:1103,1106), which the call above closes at
+     :1069 -- a typo that worked only because the C runtime handed the freed FILE
+     slot straight back to the next fopen.  Emscripten's does not, and getc on the
+     dangling pointer trapped; PATCHES.md 2 points both reads at g_uplnyslovnik,
+     which is the file the bytes are actually in.  The two calls no longer have to
+     be adjacent, and they still are. */
   faze=POKYD_FAZE_SLOVNI_ZASOBA;
   if (PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU() == 1) {
     /* No usable SLOVNIK.TMP, so the 11,207 base words have to be inflected into
@@ -178,11 +181,12 @@ DWORD pozice;
     PRECTI_DATABAZI_SLOV_ZE_ZAKLADNIHO_SLOVNIKU();
     faze=POKYD_FAZE_SLOVNI_ZASOBA;
     if (PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU() == 1) {
-      /* Cold path ran and the cache still will not read back.  On this toolchain
-         that means the write failed (a full or read-only data directory); under
-         Emscripten it is also what hazard 10 looks like if musl ever stops
-         handing the same FILE block back.  Either way it is not recoverable
-         here and it must not be silent. */
+      /* Cold path ran and the cache still will not read back, which means the
+         write failed -- a full or read-only data directory.  Before PATCHES.md 2
+         this was also where hazard 10 would have surfaced, quietly, as a checksum
+         mismatch; it does not any more, and under Emscripten it never got the
+         chance, because the dangling read trapped instead.  Not recoverable here
+         and it must not be silent. */
       NAHLAS(JMENO_UPLNEHO_SLOVNIKU " cannot be read back after inflecting the dictionary");
       faze=POKYD_FAZE_NECINNY;
       return(-1);
@@ -387,9 +391,9 @@ unsigned char *blok;
 int pokyd_import_cache(const unsigned char *data, unsigned long delka) {
 FILE *f;
 
-  /* Before loading, not during: hazard 10 again.  Writing the file here leaves
-     the base-dictionary read and the cache read adjacent, which is the whole
-     reason this is a separate call. */
+  /* Before loading, not during: the load is what reads SLOVNIK.TMP, so the file
+     has to exist by then.  This was hazard 10's requirement too, until PATCHES.md
+     2 made the cache read use its own FILE *. */
   if (stav_nacteno) {
     NAHLAS("pokyd_import_cache: too late, the dictionaries are already loaded");
     return(-1);

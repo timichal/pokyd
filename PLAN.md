@@ -9,12 +9,12 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 3 — WebAssembly. **3.1 and 3.2 are done**; 3.3 is the gate.
+**Phase:** 3 — WebAssembly. **3.1, 3.2 and 3.3 are done**; the gate is passed.
 Phases 1 and 2 are complete, 1.1–1.6 and 2.1–2.5.
 **The engine runs, answers in Czech, and the conversation is on disk.**
 `python3 tools/build.py` builds `build/native/pokyd.exe` and lays out `build/run/`;
 `build/native/pokyd.exe --data build/run` holds a conversation. The patch set against
-the original is still one line, recorded in `PATCHES.md`.
+the original is two lines in two files, both recorded in `PATCHES.md`.
 
 Measured on the way: cold start **4.5 s** (11,207 base words → **402,252** forms,
 37 MB peak working set, a 17.3 MB `SLOVNIK.TMP`), warm start **0.4 s**, and a clean
@@ -80,15 +80,26 @@ Node v24.20.0 loads it **from any directory with no options**, and `pokyd_init("
 returns 0. Emscripten is 6.0.9, installed at `C:/Program Files/emsdk`, and `build.py`
 finds it by absolute path — it is not on `PATH` and does not need to be.
 
-What 3.2 has *not* done is make it say anything. The module has never answered a
-sentence; it has only loaded. Every byte-exactness claim in this file is still a claim
-about the native build.
+**3.3 is done, and the gate is passed: IQ Pokyd says the same things in a browser
+engine that it says natively.** `node test/wasm/smoke.mjs` drives the wasm module
+through the 23 sentences of `test/golden/rozhovor.in` and reproduces
+`test/golden/rozhovor.txt` **byte for byte, cold and warm**. The cold run also exports
+an 18,131,435-byte `SLOVNIK.TMP` that is **byte-identical to the native one** — 18 MB of
+obfuscated, checksummed, `rand()`-padded data agreeing across two toolchains, which is a
+far stronger statement than the 1,116-byte transcript on its own. Both runs tear down
+with zero unfreed blocks. Hazards 1, 4 and 11 are answered by that, on evidence.
 
-**Next action:** 3.3, and it is the gate that matters: the wasm build must reproduce
-`test/golden/rozhovor.txt` byte for byte. Build with `python3 tools/build.py --wasm`,
-`import PokydModule from 'build/wasm/pokyd.mjs'`, and drive the exported surface —
-`pokyd_init("/pokyd")`, `pokyd_load_dictionaries()`, then `pokyd_say()` per line of
-`test/golden/rozhovor.in`, with the settings and the seed from `test/golden/README.md`.
+It cost one patch to the engine, and it is the one hazard 10 predicted: the cache read's
+`FILE *` typo is a use-after-free that MinGW and MSVC hid and Emscripten traps on.
+`PATCHES.md` 2 has the argument, the measurements and the author's own evidence that it
+is a typo. The patch set is now two lines in two files, and it is still provably
+answer-preserving: the native transcript and the native `SLOVNIK.TMP` are unchanged by it.
+
+**Next action:** 3.4, which is now mostly bookkeeping — the numbers are already in hand
+and only the peak-heap figure and the decision are missing. The wasm cold start is
+**14.2 s** against 4.5–5.7 s native, and a warm start from an imported cache blob is
+**0.12 s**. At 14 s the cache stops looking like an optimization and starts looking like
+a launch requirement, which is 3.4's question and 4.4's mechanism.
 
 ---
 
@@ -129,6 +140,10 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   would fail it.
 - Comments and identifiers in ported/shim code stay in the original's Czech where they
   mirror original names, so the two can be diffed by eye.
+- **Two commands say whether the engine still answers the way it did.** The native one is
+  in `test/golden/README.md`; the wasm one is `node test/wasm/smoke.mjs`, which needs
+  `python3 tools/build.py --wasm` first and exits non-zero if anything moved. Run both
+  after touching `src/engine/`, the build flags, or the shim.
 
 ---
 
@@ -296,9 +311,10 @@ Specific things that will bite. Each has a task attached in the phases below.
    `ALLOW_MEMORY_GROWTH` still wanted. The mitigation is built in: the engine already
    writes and reads that cache (`ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU` /
    `PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU`), so persisting the blob to IndexedDB skips
-   the whole thing — but read hazard 10 first, because the read side of it is broken in a
-   way that only luck is fixing. A 4.5 s cold start is also cheap enough that 3.4 may
-   reasonably decide the cache is an optimization, not a launch requirement.
+   the whole thing — and as of 3.3 the read side of it is no longer held together by luck
+   (hazard 10). A 4.5 s cold start would have been cheap enough for 3.4 to call the cache
+   an optimization; the wasm cold start is **14.2 s** against a **0.12 s** warm one, which
+   is a different question.
 6. **Source encoding.** ~~Mixed: `VSTUP.FU` fails CP1250 decoding at line 1156, Latin-2
    bytes mixed in.~~ **Investigated in 1.2 and that reading was wrong.** The corpus is
    uniformly CP1250; nothing in it is Latin-2 text. What fails to decode is *data*: 60
@@ -335,8 +351,9 @@ Specific things that will bite. Each has a task attached in the phases below.
    `class Typ_slova`; ISO C++ calls that an extra qualification. Dropping the qualifier
    declares the same member function.
 
-10. **The cache path reads a `FILE *` that was already `fclose`d.** Found in 1.5 and the
-    most dangerous thing in this list, because it currently works.
+10. **~~The cache path reads a `FILE *` that was already `fclose`d.~~ Closed at 3.3, by
+    the one patch this hazard list ever asked for** — `PATCHES.md` 2. Found in 1.5 and
+    described then as the most dangerous thing in this list, because it worked.
     `PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU` opens `SLOVNIK.TMP` into `g_uplnyslovnik`,
     then reads its padding-length byte and the padding itself from **`g_zakladnislovnik`**
     (`SLOVNIK.FU:1102-1105`) — the base dictionary, which
@@ -349,15 +366,30 @@ Specific things that will bite. Each has a task attached in the phases below.
     and the code does what the author meant. MSVC 6 pooled `FILE`s the same way, which is
     why this was never visible.
 
-    Two consequences, both for phase 3. **Nothing may `fopen` between those two calls** —
-    the accident only holds while the cache file is the very next thing opened, so the
-    loader's order in `pokyd_api.cpp` is load-bearing. And **under Emscripten the `FILE` is
-    `malloc`ed and `fclose` frees it**, so this is a use-after-free; musl will probably
-    hand back the same block and it will probably keep working, but if it ever does not,
-    the failure is silent — the header checksum mismatches, the engine reports
-    `_SPATNY_UPLNY_SLOVNIK_` and re-inflects, and hazard 5's whole mitigation is quietly
-    gone. Test for it at 3.3 by timing the *second* run, not the first. If it breaks,
-    the fix is a one-identifier patch with a strong argument behind it.
+    That is exactly what happened, at the first wasm run, and the prediction above was
+    right about the cause and wrong about two details worth correcting.
+
+    **It did not keep working, and it did not fail silently.** Under Emscripten the
+    `FILE` is `malloc`ed, `fclose` frees it, and in the engine's own sequence the next
+    `fopen` is *not* served the same block — measured, `0x45780` closed, `0x50b40`
+    opened. `getc` on the dangling pointer trapped: `memory access out of bounds` in
+    `locking_getc`, on every load that had a cache to read. A minimal
+    `fopen`/`fclose`/`fopen` under the same emcc *does* hand the pointer back, so the
+    difference is allocator state, not musl policy — which is a good reminder that
+    "it works here" was never the property this code needed.
+
+    The fix was the predicted one-identifier patch, twice: `g_zakladnislovnik` →
+    `g_uplnyslovnik` at `SLOVNIK.FU:1103` and `:1106`, which is the file those bytes are
+    actually in. `PATCHES.md` 2 carries the argument — the writer puts the padding in
+    `SLOVNIK.TMP`, `PRECTI_PROFIL_ZE_SOUBORU` is the author's own correct copy of the
+    same reader, and the checksum only closes if the bytes come from the cache file.
+    Natively it is provably a no-op: same transcript, same 18 MB `SLOVNIK.TMP`.
+
+    **The knock-on constraint is retired.** "Nothing may `fopen` between those two calls"
+    was load-bearing for `pokyd_api.cpp`, `pokyd_api.h`, `src/README.md` and the driver;
+    all four said so and all four have been corrected. `pokyd_import_cache` is still its
+    own call before `pokyd_load_dictionaries`, for the ordinary reason that the load is
+    what reads the file.
 
 11. **~~`rand()` is the C runtime's, and the toolchains do not agree.~~ Closed at 1.6,
     by the shim.** `VRAT_CISLO_ODPOVEDI_PODLE_HISTORIE` picks between equally-unheard
@@ -838,27 +870,61 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       `POKYD_FAZE_NECINNY`. **No sentence has been said yet** — the module has never been
       past loading, and `pokyd_load_dictionaries()` has never been called in wasm. That is
       3.3, and until it passes, nothing here is evidence about the engine's answers.
-- [ ] 3.3 Node smoke test: same inputs as 1.6, diff against the native transcript.
-      **They must match exactly.** Any divergence is a hazard-1/4 bug — fix before moving on.
-      Hazard 11 is already settled — `src/shim/nahoda.h` gives both builds the same
-      `rand()` — so this test can pass; check that the shim is actually in the Emscripten
-      include path before blaming the engine for a divergence.
+- [x] 3.3 **Node smoke test — `node test/wasm/smoke.mjs`, and it passes.** The wasm build
+      reproduces `test/golden/rozhovor.txt` byte for byte, cold and warm. The runner is
+      `test/wasm/smoke.mjs`: no arguments, no build step of its own, exit code 0 or 1.
 
-      Read the warnings before blaming the engine, too: clang's inventory is not g++'s.
-      The 3.2 build emits 1,208 `-Winvalid-source-encoding` — CP1250 bytes in char and
-      string literals, hazard 6, informational, clang keeps the raw byte — and they bury
-      eleven that are not noise: 4 `-Wunused-variable`, 3 `-Wsometimes-uninitialized`, and
-      one each of `-Wself-assign`, `-Wlogical-op-parentheses`, `-Wformat-security` and
-      `-Wchar-subscripts`. The last of those sits directly on hazard 1 and is the first
-      place to look if the transcript diverges. None are silenced, per the standing rule
-      about the g++ warnings — but if 3.3 needs to read them, `--wasm -v 2>&1 | grep -v
-      invalid-source-encoding` is how. Time the *second* run too,
-      not just the first — that is the only way hazard 10 shows itself. The inputs are
-      `test/golden/rozhovor.in` and the settings in `test/golden/README.md`; the file to
-      `cmp` against is `test/golden/rozhovor.txt`.
+      ```
+      cold  load 14.21 s, 23 answers in 6 ms
+            transcript 1116 bytes, identical      SLOVNIK.TMP 18,131,435 bytes,
+            0 unfreed blocks                      identical to the native one
+      warm  load  0.12 s, 23 answers in 2 ms
+            transcript 1116 bytes, identical      0 unfreed blocks
+      ```
+
+      **The SLOVNIK.TMP comparison is the real test** and it was worth writing: the
+      transcript is 1,116 bytes and touches a few dozen rules, while the cache is 18 MB
+      of every inflected form, obfuscated with `rand()` padding and checksummed twice.
+      Two toolchains agreeing on it byte for byte is hazard 1 (`char` signedness),
+      hazard 4 (overflow and aliasing under `-O1`) and hazard 11 (`rand()`) all answered
+      at once. Hazard 6's 1,208 `-Winvalid-source-encoding` are confirmed informational:
+      clang keeps the raw byte, and the bytes are right.
+
+      Warm is tested by exporting the cold run's blob and importing it into a **second
+      module instance** — MEMFS does not survive an instance, so there is no other way to
+      time a second run, and it exercises `pokyd_import_cache` (phase 4.4's mechanism) on
+      the way. It is 0.12 s, faster than the native 0.4 s, because the blob never touches
+      a disk.
+
+      **It did not pass first time, and hazard 10 is why** — see below and `PATCHES.md` 2.
+      The failure was a hard `RuntimeError: memory access out of bounds` inside `getc`,
+      not the silent re-inflection this plan predicted.
+
+      Three notes for whoever reads the runner. It **decodes nothing**: `rozhovor.in` is
+      CP1250 on disk, the API takes CP1250, and the transcript is written back as the
+      bytes the engine returned, so phase 4.1's codec is not silently on trial here.
+      It **checks the `pokyd_settings` layout** against what `NASTAV_STANDARDNE` wrote
+      before trusting a single offset, because a JS-side offset table that drifts from
+      the header would corrupt every setting at once and still produce a plausible
+      conversation. And it **discards the engine's own console output** unless `--noise`
+      asks for it — 2.6 MB of progress bar and `vstup.fu:801-809` per run — which costs
+      nothing measurable either way (14.15 s noisy, 14.21 s quiet), so the 14 s is real
+      compute and not console traffic.
 - [ ] 3.4 Measure cold-start time and peak heap; compare against 1.5's native 4.5 s /
       37 MB / 402,252 forms. Decide whether the `SLOVNIK.TMP` cache is required for launch
-      or a later optimization — at 4.5 s native it may well be the latter.
+      or a later optimization — ~~at 4.5 s native it may well be the latter~~.
+
+      **3.3 brought back the timings and they change the answer.** Cold in node v24.20.0
+      is **14.2 s**, about 3× the native 4.5–5.7 s, and console noise is not the cause
+      (14.15 s noisy vs 14.21 s quiet). Warm, from an imported blob, is **0.12 s**. A
+      browser tab that thinks for fourteen seconds before its first word is not a museum
+      piece anybody waits for, so the cache looks like a launch requirement rather than an
+      optimization — which makes 4.4 load-bearing for 5.2 and not a nicety after it.
+
+      What is still missing here is **peak heap** (the native figure is 37 MB of working
+      set), a second reading on hardware that is not this laptop, and the decision itself
+      written down. `pokyd_export_cache` already hands over the exact blob 4.4 needs, and
+      3.3 proved importing it works in wasm.
 
 ## Phase 4 — JS boundary
 

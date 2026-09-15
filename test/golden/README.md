@@ -66,6 +66,13 @@ So a transcript that differs from this one means the engine differs. At 3.3 that
 is a hazard-1 or hazard-4 bug in the wasm build, not a licence to re-record the
 golden file.
 
+**Phase 3.3 ran it and it holds.** `node test/wasm/smoke.mjs` drives the wasm
+build through the same 23 sentences and reproduces this file byte for byte, cold
+and warm, and the `SLOVNIK.TMP` its cold run exports is byte-identical to the
+native one. It took one patch to the engine to get there — `PATCHES.md` 2, the
+hazard-10 `FILE *` — and that patch changes neither this transcript nor that
+cache on the native build.
+
 ## The conversation
 
 ```

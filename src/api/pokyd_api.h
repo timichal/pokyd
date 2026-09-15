@@ -23,12 +23,14 @@
        pokyd_export_cache(...)      any time after loading
        pokyd_shutdown()
 
-   Two of those constraints come from the engine and are documented again at the
-   calls that enforce them in pokyd_api.cpp: seeding has to come last because
+   One of those constraints comes from the engine and is documented again at the
+   call that enforces it in pokyd_api.cpp: seeding has to come last because
    ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU reseeds from the clock on its way out
-   (SLOVNIK.FU:1732), and nothing may open a file between the base-dictionary read
-   and the cache read (PLAN.md hazard 10), which is why importing a cache is a
-   step of its own and not something pokyd_load_dictionaries takes as an argument.
+   (SLOVNIK.FU:1732).  Importing a cache is a step of its own for a plainer reason
+   -- it writes SLOVNIK.TMP, and the file has to be there before the load looks for
+   it.  Until phase 3.3 it was also hazard 10's requirement that nothing open a file
+   between the base-dictionary read and the cache read; PATCHES.md 2 removed that,
+   and the shape of the API is unchanged by it.
 
    Written by us, not ported.  ASCII only, like the rest of the non-engine code.
 */
@@ -199,10 +201,12 @@ int pokyd_phase(void);
 
    Import writes the blob to SLOVNIK.TMP.  It must be called after pokyd_init and
    *before* pokyd_load_dictionaries -- not during, and not as an argument to it.
-   PLAN.md hazard 10: the cache read takes its padding length from a FILE * that
-   the base-dictionary read already closed, and it works only because the C
-   runtime hands the same slot straight back, so nothing may open a file between
-   those two calls.
+   It used to matter a great deal more than that.  PLAN.md hazard 10: the cache
+   read took its padding length from a FILE * the base-dictionary read had already
+   closed, and worked only while the C runtime handed the same slot straight back,
+   so nothing could open a file between those two calls.  Emscripten's allocator
+   does not hand it back and the read trapped; PATCHES.md 2 is the two-identifier
+   fix, and the ordering is now ordinary rather than load-bearing.
 
    Nothing in SLOVNIK.TMP identifies which dictionary it was inflected from.  The
    engine checksums it and rejects a corrupt one (_SPATNY_UPLNY_SLOVNIK_, after

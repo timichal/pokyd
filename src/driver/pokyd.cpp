@@ -294,8 +294,9 @@ pokyd_settings nastaveni;
      SPOCITEJ_NALADABODY_Z_NALADY.  See pokyd_api.h. */
   if (o_nalada != -1) pokyd_set_mood((unsigned char)o_nalada);
 
-  /* Before loading, never during: hazard 10 wants the base-dictionary read and
-     the cache read adjacent, which is why this is its own step.  See pokyd_api.h. */
+  /* Before loading, never during: the load is what reads SLOVNIK.TMP.  It was
+     hazard 10's adjacency that made this its own step; PATCHES.md 2 settled that,
+     and the order is still the API's.  See pokyd_api.h. */
   if (o_dovez != NULL && DOVEZ_CACHE(o_dovez) != 0) return(1);
 
   if (pokyd_load_dictionaries() != 0) {

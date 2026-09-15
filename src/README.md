@@ -97,10 +97,10 @@ that enforces it, because getting any of them wrong fails silently:
 
 - **Seed after loading, never before.** `ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU`
   reseeds from the clock on its way out (`SLOVNIK.FU:1732`).
-- **Import a cache before loading, not during.** Hazard 10 needs the
-  base-dictionary read and the cache read adjacent, which is why
-  `pokyd_import_cache` is its own call and not an argument to
-  `pokyd_load_dictionaries`.
+- **Import a cache before loading, not during.** The load is what reads
+  `SLOVNIK.TMP`, so the file has to be on disk by then. Until phase 3.3 this was
+  hazard 10's requirement as well — the two reads had to stay adjacent — and
+  `PATCHES.md` 2 retired that argument without changing the rule.
 - **`nalada` is derived, `naladabody` is the state.** Writing `nalada` through
   `pokyd_set_settings` is undone after the next sentence (`INTELIG.FU:1047`);
   `pokyd_set_mood` is what the original's own dialog does.
