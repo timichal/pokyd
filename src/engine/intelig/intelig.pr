@@ -1,0 +1,36 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Můžete ho použít k vlastní
+   potřebě, ale nesmíte jej ani programy založené na tomto kódu využít komerčně!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - intelig.pr - globální proměnné pro funkce pro generování odpovědi
+   na základě věty člověka a předchozích znalostí
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+#define POCET_PRVKU_HISTORIE 200
+                               //kolik minulych odpovedi se ma ukladat
+
+
+Struktura_vety g_vetacloveka;
+
+Typ_slova g_prostorslovviqpodminkach[10];    //zde se budou ukladat informace
+       //o slovech c.1-9 z podminek, ktere budou moci byt pouzity v odpovedich
+
+char **g_odpovedipocitace=NULL;
+                //zde se prubezne ukladaji vybrane vety - odpovedi pocitace
+WORD *g_idodpovedipocitace=NULL;
+                //zde jsou identifikacni cisla z g_odpovedipocitace
+char g_odpovedpocitace[MAX_DELKA_ODPOVEDI_POCITACE+1];
+             //zde se ulozi veta, kterou "odpovi" pocitac. Ta se vybere
+             //z "**odpovedipocitace"
+DWORD g_pocetodpovedipocitace;
+                //udava, kolik je odpovedi v g_odpovedipocitace
+WORD g_posledniodpovedi[POCET_PRVKU_HISTORIE];
+                     //cisla poslednich 200 odpovedi (aby se neopakoval)
+DWORD g_pocetrecenychvet=0;
+                //udava, kolikata je tohle veta cloveka
+BYTE g_smyslposlednivetypocitace;
+              //zde se zapise smysl posledni odpovedi pocitace

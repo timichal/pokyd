@@ -1,0 +1,32 @@
+# Line endings are load-bearing here, so pin them instead of letting each clone's
+# core.autocrlf decide.
+#
+# tools/transcode.py guarantees that the CP1250 tree handed to the compiler is a
+# byte-for-byte match of original/.  That proof compares real files on disk, so
+# every checkout has to produce the same bytes on every platform.  These two trees
+# are CRLF (a 2005 Windows project), and the working copies this repo was verified
+# against are CRLF, so CRLF is what git must check out -- also on Linux, where the
+# Emscripten build will eventually run.
+#
+# Note: these files were first committed under core.autocrlf=true and are stored
+# LF-normalized in the index.  eol=crlf keeps that storage and fixes the checkout,
+# which is why it shows no diff.  See PLAN.md, "Line endings in the archive".
+
+original/**       text eol=crlf
+src/engine/**     text eol=crlf
+
+# Binary payloads: never touched, never diffed as text.
+*.iqp   binary
+*.IQP   binary
+*.bmp   binary
+*.BMP   binary
+*.ico   binary
+*.ICO   binary
+*.ttf   binary
+*.TTF   binary
+*.wav   binary
+*.WAV   binary
+*.exe   binary
+*.EXE   binary
+*.hlp   binary
+*.HLP   binary

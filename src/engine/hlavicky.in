@@ -1,0 +1,29 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Můžete ho použít k vlastní
+   potřebě, ale nesmíte jej ani programy založené na tomto kódu využít komerčně!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - hlavicky.in - soubor pro načtení všech hlaviček funkcí IQ Pokydu
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+#include <stdio.h>
+
+#include "konstant.k"
+
+#include "vzory/skl_a_dr.h"
+#include "intelig/intelig.tr"
+#include "vstup/nastaven.tr"
+#ifndef BEZ_PROSTREDI
+#include "prostred/iqpwav.tr"
+#endif
+#include "debug/debug.h"
+#include "slovnik/slovnik.h"
+#include "vstup/vstup.h"
+#include "intelig/intelig.h"
+#include "vzory/sklonov.h"
+#ifndef BEZ_PROSTREDI
+#include "prostred/prostred.h"
+#endif

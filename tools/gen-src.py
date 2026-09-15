@@ -23,8 +23,10 @@ inconsistent about case (`\!IQPokyd\!Zdrojak\Aplikace\` in one file,
 `\!iqpokyd\!Zdrojak\aplikace\` in another) and only worked because Windows
 does not care -- Emscripten on a case-sensitive host would.
 
-File *contents* are copied byte-for-byte; the sources stay CP1250 here.
-Transcoding to UTF-8 is task 1.2 and gets its own output tree.
+File *contents* are copied byte-for-byte; the sources stay CP1250 here.  This tree is
+the reference the byte-exactness proof compares against, not the tree we compile:
+`tools/transcode.py` turns it into the canonical UTF-8 `src/engine/` and back into the
+CP1250 `build/cp1250/` that the compiler is actually given.
 """
 
 import argparse

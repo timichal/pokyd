@@ -1,0 +1,2179 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Můžete ho použít k vlastní
+   potřebě, ale nesmíte jej ani programy založené na tomto kódu využít komerčně!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - slovesa.sk - funkce na časování jednotlivých vzorů sloves
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+// nejsou (a v nejbližší době nebudou) udělané přechodníky
+
+// "osoba": 1, 2 nebo 3
+// "cislo": 1 (jednotné) nebo 2 (množné)
+// "cas": 1 (minulý), 2 (přítomný), 3 (budoucí), 4 (rozkazovací způsob),
+//        5 (infinitiv)
+// "rod": 1 (mužský), 2 (ženský), 3 (střední)
+// "vid": 0 (nedokonavý), 1 (dokonavý), 2 (dokonavý, pouze s předložkou)
+// "zapor": 0 (ne), 1 (přidá "ne" a případně upraví tvar)
+// "tvar": 0 (normální sloveso)
+//         1 (slovesné postatné jméno - např. "dělání")
+//         2 (přechodník - "cas" může být 1 nebo 2)
+//         3 (slovesné přídavné jméno - dělající, holící)
+//         30 (přídavné jméno udávající povahu věci - holicí)
+//         4 (slovesné přídavné jméno - dělaný)
+//         5 (konverze dokonavého vidu na nedokonavý)
+//         6 (vytvoření času "předminulého" - trpívá, sázívá, dělává)
+//           - pouze u vzorů prosí, trpí, sází a dělá
+//           - může zde být různá osoba, číslo, čas, rod, životnost a zápor
+
+
+BYTE CASUJ_VZOR_NESE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+int pozice;
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nemá "předminulý" čas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    if ((POSLEDNI_ZNAK(g_slovo) == 'm' || POSLEDNI_ZNAK(g_slovo) == 'p')
+      && PREDPOSLEDNI_ZNAK(g_slovo) == 'a') {
+      g_slovo[1]='á';                        //mate -> mátl, pase -> pásl
+     }
+    if (POSLEDNI_PISMENA(g_slovo,"řes") == 1) {           //třese -> třásl
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("ás");
+     }
+    PRIDEJ_NA_KONEC("l");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+    if (cislo == 1 && rod == 1) {
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_DO_FRONTY(); //(on) nes - nespisovné
+     }
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) nesem - nespisovné
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eš");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou"); break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_NESE(1,1,5,1,1,0,0,0);     //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+
+    if (POSLEDNI_PISMENA(g_slovo,"íp") == 1) {
+      PRIDEJ_NA_KONEC("ej");                             //podle vzoru "dělá"
+     }                                                   //(skřípe, hnípe)
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+    if (POSLEDNI_PISMENA(g_slovo,"st") == 0) { //konci-li na "st", dalsi "s"
+                                             //se uz pridavat nebude
+      switch(POSLEDNI_ZNAK(g_slovo)) {
+        case 'd': case 't': OREZ_POSLEDNI_ZNAKY(g_slovo,1);   //krást, mást
+                            PRIDEJ_NA_KONEC("s"); break;
+       }
+      PRIDEJ_NA_KONEC("t");
+     }
+    PRIDEJ_DO_FRONTY();
+    if (POSLEDNI_PISMENA(g_slovo,"st") == 0) {    //jenom růst, ne růsti
+      ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+      PRIDEJ_DO_FRONTY();
+     }
+
+    strcpy(g_slovo,g_slovodocasne);
+    pozice=strlen(g_slovo); if (pozice >= 3 && g_slovo[pozice-2] == 'e') {
+      if (TVRDA_SOUHLASKA(g_slovo[pozice-3]) == 1) g_slovo[pozice-2]='ý';
+      else g_slovo[pozice-2]='í';       //nést -> nýst, vézt -> vízt (nespisovné)
+      switch(POSLEDNI_ZNAK(g_slovo)) {
+        case 'd': case 't': OREZ_POSLEDNI_ZNAKY(g_slovo,1);   //krást, mást
+                            PRIDEJ_NA_KONEC("s"); break;
+       }
+      PRIDEJ_NA_KONEC("t");
+      PRIDEJ_DO_FRONTY();
+      ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+      PRIDEJ_DO_FRONTY();
+     }
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                //slovesné podstatné jméno
+  CASUJ_VZOR_NESE(3,1,2,1,0,0,zapor,0);    //rekurze - 3.osoba j.č. přít.času
+  PRIDEJ_ZA_KAZDE_SLOVO("ňí");
+  return(_staveni_);
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  CASUJ_VZOR_NESE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.č. (dělají)
+  PRIDEJ_ZA_KAZDE_SLOVO("cí");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_NESE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+  strcpy(g_slovo,g_slovodocasne);
+  switch(POSLEDNI_ZNAK(g_slovo)) {
+    case 's': switch(PREDPOSLEDNI_ZNAK(g_slovo)) {
+      case 'a': KONC_ASA:
+                OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("ásá");
+                PRIDEJ_DO_FRONTY(); return(_dela_);
+      default: if (PREDPREDPOSLEDNI_ZNAK(g_slovo) != 'ř') {     //nese
+                 OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("áší");
+                 PRIDEJ_DO_FRONTY(); return(_sazi_);
+                }
+               else goto KONC_ASA;                            //třese
+     }
+    case 'd': switch(PREDPOSLEDNI_ZNAK(g_slovo)) {
+      case 'a':                                               //krade
+                OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("ádá");
+                PRIDEJ_DO_FRONTY(); return(_dela_);
+      default:                                                //vede
+               OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("áďí");
+               PRIDEJ_DO_FRONTY(); return(_sazi_);
+     }
+    case 't': if (PREDPOSLEDNI_ZNAK(g_slovo) == 'e') {         //kvete, plete
+                OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("étá");
+                PRIDEJ_DO_FRONTY();
+
+                strcpy(g_slovo,g_slovozaklad);
+                OREZ_POSLEDNI_ZNAKY(g_slovo,3);  //3, protoze se tvori z tvaru
+                                           //"odkvete", ne "odkvet"
+                if (TVRDA_SOUHLASKA(POSLEDNI_ZNAK(g_slovo)) == 1) PRIDEJ_NA_KONEC("ýtá");
+                else PRIDEJ_NA_KONEC("ítá");       //nespisovné (vykvítá)
+                PRIDEJ_DO_FRONTY(); return(_dela_);
+               }
+              else return(0);
+    case 'z': if (PREDPOSLEDNI_ZNAK(g_slovo) == 'e') {         //doleze -> dolézá
+                OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("ézá");
+                PRIDEJ_DO_FRONTY();
+
+                strcpy(g_slovo,g_slovozaklad);
+                OREZ_POSLEDNI_ZNAKY(g_slovo,3);  //3, protoze se tvori z tvaru
+                                           //"doleze", ne "dolez"
+                PRIDEJ_NA_KONEC("ejzá");       //nespisovné (dolejzá)
+                PRIDEJ_DO_FRONTY(); return(_dela_);
+               }
+              else return(0);
+    default: return(0);
+   }
+ }
+
+BYTE CASUJ_VZOR_BERE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+int pozice;
+char *slovavefronte2=NULL;
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nemá "předminulý" čas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_ZNAK(g_slovo) == 'm') {                //dme
+      PRIDEJ_NA_KONEC("ul");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+     }
+    else if (POSLEDNI_PISMENA(g_slovo,"jd") == 1) {           //jde, přijde atd.
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      if (rod == 1 && cislo == 1) PRIDEJ_NA_KONEC("šel");
+      else PRIDEJ_NA_KONEC("šl");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+     }
+    else if (POSLEDNI_PISMENA(g_slovo,"šl") == 1) {           //pošle atd.
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      PRIDEJ_NA_KONEC("slal");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+     }
+    else {
+      switch (VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovo))) {  //malé písmeno kvůli bě, pě
+	      case 'b': case 'p': break;        //jebe -> jebal
+        default: ODSTRAN_E(g_slovo);
+       }
+      PRIDEJ_NA_KONEC("al");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+     }
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) berem - nespisovné
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eš");
+              else PRIDEJ_NA_KONEC("ete");
+              break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou");
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+
+    if (VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne)) == 'b' || VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne) == 'p')) {
+      strcpy(g_slovo,g_slovodocasne);
+      PRIDEJ_NA_KONEC("e");         //pomocná konstrukce ke zjištění počtu slabik
+      if (POCET_SLABIK(g_slovo) >= 2) { //vynechání slov typu "cpe" - (on) cpá neexistuje
+        slovavefronte2=ALOKUJ_RETEZEC(strlen(g_slovavefronte)+1);
+        strcpy(slovavefronte2,g_slovavefronte); VYMAZ_FRONTU();
+        CASUJ_VZOR_DELA(osoba,cislo,2,1,vid,0,0,0);      //rekurze - infinitiv
+        PRIDEJ_NA_ZACATEK_FRONTY(slovavefronte2);
+        UVOLNI(slovavefronte2);
+       }
+     }
+
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_BERE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    if (VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne)) == 'b' || VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne)) == 'p') {
+      strcpy(g_slovo,g_slovodocasne);
+      PRIDEJ_NA_KONEC("e");         //pomocná konstrukce ke zjištění počtu slabik
+      if (POCET_SLABIK(g_slovo) >= 2) { //vynechání slov typu "cpe" - (on) cpá neexistuje
+        strcpy(g_slovo,g_slovodocasne);
+        PRIDEJ_NA_KONEC("ej");
+        PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+        return(1);
+       }
+     }
+
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_PISMENA(g_slovo,"jd") == 1) {        //jde, přijde atd.
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+      PRIDEJ_NA_KONEC("ít");
+     }
+    else if (POSLEDNI_PISMENA(g_slovo,"šl") == 1) {           //pošle atd.
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      PRIDEJ_NA_KONEC("slat");
+     }
+    else {
+      ODSTRAN_E(g_slovo); PRIDEJ_NA_KONEC("e");  //pomocné vytvoření slova
+                                                 //(kvůli spočítání počtu slabik)
+      if (zapor == 1 || POCET_SLABIK(g_slovo) >= 2) {
+        strcpy(g_slovo,g_slovodocasne);
+        ODSTRAN_E(g_slovo);
+        PRIDEJ_NA_KONEC("at");                    //"sebrat", "nebrat", "kašlat"
+       }                                          // ...
+      else {                                      // ...
+        strcpy(g_slovo,g_slovodocasne);           // ...
+        ODSTRAN_E(g_slovo);                       // ...
+        PRIDEJ_NA_KONEC("át");                    //ale "brát", "štvát"
+       }
+     }
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  CASUJ_VZOR_BERE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+                         //braní, sebrání, ale nebraní ! (na záporu nezáleží)
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+  switch(POSLEDNI_ZNAK(g_slovo)) {
+    case 'a': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("á");
+              PRIDEJ_NA_KONEC("ňí");
+              break;                                     //sebrat -> sebrání
+    case 'á': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("a");
+              PRIDEJ_NA_KONEC("ňí");
+              break;                                     //brát -> braní
+    case 'í': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("i");
+              PRIDEJ_NA_KONEC("ťí");
+              break;                                     //najít -> najití
+   }
+  PRIDEJ_DO_FRONTY();
+  if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  if (POSLEDNI_ZNAK(g_slovodocasne) == 'š') {    //kouše
+    strcpy(g_slovo,g_slovodocasne);
+    ZDRSNI_KONCOVKU_SLOVESA();
+    PRIDEJ_NA_KONEC("ající");                    //"kousající"
+    PRIDEJ_DO_FRONTY();
+   }
+  else {
+    if (VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne)) == 'b' || VRAT_MALE_PISMENO(POSLEDNI_ZNAK(g_slovodocasne)) == 'p') {
+      strcpy(g_slovo,g_slovodocasne);
+      PRIDEJ_NA_KONEC("e");         //pomocná konstrukce ke zjištění počtu slabik
+      if (POCET_SLABIK(g_slovo) >= 2) { //vynechání slov typu "cpe" - (on) cpá neexistuje
+        strcpy(g_slovo,g_slovodocasne);
+        PRIDEJ_NA_KONEC("ající");                    //"kousající"
+        PRIDEJ_DO_FRONTY();
+        return(1);
+       }
+     }
+    strcpy(g_slovo,g_slovodocasne);
+    CASUJ_VZOR_BERE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.č. (dělají)
+    PRIDEJ_ZA_KAZDE_SLOVO("cí");
+   }
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_BERE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (PREDPOSLEDNI_ZNAK(g_slovo) == 'e') { //probere -> probírá
+    pozice=strlen(g_slovo);
+    if (TVRDA_SOUHLASKA(g_slovo[pozice-3]) == 1) g_slovo[pozice-2]='ý';
+    else g_slovo[pozice-2]='í';
+    g_slovo[pozice]='á'; g_slovo[pozice+1]=0;
+
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"jd") == 1) {           //najde, přijde atd.
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("chází");
+    PRIDEJ_DO_FRONTY(); return(_sazi_);
+   }
+  else {                               //naštve -> naštvává, dupe -> dupává
+    PRIDEJ_NA_KONEC("ává");
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+ }
+
+BYTE CASUJ_VZOR_MAZE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+// Tento vzor kolísá mezi originálním "maže" a dělá (mazá).
+// Jsou zahrnuty oba dva tvary, přičemž originální "maže" je jako primární.
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nemá "předminulý" čas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    ZDRSNI_KONCOVKU_SLOVESA();
+    PRIDEJ_NA_KONEC("al");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) {
+                PRIDEJ_NA_KONEC("u");
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lž") == 1) break;
+                switch(POSLEDNI_ZNAK(g_slovodocasne)) {
+                  case 'č': case 'š': case 'ž':
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    PRIDEJ_NA_KONEC("i");            //(já) maži - knižní tvar
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("ám");  //mazám
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("am");  //mazam - nespisovné
+                    break;
+                 }
+               }
+              else {
+                PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lž") == 0) {
+                  ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("áme");      //mazáme
+                  PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                 }
+                PRIDEJ_NA_KONEC("em");            //(my) berem - nespisovné
+               }
+              break;
+      case 2: if (cislo == 1) {
+                PRIDEJ_NA_KONEC("eš");
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lž") == 1) break;
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("áš");    //mazáš
+               }
+              else {
+                PRIDEJ_NA_KONEC("ete");
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lž") == 1) break;
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("áte");  //mazáte
+               }
+              break;
+      case 3: if (cislo == 1) {
+                PRIDEJ_NA_KONEC("e");
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lž") == 1) break;
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("á");  //mazá
+               }
+              else {
+                PRIDEJ_NA_KONEC("ou");
+                if (POSLEDNI_PISMENA(g_slovodocasne,"lž") == 1) break;
+                switch(POSLEDNI_ZNAK(g_slovodocasne)) {
+                  case 'č': case 'š': case 'ž':
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    PRIDEJ_NA_KONEC("í");       //(oni) maží - knižní tvar
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("ají");  //mazají
+                    PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                    ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("aj");  //mazaj - nespisovné
+                    break;
+                 }
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_MAZE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+
+    if (POSLEDNI_PISMENA(g_slovodocasne,"lž") == 0) {
+      strcpy(g_slovo,g_slovodocasne);
+      ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("ej");     //kousej, mazej
+      PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+     }
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    ZDRSNI_KONCOVKU_SLOVESA();
+    if (strlen(g_slovo) > 2)
+     PRIDEJ_NA_KONEC("at");                     //mazal
+    else PRIDEJ_NA_KONEC("át");                 //lhát
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  CASUJ_VZOR_MAZE(3,1,1,1,0,0,zapor,0);     //rekurze - 3.osoba j.č. min.času
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+  if (POCET_SLABIK(g_slovo) > 0) PRIDEJ_NA_KONEC("áňí");
+  else PRIDEJ_NA_KONEC("aňí");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  strcpy(g_slovo,g_slovodocasne);
+  ZDRSNI_KONCOVKU_SLOVESA(); PRIDEJ_NA_KONEC("ající");
+  PRIDEJ_DO_FRONTY();
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_MAZE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (POSLEDNI_PISMENA(g_slovo,"až") == 1 || POSLEDNI_PISMENA(g_slovo,"lž") == 1
+   || POSLEDNI_ZNAK(g_slovo) == 'š') {
+              //smaže -> smazává, nalže -> nalhává, kouše,češe -> kousává,česává
+
+    CASUJ_VZOR_MAZE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+    OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+    VYMAZ_FRONTU();
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("ává");
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"áž") == 1         //dokáže -> dokazuje
+        || POSLEDNI_PISMENA(g_slovo,"íž") == 1) {      //vylíže -> vylizuje
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,0);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("zuje");
+    PRIDEJ_DO_FRONTY(); return(_kupuje_);
+   }
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_PECE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+int pozice;
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nemá "předminulý" čas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_ZNAK(g_slovo) == 'ž') {             //"může"
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      PRIDEJ_NA_KONEC("ohl");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+      if (cislo == 1 && rod == 1) {
+        OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_DO_FRONTY();  //(on) moh - nespisovné
+       }
+     }
+    else if (PREDPOSLEDNI_ZNAK(g_slovo) == 'u') {      //tluče -> tloukl
+      PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+      goto NORMALNEMINULY;
+     }
+    else {
+      NORMALNEMINULY:
+      ZDRSNI_KONCOVKU_SLOVESA();
+      PRIDEJ_NA_KONEC("l");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+      if (cislo == 1 && rod == 1) {
+        OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_DO_FRONTY();//(on) pek - nespisovné
+       }
+     }
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_ZNAK(g_slovo) == 'ž') {             //"může"
+      if (osoba == 1 && cislo == 1) {              //"mohu"
+        OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+        PRIDEJ_NA_KONEC("ohu"); PRIDEJ_DO_FRONTY();
+       }
+      if (osoba == 3 && cislo == 2) {              //"mohou"
+        OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+        PRIDEJ_NA_KONEC("ohou"); PRIDEJ_DO_FRONTY();
+       }
+      strcpy(g_slovo,g_slovodocasne);
+     }
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) pečem - nespisovné
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eš");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else {
+                PRIDEJ_NA_KONEC("ou");
+                if (POSLEDNI_ZNAK(g_slovodocasne) != 'ž') {
+                  PRIDEJ_DO_FRONTY();
+                  strcpy(g_slovo,g_slovodocasne);
+                  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+                  PRIDEJ_NA_KONEC("kou");                  //pekou - knižně
+                 }
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_PECE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_ZNAK(g_slovo) == 'ž') {
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("z");
+      PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor); //pomoz
+      strcpy(g_slovo,g_slovodocasne);
+      PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor); //pomož
+                                                            // -nespisovné
+     }
+    else PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    switch(POSLEDNI_ZNAK(g_slovo)) {
+      case 'č': OREZ_POSLEDNI_ZNAKY(g_slovo,1);          //peče -> péct
+                PRIDEJ_NA_KONEC("c");
+                PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+                break;
+      case 'ž': OREZ_POSLEDNI_ZNAKY(g_slovo,2);          //může -> moct
+                PRIDEJ_NA_KONEC("oc");
+                break;
+      default: break;                 //jiný znak by na konci snad neměl být
+     }
+    PRIDEJ_NA_KONEC("t");                      //péct
+    PRIDEJ_DO_FRONTY();
+
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    PRIDEJ_NA_KONEC("i");                      //péci - knižní tvar
+    PRIDEJ_DO_FRONTY();
+
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    pozice=strlen(g_slovo); if (pozice >= 3 && g_slovo[pozice-2] == 'é') {
+      if (TVRDA_SOUHLASKA(g_slovo[pozice-3]) == 1) g_slovo[pozice-2]='ý';
+      else g_slovo[pozice-2]='í';       //péct -> píct (nespisovné)
+      PRIDEJ_NA_KONEC("t");
+      PRIDEJ_DO_FRONTY();
+     }
+
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  if (POSLEDNI_ZNAK(g_slovodocasne) == 'ž') {
+    strcpy(g_slovo,g_slovodocasne);
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,0);
+    PRIDEJ_NA_KONEC("eňí");
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else {
+    CASUJ_VZOR_PECE(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.č. přít.času
+    PRIDEJ_ZA_KAZDE_SLOVO("ňí");
+   }
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  if (POSLEDNI_ZNAK(g_slovodocasne) != 'ž') {
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    PRIDEJ_NA_KONEC("koucí");
+    PRIDEJ_DO_FRONTY();                     //pekoucí
+   }
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("oucí");
+  PRIDEJ_DO_FRONTY();                     //pečoucí
+  if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_PECE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (POSLEDNI_ZNAK(g_slovo) == 'ž') {             //pomůže -> pomáhá
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+    PRIDEJ_NA_KONEC("áhá");
+
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  if (JELI_SAMOHLASKA(PREDPOSLEDNI_ZNAK(g_slovo)) == 1) { //zateče -> zatéká
+    PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    PRIDEJ_NA_KONEC("ká");
+
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_UMRE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+// tento vzor má jiné přechodníky -> ř se mění na r (vře -> vrouc)
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nemá "předminulý" čas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("el");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) berem - nespisovné
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eš");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou");
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_UMRE(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ít");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  CASUJ_VZOR_UMRE(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.č. přít.času
+  PRIDEJ_ZA_KAZDE_SLOVO("ňí");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  CASUJ_VZOR_UMRE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.č. (dělají)
+  PRIDEJ_ZA_KAZDE_SLOVO("cí");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_UMRE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (JELI_SOUHLASKA(PREDPOSLEDNI_ZNAK(g_slovo)) == 1 && POSLEDNI_ZNAK(g_slovo) == 'ř') {
+                                                            //umře -> umírá
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("írá");
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_TISKNE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+//u tohoto vzoru se velmi špatně tvoří nedokonavý vid
+// - funkce tedy u tvoření nedokonavého vidu vždy vrací nulu (neúspěch)
+//   -> všechna slova vzoru tiskne musí mít nedokonavý vid zapsán
+//      jako výjimku
+// (zamkne -> zamyká, řízne -> řeže, klekne -> kleká atd.)
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nemá "předminulý" čas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);                     //tiskl
+    if (strlen(g_slovo) > 2) {         //pokud to zrovna není slovo typu hnul
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+      PRIDEJ_NA_KONEC("l");
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+     }
+
+    strcpy(g_slovo,g_slovodocasne);                     //tisknul
+    PRIDEJ_NA_KONEC("ul");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    if (cislo == 1 && rod == 1 && strlen(g_slovodocasne) > 2) {
+      strcpy(g_slovo,g_slovodocasne);
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_DO_FRONTY();//(on) tisk - nespisovné
+     }
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) tisknem - nespisovné
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eš");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou");
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_TISKNE(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("out");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  CASUJ_VZOR_TISKNE(1,1,2,1,0,0,zapor,0);     //rekurze - 1.osoba j.č. přít.času
+  PRIDEJ_ZA_KAZDE_SLOVO("ťí");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  CASUJ_VZOR_TISKNE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.č. (dělají)
+  PRIDEJ_ZA_KAZDE_SLOVO("cí");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_TISKNE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+
+  strcpy(g_slovo,g_slovodocasne);
+  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+  PRIDEJ_NA_KONEC("lý");
+  PRIDEJ_NA_ZACATEK_FRONTY();
+
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+                                   //poznámka viz výše
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_MINE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+int pozice;
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nemá "předminulý" čas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_PISMENA(g_slovo,"omen") == 1) {     //zapomene, vzpomene atd.
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      PRIDEJ_NA_KONEC("ňel");                      //zapomněl, vzpomněl atd.
+      PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+      strcpy(g_slovo,g_slovodocasne);
+     }
+    PRIDEJ_NA_KONEC("ul");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) minem - nespisovné
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eš");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou");
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_MINE(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("out");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  CASUJ_VZOR_MINE(1,1,2,1,0,0,zapor,0);     //rekurze - 1.osoba j.č. přít.času
+  PRIDEJ_ZA_KAZDE_SLOVO("ťí");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  CASUJ_VZOR_MINE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.č. (dělají)
+  PRIDEJ_ZA_KAZDE_SLOVO("cí");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_MINE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (POSLEDNI_PISMENA(g_slovo,"an") == 1) {          //dostane -> dostává
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+    PRIDEJ_NA_KONEC("ává");
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"en") == 1) {        //zapomene -> zapomíná
+    pozice=strlen(g_slovo);
+    if (TVRDA_SOUHLASKA(g_slovo[pozice-3]) == 1) g_slovo[pozice-2]='ý';
+    else g_slovo[pozice-2]='í';
+    g_slovo[pozice]='á'; g_slovo[pozice+1]=0;
+
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"in") == 1) {        //mine -> míjí
+    pozice=strlen(g_slovo);
+    if (TVRDA_SOUHLASKA(g_slovo[pozice-3]) == 1) g_slovo[pozice-2]='ý';
+    else g_slovo[pozice-2]='í';
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    PRIDEJ_NA_KONEC("jí");
+
+    PRIDEJ_DO_FRONTY(); return(_sazi_);
+   }
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_ZACNE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+int pozice;
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nemá "předminulý" čas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    ODSTRAN_E(g_slovo);
+    if (POSLEDNI_ZNAK(g_slovo) != 'a') PRIDEJ_NA_KONEC("a");
+    PRIDEJ_NA_KONEC("l");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ul");                        //zajmul - možná nespisovné
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) PRIDEJ_NA_KONEC("u");
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) berem - nespisovné
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eš");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else PRIDEJ_NA_KONEC("ou"); break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_ZACNE(1,1,5,1,vid,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    if (POSLEDNI_ZNAK(g_slovo) != 'm'           //když to NENÍ přijme, zajme
+     && PREDPOSLEDNI_ZNAK(g_slovo) != 'a') {    //a NENÍ to dostane atd.
+      strcpy(g_slovo,g_slovodocasne);
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+      ODSTRAN_E(g_slovo);
+      PRIDEJ_NA_KONEC("ít");
+      PRIDEJ_DO_FRONTY();
+      ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+      PRIDEJ_DO_FRONTY();
+     }
+
+    if (PREDPOSLEDNI_ZNAK(g_slovo) == 'a') {    //pokud to JE dostane atd.
+      strcpy(g_slovo,g_slovodocasne);
+      OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+      if (POCET_SLABIK(g_slovo) > 0 || zapor == 1) PRIDEJ_NA_KONEC("at");
+      else PRIDEJ_NA_KONEC("át");         //stát, dostat a nestat (se)
+      PRIDEJ_DO_FRONTY();
+      ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+      PRIDEJ_DO_FRONTY();
+     }
+    else {
+      strcpy(g_slovo,g_slovodocasne);
+      PRIDEJ_NA_KONEC("out");
+      PRIDEJ_DO_FRONTY();
+      ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+      PRIDEJ_DO_FRONTY();
+     }
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  CASUJ_VZOR_ZACNE(1,1,2,1,0,0,zapor,0);     //rekurze - 1.osoba j.č. přít.času
+  PRIDEJ_ZA_KAZDE_SLOVO("ťí");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  CASUJ_VZOR_ZACNE(3,2,2,1,0,0,zapor,0);     //rekurze - 3.os. mn.č. (dělají)
+  PRIDEJ_ZA_KAZDE_SLOVO("cí");
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_ZACNE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (JELI_SOUHLASKA(POSLEDNI_ZNAK(g_slovo)) == 1 &&
+      JELI_SOUHLASKA(PREDPOSLEDNI_ZNAK(g_slovo)) == 1) {
+         //začne -> začíná, napne -> napíná, přijme -> přijímá, nadme -> nadýmá
+    pozice=strlen(g_slovo);
+    g_slovo[pozice]=g_slovo[pozice-1];
+    if (TVRDA_SOUHLASKA(g_slovo[pozice-2]) == 1) g_slovo[pozice-1]='ý';
+    else g_slovo[pozice-1]='í';
+    g_slovo[pozice+1]='á'; g_slovo[pozice+2]=0;
+
+    PRIDEJ_DO_FRONTY(); return(_dela_);
+   }
+  return(0);
+ }
+
+BYTE CASUJ_VZOR_KRYJE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nemá "předminulý" čas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    if (POSLEDNI_ZNAK(g_slovo) == 'a') {                  //vlaje - vlál
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("á");
+     }
+    else if (POSLEDNI_PISMENA(g_slovo,"ře") == 1 ||                  //přeje
+             POSLEDNI_PISMENA(g_slovo,"Me") == 1) {                  //směje
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("á");
+     }
+    PRIDEJ_NA_KONEC("l");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("u");  //spisovné, ale hovorové
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("i");
+               }
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) kryjem - nespisovné
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eš");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else { PRIDEJ_NA_KONEC("ou");          //spisovné, ale hovorové
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("í");
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_KRYJE(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    if (POSLEDNI_PISMENA(g_slovo,"ře") == 1 ||                  //přeje
+        POSLEDNI_PISMENA(g_slovo,"Me") == 1) {                  //směje
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("á");
+     }
+    else if (POSLEDNI_ZNAK(g_slovo) == 'e') {  //děje -> dít, leje -> lít
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+      if (TVRDA_SOUHLASKA(POSLEDNI_ZNAK(g_slovo)) == 1) PRIDEJ_NA_KONEC("ý");
+      else PRIDEJ_NA_KONEC("í");
+     }
+    PRIDEJ_NA_KONEC("t");
+    PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  CASUJ_VZOR_KRYJE(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.č. přít.času
+
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+  switch(POSLEDNI_ZNAK(g_slovo)) {
+    case 'a': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("áňí");
+              PRIDEJ_DO_FRONTY();
+              break;
+    case 'e': OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+              if (POSLEDNI_ZNAK(g_slovo) == 'M') {  //směje -> smání
+                OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("má");
+                PRIDEJ_NA_KONEC("ňí"); PRIDEJ_DO_FRONTY();
+               }
+              else {                     //hřeje -> hřátí i
+                PRIDEJ_NA_KONEC("á");
+                PRIDEJ_NA_KONEC("ťí"); PRIDEJ_DO_FRONTY();
+                OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+                PRIDEJ_NA_KONEC("ňí"); PRIDEJ_DO_FRONTY();
+               }
+              break;
+    default: PRIDEJ_NA_KONEC("ťí");                //kryje, myje, lije
+             PRIDEJ_DO_FRONTY();
+             break;
+   }
+  if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ící");
+  PRIDEJ_DO_FRONTY();
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_KRYJE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+  strcpy(g_slovo,g_slovodocasne);
+
+  PRODLUZ_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo);
+  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+  PRIDEJ_NA_KONEC("vá");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_VZOR_KUPUJE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: return(0);                     //vzor nemá "předminulý" čas
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+    PRIDEJ_NA_KONEC("oval");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("u");  //spisovné, ale hovorové
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("i");
+               }
+              else { PRIDEJ_NA_KONEC("eme");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("em");            //(my) kryjem - nespisovné
+               }
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("eš");
+              else PRIDEJ_NA_KONEC("ete"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("e");
+              else { PRIDEJ_NA_KONEC("í");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("ou");          //spisovné, ale hovorové
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_KUPUJE(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+    PRIDEJ_NA_KONEC("ovat");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  CASUJ_VZOR_KUPUJE(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.č. přít.času
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,3);
+  PRIDEJ_NA_KONEC("ováňí");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ící");
+  PRIDEJ_DO_FRONTY();
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_KUPUJE(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+                         //maloktere g_slovo tohoto vzoru je v dokonavem tvaru
+  strcpy(g_slovo,g_slovodocasne);
+
+  OREZ_POSLEDNI_ZNAKY(g_slovo,2);
+  PRIDEJ_NA_KONEC("ovává");                //ubytuje => ubytovává
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_VZOR_PROSI(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: goto PREDMINULY;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("il");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("ím");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("im");                 //prosim - nespisovné
+               }
+              else PRIDEJ_NA_KONEC("íme");
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("íš");
+              else PRIDEJ_NA_KONEC("íte"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("í");
+              else { PRIDEJ_NA_KONEC("í");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("ejí");
+                PRIDEJ_DO_FRONTY(); OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+                                                //(oni) prosej - nespisovné
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_PROSI(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,0);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+
+    strcpy(g_slovo,g_slovodocasne);
+    switch(POSLEDNI_ZNAK(g_slovo)) {
+      case 's': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("š"); goto ROZKAZDAL;
+      case 'z': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("ž");
+                ROZKAZDAL:
+                PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+                                     //nespisovne (uhas x uhaš, nekaz x nekaž)
+     }
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("i");      //pomocná konstrukce
+    if (POCET_SLABIK(g_slovo) < 2) {
+      OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+      PRIDEJ_NA_KONEC("í");        //křtít, ctít (platí včetně předpon a záporu)
+     }
+    PRIDEJ_NA_KONEC("t");                          //prosit
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  CASUJ_VZOR_PROSI(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.č. přít.času
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+  if (ZJEMNI_KONCOVKU_SLOVESA_2(POSLEDNI_ZNAK(g_slovo)) != POSLEDNI_ZNAK(g_slovo)) {
+                                               //koncovka je b,f,m,p nebo v
+    PRIDEJ_NA_KONEC("eňí");
+    PRIDEJ_DO_FRONTY();
+    if (POSLEDNI_PISMENA(g_slovo,"ouP") == 1) return(1);
+                                //ve slovech končících na "oupí" (koupí, loupí)
+                                //se nezjemňuje souhláska "p" - koupení, loupení
+    OREZ_POSLEDNI_ZNAKY(g_slovo,3);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+               //dale se pokracuje pridanim "eni" za nasledujicim else
+   }
+  else {
+    switch(POSLEDNI_ZNAK(g_slovo)) {
+      case 'ť': if (PREDPOSLEDNI_ZNAK(g_slovo) == 's') {
+                  OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("šť");
+                  PRIDEJ_NA_KONEC("eňí"); PRIDEJ_DO_FRONTY();
+                  OREZ_POSLEDNI_ZNAKY(g_slovo,5); PRIDEJ_NA_KONEC("sť");
+                 }                     //např. mastí -> maštění, mastění
+                else if (JELI_SAMOHLASKA(PREDPOSLEDNI_ZNAK(g_slovo)) == 1) {
+                  OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("c");
+                  PRIDEJ_NA_KONEC("eňí"); PRIDEJ_DO_FRONTY();
+                  OREZ_POSLEDNI_ZNAKY(g_slovo,4); PRIDEJ_NA_KONEC("ť");
+                 }              //nutí -> nucení (nutění), ale uctí -> uctění
+                break;
+      case 'ď': switch(PREDPOSLEDNI_ZNAK(g_slovo)) {
+                  case 'z': OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("žď");
+                            PRIDEJ_NA_KONEC("eňí"); PRIDEJ_DO_FRONTY();
+                            OREZ_POSLEDNI_ZNAKY(g_slovo,5); PRIDEJ_NA_KONEC("zď");
+                            break;         //brždění i brzdění
+                  case 'ž': break; //nemění se (oproti tomu, co je v default)
+                  default: OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("z");
+                           PRIDEJ_NA_KONEC("eňí"); PRIDEJ_DO_FRONTY();
+                           OREZ_POSLEDNI_ZNAKY(g_slovo,4); PRIDEJ_NA_KONEC("ď");
+                           break;         //sezení i sedění
+                 }
+                break;
+      case 's': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("š");
+                PRIDEJ_NA_KONEC("eňí"); PRIDEJ_DO_FRONTY();
+                OREZ_POSLEDNI_ZNAKY(g_slovo,4); PRIDEJ_NA_KONEC("s");
+                break;                     //hašení i hasení
+      case 'z': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("ž");
+                PRIDEJ_NA_KONEC("eňí"); PRIDEJ_DO_FRONTY();
+                OREZ_POSLEDNI_ZNAKY(g_slovo,4); PRIDEJ_NA_KONEC("z");
+                break;                     //kažení i kazení
+     }
+   }
+
+  PRIDEJ_NA_KONEC("eňí");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  if (tvar == 3) {                    //holící
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ící");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("ející");
+    PRIDEJ_DO_FRONTY();
+   }
+  if (tvar == 30) {                    //holicí
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("icí");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ící");           //nespisovne
+    PRIDEJ_DO_FRONTY();
+   }
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_PROSI(1,1,1,1,0,0,zapor,1);     //rekurze - přídavné jm. (dělaný)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+  strcpy(g_slovo,g_slovodocasne);
+
+  switch(POSLEDNI_ZNAK(g_slovo)) {
+    case 's': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("š"); break; //odporošuje
+    case 'z': OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("ž"); break; //pokažuje
+   }
+  if (POSLEDNI_PISMENA(g_slovo,"sť") == 1) {          //nahušťuje i nahusťuje
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("šťuje");
+    PRIDEJ_DO_FRONTY();
+
+    strcpy(g_slovo,g_slovodocasne);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);                      //nahustí => nahusť
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    PRIDEJ_NA_KONEC("uje");
+    PRIDEJ_DO_FRONTY(); return(_kupuje_);
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"zď") == 1) {          //zbržďuje i zbrzďuje
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("žďuje");
+    PRIDEJ_DO_FRONTY();
+
+    strcpy(g_slovo,g_slovodocasne);
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);;                      //zbrzdí => zbrzď
+    PRIDEJ_NA_KONEC("uje");
+    PRIDEJ_DO_FRONTY(); return(_kupuje_);
+   }
+  else if (POSLEDNI_ZNAK(g_slovo) == 'ť') {            //rozsvěcuje (rozsvěťuje)
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("cuje");
+    PRIDEJ_DO_FRONTY();
+
+    strcpy(g_slovo,g_slovodocasne);
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);                 //rozsvítí => rozsvíť
+    PRIDEJ_NA_KONEC("uje");
+    PRIDEJ_DO_FRONTY(); return(_kupuje_);
+   }
+  else if (POSLEDNI_ZNAK(g_slovo) == 'ď') {             //ochlazuje i ochlaďuje
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("zuje");
+    PRIDEJ_DO_FRONTY();
+
+    strcpy(g_slovo,g_slovodocasne);
+    ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+    PRIDEJ_NA_KONEC("uje");
+    PRIDEJ_DO_FRONTY(); return(_kupuje_);
+   }
+
+  ZKRAT_PREDPOSLEDNI_SAMOHLASKU_V_SLOVESE(g_slovo,1);
+
+  PRIDEJ_NA_KONEC("uje");
+  PRIDEJ_DO_FRONTY(); return(_kupuje_);
+
+  PREDMINULY:                   //"předminulý" tvar slovesa (dělává)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ívá");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_VZOR_TRPI(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+//u tohoto vzoru většina slov nemá tvar nedokonavého vidu
+// - funkce tedy u tvoření nedokonavého vidu vždy vrací nulu (neúspěch)
+//   -> slova vzoru trpí, která nedokonavý vid mají, ho musí mít zapsán
+//      jako výjimku
+// (zavěsí -> zavěšuje, zabydlí -> zabydluje atd.)
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: goto PREDMINULY;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("el");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("ím");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("im");                 //trpim - nespisovné
+               }
+              else PRIDEJ_NA_KONEC("íme");
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("íš");
+              else PRIDEJ_NA_KONEC("íte"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("í");
+              else { PRIDEJ_NA_KONEC("í");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("ejí");
+                PRIDEJ_DO_FRONTY(); OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+                                                //(oni) trpěj - nespisovné
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_TRPI(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("et");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  return(CASUJ_VZOR_PROSI(1,1,6,1,vid,0,zapor,tvar));   //stejné jako u vzoru prosí
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  if (tvar == 3) {                    //holící
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ící");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("ející");
+    PRIDEJ_DO_FRONTY();
+   }
+  if (tvar == 30) {                    //holicí
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("icí");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ící");           //nespisovne
+    PRIDEJ_DO_FRONTY();
+   }
+  return(0);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_TRPI(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+                                   //poznámka viz výše
+  return(0);
+
+  PREDMINULY:                   //"předminulý" tvar slovesa (dělává)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ívá");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_VZOR_SAZI(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+//u tohoto vzoru většina slov nemá tvar nedokonavého vidu
+// - funkce tedy u tvoření nedokonavého vidu vždy vrací nulu (neúspěch)
+//   -> slova vzoru sází, která nedokonavý vid mají, ho musí mít zapsán
+//      jako výjimku
+// (zatím mě nenapadla žádná výjimka)
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: goto PREDMINULY;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("el");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("ím");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("im");                 //sazim - nespisovné
+               }
+              else PRIDEJ_NA_KONEC("íme");
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("íš");
+              else PRIDEJ_NA_KONEC("íte"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("í");
+              else { PRIDEJ_NA_KONEC("í");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("ejí");
+                PRIDEJ_DO_FRONTY(); OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+                                                //(oni) sázej - nespisovné
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_SAZI(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("ej");
+
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("et");
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  CASUJ_VZOR_SAZI(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.č. přít.času
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+  ZJEMNI_KONCOVKU_SLOVESA_1();
+  PRIDEJ_NA_KONEC("eňí");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  if (tvar == 3) {                    //holící
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("ející");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ící");
+    PRIDEJ_DO_FRONTY();
+   }
+  if (tvar == 30) {                    //holicí
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("icí");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    ZJEMNI_KONCOVKU_SLOVESA_1();
+    PRIDEJ_NA_KONEC("ecí");
+    PRIDEJ_DO_FRONTY();
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("ící");           //nespisovne
+    PRIDEJ_DO_FRONTY();
+   }
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_SAZI(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+                                   //poznámka viz výše
+  return(0);
+
+  PREDMINULY:                   //"předminulý" tvar slovesa (dělává)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ívá");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_VZOR_DELA(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE vid,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+// Tento vzor umožňuje vytvářet slova typu "bývávalo" - stačí vytvořit
+// nedokonavý tvar slovesa z již nedokonavého základního tvaru bez předpony
+// (např. dělá => dělává)
+// Tento vzor je také jediným vzorem, který má zcela pravidelné skloňování
+// i tvoření různých tvarů. (Kéž by takových vzorů bylo víc :-) )
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+  OREZ_O_SAMOHLASKU(g_slovodocasne);
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 3: case 30:
+            goto PRIDAV_DELAJICI;
+    case 4: goto PRIDAV_DELANY;
+    case 5: goto NEDOKONAVY;
+    case 6: goto PREDMINULY;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("al");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    if (vid == 1 || vid == 2) return(0);                   //neexistuje příslušný tvar
+    CAS2:
+    strcpy(g_slovo,g_slovodocasne);
+    switch(osoba) {
+      case 1: if (cislo == 1) { PRIDEJ_NA_KONEC("ám");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("am");                 //dělam - nespisovné
+               }
+              else PRIDEJ_NA_KONEC("áme");
+              break;
+      case 2: if (cislo == 1) PRIDEJ_NA_KONEC("áš");
+              else PRIDEJ_NA_KONEC("áte"); break;
+      case 3: if (cislo == 1) PRIDEJ_NA_KONEC("á");
+              else { PRIDEJ_NA_KONEC("ají");
+                PRIDEJ_DO_FRONTY(); strcpy(g_slovo,g_slovodocasne);
+                PRIDEJ_NA_KONEC("aj");                   //dělaj - nespisovné
+               }
+              break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    if (vid == 1 || vid == 2) goto CAS2;  //skloňování přítomný čas (bere - sebere) nebo (za)pomene
+
+    CASUJ_VZOR_DELA(1,1,5,1,1,0,0,0);      //rekurze - infinitiv
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,vid,zapor);
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,g_slovodocasne);
+
+    PRIDEJ_NA_KONEC("ej");
+
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,g_slovodocasne);
+    PRIDEJ_NA_KONEC("a");         //pomocná konstrukce ke zjištění počtu slabik
+    if (POCET_SLABIK(g_slovo) >= 2 || zapor == 1) PRIDEJ_NA_KONEC("t");   //dělat, dotkat
+    else { OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("át"); }  //tkát
+    PRIDEJ_DO_FRONTY();
+    ZJEMNI_KONCOVKU_SLOVESA_1(); PRIDEJ_NA_KONEC("i");      //knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  CASUJ_VZOR_DELA(3,1,2,1,0,0,zapor,0);     //rekurze - 3.osoba j.č. přít.času
+  OREZ_FRONTU_NA_1_SLOVO(1); strcpy(g_slovo,g_slovavefronte);
+  VYMAZ_FRONTU();
+  PRIDEJ_NA_KONEC("ňí");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PRIDAV_DELAJICI:                 //slovesné přídavné jméno (dělající)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ající");
+  PRIDEJ_DO_FRONTY();
+  return(1);
+
+  PRIDAV_DELANY:                   //slovesné přídavné jméno (dělaný)
+  CASUJ_VZOR_DELA(1,1,1,1,0,0,zapor,1);     //rekurze - podst. jm. (dělání)
+  VYGENERUJ_TVAR_DELANY(g_slovavefronte);
+  return(1);
+
+  NEDOKONAVY:                      //konverze dokonavého vidu na nedokonavý
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ává");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+
+  PREDMINULY:                   //"předminulý" tvar slovesa (dělává)
+  strcpy(g_slovo,g_slovodocasne);
+  PRIDEJ_NA_KONEC("ává");
+  PRIDEJ_DO_FRONTY(); return(_dela_);
+ }
+
+BYTE CASUJ_SLOVESO_JE(BYTE osoba,BYTE cislo,BYTE cas,BYTE rod,BYTE zivotnost,BYTE zapor,BYTE tvar) {
+
+  switch(tvar) {
+    case 0: break;
+    case 1: goto PODSTJM;
+    case 2: goto PRECHODNIK;
+    case 6: goto PREDMINULY;
+    default: NAHLAS_CHYBU(__FILE__,__LINE__,_NESPECIFIKOVANO_,_UKONCIT_);
+   }
+
+  if (cas == 1) {                                       //minulý čas
+    strcpy(g_slovo,"byl");
+    PRIDEJ_SE_SPRAVNOU_KONCOVKOU_SLOVESA(rod,cislo,zivotnost);
+
+    DOPLN_POMOCNE_SLOVESO(osoba,cislo,cas,0,0);
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 2) {                                  //přítomný čas
+    switch(osoba) {
+      case 1: if (cislo == 1) strcpy(g_slovo,"jsem,sem");  //sem - nespisovné
+              else strcpy(g_slovo,"jsme,sme"); break;      //sme - nespisovné
+      case 2: if (cislo == 1) strcpy(g_slovo,"jsi,jseš,seš,si");//jseš,seš,si - nespisovné
+              else strcpy(g_slovo,"jste,ste"); break;      //ste - nespisovné
+      case 3: if (cislo == 1) strcpy(g_slovo,"je");
+              else strcpy(g_slovo,"jsou,sou"); break;      //sou - nespisovné
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) {
+	  if (osoba == 3 && cislo == 1) strcpy(g_slovavefronte,"není");
+	  else PRIDEJ_PRED_KAZDE_SLOVO("ne");
+	 }
+   }
+  else if (cas == 3) {                                   //budoucí čas
+    switch(osoba) {
+      case 1: if (cislo == 1) strcpy(g_slovo,"budu");
+              else strcpy(g_slovo,"budeme,budem"); break;  //budem - nespisovné
+      case 2: if (cislo == 1) strcpy(g_slovo,"budeš");
+              else strcpy(g_slovo,"budete"); break;
+      case 3: if (cislo == 1) strcpy(g_slovo,"bude");
+              else strcpy(g_slovo,"budou"); break;
+     }
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  else if (cas == 4) {                                   //rozkazovací způsob
+    strcpy(g_slovo,"buď");
+
+    PRIDEJ_S_KONCOVKOU_ROZKAZOVACIHO_SLOVESA(osoba,cislo,zapor);
+   }
+  else if (cas == 5) {                                   //infinitiv
+    strcpy(g_slovo,"být,býťi");             //býti - knižní tvar
+    PRIDEJ_DO_FRONTY();
+    if (zapor == 1) PRIDEJ_PRED_KAZDE_SLOVO("ne");
+   }
+  return(1);
+
+
+  PODSTJM:                                      //slovesné podstatné jméno
+
+  strcpy(g_slovo,"byťí");
+  PRIDEJ_DO_FRONTY();
+  return(_staveni_);
+
+
+  PRECHODNIK:                      //přechodník (minulý nebo přítomný)
+  return(0);
+
+  PREDMINULY:                   //"předminulý" tvar slovesa (bývá)
+  strcpy(g_slovo,"bývá");
+  PRIDEJ_DO_FRONTY();
+  return(_dela_);
+ }

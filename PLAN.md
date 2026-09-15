@@ -9,9 +9,10 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 1 — building the engine natively. 1.1 done.
+**Phase:** 1 — building the engine natively. 1.1 and 1.2 done.
 
-**Next action:** Phase 1, step 1.2 — normalize a working copy of the sources to UTF-8.
+**Next action:** Phase 1, step 1.3 — stub the Win32/MFC surface and get the first real
+compile. 1.1 and 1.2 have only ever run the preprocessor; nothing has been compiled yet.
 
 ---
 
@@ -26,8 +27,15 @@ hazard 1 (`char` signedness) differs between the two by default.
 
 - **Never commit.** Michal commits everything himself. Leave changes in the working tree.
 - `original/` is read-only. It is the archive. Never edit files in it; copy out instead.
-- Original sources are **CP1250** (a few stragglers are Latin-2). Anything new we write is UTF-8.
+- **`src/engine/` is the canonical source tree** (UTF-8). Edit there and nowhere else.
+  Everything under `build/` is generated and gitignored — `build/src/` is the CP1250
+  mirror of `original/`, `build/cp1250/` is what the compiler is actually pointed at.
+- Original sources are **CP1250**, uniformly — see hazard 6, the "Latin 2" is data, not
+  a second source encoding. Anything new we write is UTF-8.
 - The engine speaks CP1250 bytes internally, end to end. Convert **only** at the JS boundary.
+- Line endings are CRLF everywhere and `.gitattributes` pins them. The byte-exactness
+  proof in `transcode.py --check` compares files on disk, so a clone that checked out LF
+  would fail it.
 - Comments and identifiers in ported/shim code stay in the original's Czech where they
   mirror original names, so the two can be diffed by eye.
 
@@ -179,9 +187,20 @@ Specific things that will bite. Each has a task attached in the phases below.
    of heap. Mitigation is built in: the engine already writes and reads a `SLOVNIK.TMP` cache
    (`ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU` / `PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU`).
    Persist that blob to IndexedDB and later loads skip the whole thing.
-6. **Mixed source encodings.** `VSTUP.FU` fails CP1250 decoding at line 1156 — there are
-   Latin-2 bytes mixed in (the code has `PREVED_Z_LATIN_2_NA_WINDOWS_1250` helpers). Normalize
-   deliberately, don't let a tool guess.
+6. **Source encoding.** ~~Mixed: `VSTUP.FU` fails CP1250 decoding at line 1156, Latin-2
+   bytes mixed in.~~ **Investigated in 1.2 and that reading was wrong.** The corpus is
+   uniformly CP1250; nothing in it is Latin-2 text. What fails to decode is *data*: 60
+   character literals in `PREVED_Z_LATIN_2_NA_WINDOWS_1250` / `PREVED_Z_WINDOWS_1250_NA_LATIN_2`
+   are raw byte constants of another codepage, and one of them (`0x90`) is a byte CP1250
+   leaves undefined. The author's "Latin 2" is **CP852**, the DOS PC Latin-2 codepage, not
+   ISO-8859-2 — all 30 mappings verify against `cp852` exactly. In `src/engine/` those 60
+   literals are written `'\xNN'`; everything else is readable Czech.
+
+   The knock-on constraint, and the reason the UTF-8 tree is never compiled: getting CP1250
+   *runtime* strings out of a UTF-8 *source* tree needs `-fexec-charset=CP1250`, which gcc
+   supports (via iconv) and **Emscripten's clang does not** — its `-fexec-charset` knows only
+   UTF-8 and IBM-1047. So the compiler is handed CP1250 bytes instead, regenerated from
+   `src/engine/` by `tools/transcode.py --to-cp1250`. No charset flags on any toolchain.
 7. **`conio.h`, `_getch`, DOS-isms.** Present in the debug paths. Stub them.
 8. **Pre-C++11 string concatenation.** 10 sites write `"text "MACRO" text"` with no space
    (6 in `DEBUG.FU`, 4 in `SLOVNIK.FU`). C++11 reads `"text "MACRO` as a user-defined
@@ -194,6 +213,15 @@ Specific things that will bite. Each has a task attached in the phases below.
 
 - [ ] Does the shipped `IQPOKYD.IQP` match `GRAMATIK.IQZ`? (task 2.4) If not, which wins?
       Leaning: recompile from the text source, since that's readable and diffable.
+- [ ] **Line endings in the archive.** Every text file in `original/` was first committed
+      under `core.autocrlf=true`, so git stores it LF-normalized and checks it out CRLF —
+      the true bytes of the source drop are not recoverable from this repo. Harmless for
+      source (whitespace), but `GRAMATIK.IQZ` is *data* the rule compiler parses by line, so
+      a stray `\r` could land in a field. `.gitattributes` pins the checkout to CRLF so the
+      behaviour is at least deterministic everywhere. Task 2.4 settles it for free: if the
+      recompiled `IQPOKYD.IQP` matches the shipped one, CRLF was right. If Michal still has
+      the original archive, re-adding `original/` under the new attributes would restore the
+      true bytes — his call, and his commit.
 - [ ] How faithful should the UI be? The original's assets are all here — 1.2 MB background
       bitmap, custom TTF, menu bitmaps, and `IQPokyd.rc` with exact dialog layouts. Decide at
       Phase 6 once there's something running.
@@ -218,15 +246,27 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       **Gate passed:** `g++ -x c++ -DBEZ_PROSTREDI -E vsechno.in` exits 0, expands 18,806 lines
       across all 26 engine files, zero unresolved includes. `hlavicky.in` likewise. The only
       diagnostics are hazard 8 below. (This is preprocessing only — actual compilation is 1.2–1.4.)
-- [ ] 1.2 Normalize a working copy of the sources to UTF-8 (`src/engine/`), handling the
-      Latin-2 stragglers in `VSTUP.FU`. Keep a byte-exact CP1250 copy too — the engine's
-      *runtime* strings must stay CP1250 even if the *source files* are UTF-8.
+- [x] 1.2 **Done** — `tools/transcode.py` re-encodes between CP1250 and UTF-8 in both
+      directions. `src/engine/` (37 files, UTF-8, CRLF, no BOM) is now the canonical tree;
+      `--to-cp1250` regenerates `build/cp1250/`, which is what the compiler gets, since the
+      UTF-8 tree is deliberately *not* compilable (hazard 6: `case 'č':` would become a
+      multi-character literal, and Emscripten's clang has no `-fexec-charset=CP1250`).
+      **Gate passed:** `--check` proves `to_cp1250(to_utf8(x)) == x` byte-for-byte for all
+      37 files, so the re-encoding changes nothing the compiler can see — it is a
+      normalization, not a patch. `diff -r build/src build/cp1250` is empty, and the 1.1
+      preprocessing gate gives an identical line count on both trees under identical flags
+      (18,784 with `-std=gnu++98`, 18,806 without; that delta is the flag, not the
+      transcoding). The only escapes introduced are the 60 CP852 byte constants of hazard 6.
+      `.gitattributes` added to pin CRLF, without which the proof breaks on a Linux clone.
+      Also confirmed: `-std=gnu++98` silences hazard 8 completely — zero diagnostics.
 - [ ] 1.3 Stub the Win32/MFC surface: build with `BEZ_PROSTREDI` and `IQPOKYDWINMFC=0`,
       stub `conio.h`, `NAHLAS_CHYBU`, `NAPIS_TEXT_V_LATIN_2`, and the `g_handletext*` /
       `g_procentanacitani` progress globals.
-- [ ] 1.4 Apply the required fixes: `sprintf`→`strcpy` (hazard 2), `-fsigned-char`,
-      `-fwrapv -fno-strict-aliasing -O1`. Record every change to original code in
-      `PATCHES.md` with file, line, and why.
+- [ ] 1.4 Apply the required fixes **in `src/engine/`**: `sprintf`→`strcpy` (hazard 2),
+      `-fsigned-char`, `-fwrapv -fno-strict-aliasing -O1`. Record every change to original
+      code in `PATCHES.md` with file, line, and why. From here on `transcode.py --check`
+      will list those files as differing from the original; that list and `PATCHES.md` must
+      agree, which makes the check an audit of the patch set.
 - [ ] 1.5 Console driver: load `slovnik.iqp` + `IQPOKYD.IQP`, read stdin lines, print replies.
 - [ ] 1.6 **Milestone: hold a conversation in Czech in a terminal.** Save a transcript to
       `test/golden/` as the reference for later diffs.
@@ -244,7 +284,10 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       Note in the README that it came from the released binary, not the source drop.
 - [ ] 2.3 Build `GRAMATIK.C` as a host tool; recompile `GRAMATIK.IQZ` → `IQPOKYD.IQP`.
 - [ ] 2.4 Diff the recompiled `IQPOKYD.IQP` against the shipped one, modulo the random
-      obfuscation padding and header text. Resolves the 2004/2005 question above.
+      obfuscation padding and header text. Resolves the 2004/2005 question above — and the
+      line-endings question, since the shipped `.IQP` is binary and was never normalized
+      while `GRAMATIK.IQZ` was. If they differ only in ways that track `\r`, that is the
+      answer.
 - [ ] 2.5 Pick the shipping rule base and record the decision here.
 
 ## Phase 3 — WebAssembly
@@ -324,6 +367,9 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
 
 ## Reference
 
+- Source pipeline and how to regenerate it: `src/README.md`.
+  `tools/gen-src.py` (original → `build/src/`), `tools/transcode.py`
+  (`build/src/` ⇄ `src/engine/` → `build/cp1250/`), `tools/dump-dict.py` (dictionary decoder).
 - Engine entry point: `IQ_POKYDE_ODPOVEZ` — `Aplikace/Prostred/PROSTRED.FU:212`.
   Pipeline is `POROZUMEJ_VETE_NAPSANE_CLOVEKEM` → `ZPRACUJ_VETU`
   (= `ROZEBER_NEINTELIGENTNE_VETU` + `ODPOVEZ_PODLE_IQ_PODMINEK`) →

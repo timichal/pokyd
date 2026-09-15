@@ -1,0 +1,39 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Můžete ho použít k vlastní
+   potřebě, ale nesmíte jej ani programy založené na tomto kódu využít komerčně!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - prislovc.sk - funkce na stupňování jednotlivých vzorů příslovcí
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+
+BYTE VYGENERUJ_PRISLOVCE_Z_PRIDAVNEHO_JMENA(void) {
+
+  strcpy(g_slovodocasne,g_slovozaklad);
+
+  strcpy(g_slovo,g_slovodocasne);
+
+  if (POSLEDNI_PISMENA(g_slovo,"cký") == 1 || POSLEDNI_PISMENA(g_slovo,"ský") == 1 || POSLEDNI_PISMENA(g_slovo,"ezký") == 1) {
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("y"); PRIDEJ_DO_FRONTY();
+   }
+  else if (POSLEDNI_PISMENA(g_slovo,"ťejší") == 1) {
+    OREZ_POSLEDNI_ZNAKY(g_slovo,2); PRIDEJ_NA_KONEC("i");
+    PRIDEJ_DO_FRONTY();
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("š");
+    PRIDEJ_DO_FRONTY();    //nespisovné
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1); PRIDEJ_NA_KONEC("c");
+    PRIDEJ_DO_FRONTY();    //nespisovné
+   }
+  else if (MEKKA_SOUHLASKA(PREDPOSLEDNI_ZNAK(g_slovo)) != 1) {
+    OREZ_POSLEDNI_ZNAKY(g_slovo,1);
+    ZJEMNI_SLOVO_PODSTJM();
+    PRIDEJ_NA_KONEC("e");
+    PRIDEJ_DO_FRONTY();
+   }
+  else return(0);           //neexistuje tvar
+
+  return(1);
+ }

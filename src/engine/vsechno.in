@@ -1,0 +1,59 @@
+/* Tento zdrojový kód je pod licencí GNU/GPL. Můžete ho použít k vlastní
+   potřebě, ale nesmíte jej ani programy založené na tomto kódu využít komerčně!
+
+   Jedná se o zdrojový kód programu IQ Pokyd (http://iqpokyd.kyblsoft.cz)
+   od Aleše Jandy
+*/
+
+/* IQ Pokyd - vsechno.in - soubor pro načtení všech souborů IQ Pokydu
+   Aleš Janda (C) KÝBLSoft 2002-2005 (kódování Windows 1250)
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <malloc.h>
+#include <stdlib.h>
+#include <conio.h>
+#include <time.h>
+
+#include "konstant.k"
+
+#include "vzory/sklonov.pr"
+#include "debug/debug.pr"
+#include "slovnik/slovnik.pr"
+#include "vstup/vstup.pr"
+//#include "intelig/intelig.tr"
+#include "intelig/intelig.ft"
+#include "intelig/intelig.pr"
+#ifndef BEZ_PROSTREDI
+  #include "prostred/prostred.pr"
+  #include "prostred/iqpwav.pr"
+#endif
+
+#include "debug/debug.h"
+#include "vzory/skl_a_dr.h"
+#include "slovnik/slovnik.h"
+#include "vstup/vstup.h"
+#include "intelig/intelig.h"
+#ifndef BEZ_PROSTREDI
+  #include "prostred/prostred.h"
+  #include "prostred/iqpwav.tr"
+#endif
+
+#include "vstup/nastaven.tr"
+#include "vstup/nastaven.pr"
+
+#include "debug/debug.fu"
+#include "vzory/podstjm.sk"
+#include "vzory/pridavjm.sk"
+#include "vzory/zajmena.sk"
+#include "vzory/cislovky.sk"
+#include "vzory/slovesa.sk"
+#include "vzory/prislovc.sk"
+#include "vzory/sklonov.fu"
+#include "slovnik/slovnik.fu"
+#include "vstup/vstup.fu"
+#include "intelig/intelig.fu"
+#ifndef BEZ_PROSTREDI
+#include "prostred/prostred.fu"
+#endif
