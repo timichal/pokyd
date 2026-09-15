@@ -9,11 +9,18 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 0 — nothing built yet. Planning complete.
+**Phase:** 1 — building the engine natively. 1.1 done.
 
-**Next action:** Phase 1, step 1.1 — get `Aplikace/` compiling as a native console binary.
+**Next action:** Phase 1, step 1.2 — normalize a working copy of the sources to UTF-8.
 
 ---
+
+## Toolchain on this machine
+
+Probed 2026-09-15. `gcc`/`g++` MinGW-W64 16.1.0 (ucrt64), `python` 3.14.7.
+**No `clang`, no `cl`, no `emcc`** — Emscripten has to be installed before Phase 3 starts.
+Phase 1 targets MinGW g++; expect to re-diff everything once clang enters the picture, since
+hazard 1 (`char` signedness) differs between the two by default.
 
 ## Conventions
 
@@ -158,8 +165,11 @@ Specific things that will bite. Each has a task attached in the phases below.
    does `sprintf(g_vetacloveka.slova[poziceslova].vlastnislovo, slovo)` — the user's own word
    as a format string. Typing `%s` will crash or leak memory. Must become `strcpy`. This is a
    required fix, not a cleanup.
-3. **Hardcoded absolute includes.** Every `.IN` file uses `#include "\!IQPokyd\!Zdrojak\..."`
-   and `DOS.IN` uses `f:\!iqpokyd\...`. Needs a generated shim include tree or a sed pass.
+3. **Hardcoded absolute includes.** ~~Every `.IN` file uses `#include "\!IQPokyd\!Zdrojak\..."`
+   and `DOS.IN` uses `f:\!iqpokyd\...`.~~ **Solved in 1.1** by `tools/gen-src.py`, which mirrors
+   the tree into `build/src/` with those paths rewritten relative. Note that no `-I` flag can
+   fix this in place: gcc on Windows reads a leading `\` as "root of the current drive", so the
+   path is *absolute* and the include search path is never consulted.
 4. **Undefined behaviour under optimization.** Heavy `goto`, globals, fixed buffers, and at
    least one uninitialized read (`nejlepsiodpoved` in `VRAT_CISLO_ODPOVEDI_PODLE_HISTORIE`
    when every variant is in history). Build `-O1 -fno-strict-aliasing -fwrapv` and do not
@@ -173,6 +183,10 @@ Specific things that will bite. Each has a task attached in the phases below.
    Latin-2 bytes mixed in (the code has `PREVED_Z_LATIN_2_NA_WINDOWS_1250` helpers). Normalize
    deliberately, don't let a tool guess.
 7. **`conio.h`, `_getch`, DOS-isms.** Present in the debug paths. Stub them.
+8. **Pre-C++11 string concatenation.** 10 sites write `"text "MACRO" text"` with no space
+   (6 in `DEBUG.FU`, 4 in `SLOVNIK.FU`). C++11 reads `"text "MACRO` as a user-defined
+   literal. GCC downgrades it to `-Wliteral-suffix` and still concatenates, but don't rely on
+   that — **build `-std=gnu++98`**, which is also closer to what MSVC6 gave the original.
 
 ---
 
@@ -194,8 +208,16 @@ Specific things that will bite. Each has a task attached in the phases below.
 The gate for everything else. If `Aplikace/` won't build without MFC on a desktop compiler,
 we learn it now and cheaply. Also gives us a reference binary to diff the wasm build against.
 
-- [ ] 1.1 Create `build/` with a generated shim include tree so `\!IQPokyd\!Zdrojak\Aplikace\...`
-      resolves. Do not edit `original/`.
+- [x] 1.1 **Done** — `tools/gen-src.py` mirrors `original/IQ Pokyd/Aplikace/` into `build/src/`
+      (37 files), rewriting the 54 hardcoded includes to relative paths
+      (`\!IQPokyd\!Zdrojak\Aplikace\Vzory\sklonov.pr` → `vzory/sklonov.pr`). Names are
+      lowercased — the original is inconsistent (`\Aplikace\` vs `\aplikace\`) and only
+      worked because Windows is case-insensitive; Emscripten on a case-sensitive host would not
+      be. Contents are copied byte-for-byte, still CP1250; verified that the only lines differing
+      from the original are the 54 `#include`s. `build/` is generated and gitignored.
+      **Gate passed:** `g++ -x c++ -DBEZ_PROSTREDI -E vsechno.in` exits 0, expands 18,806 lines
+      across all 26 engine files, zero unresolved includes. `hlavicky.in` likewise. The only
+      diagnostics are hazard 8 below. (This is preprocessing only — actual compilation is 1.2–1.4.)
 - [ ] 1.2 Normalize a working copy of the sources to UTF-8 (`src/engine/`), handling the
       Latin-2 stragglers in `VSTUP.FU`. Keep a byte-exact CP1250 copy too — the engine's
       *runtime* strings must stay CP1250 even if the *source files* are UTF-8.
