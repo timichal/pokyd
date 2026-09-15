@@ -211,9 +211,13 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
 
 ## Phase 2 — Data
 
-- [ ] 2.1 Port the `slovnik.iqp` decoder (already prototyped and verified — 11,207 words,
-      checksums pass) into a proper tool at `tools/dump-dict.ts`. Useful for inspection and
-      for a future text-form dictionary.
+- [x] 2.1 Decoder for `slovnik.iqp` — **done**, `tools/dump-dict.py`. Verified against the
+      real file: 11,207 words, both checksums pass. `--all` dumps every entry, `-o` writes
+      UTF-8 to a file. Confirms the info field: nouns/adjectives carry one paradigm byte
+      matching `KONSTANT.K` (`pan:\x01` = `_pan_`, `abeceda:\x07` = `_zena_`,
+      `pancéřový:\x1f` = `_mlady_`), verbs carry paradigm + aspect (`žvatlá:J\x01` =
+      `_dela_` 74, vid 1). Only needed for inspection — the wasm engine reads the binary
+      itself.
 - [ ] 2.2 Decide which dictionary ships. Default: `original/slovnik.iqp` (11,207 words).
       Note in the README that it came from the released binary, not the source drop.
 - [ ] 2.3 Build `GRAMATIK.C` as a host tool; recompile `GRAMATIK.IQZ` → `IQPOKYD.IQP`.
