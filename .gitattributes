@@ -16,6 +16,12 @@ original/**       text eol=crlf
 src/engine/**     text eol=crlf
 
 # Binary payloads: never touched, never diffed as text.
+#
+# These override the `original/** text eol=crlf` rule above -- later rules win -- and
+# they must list every binary extension actually present in the archive.  Anything
+# binary that is missing here gets the CRLF smudge applied to it on checkout, and for
+# a file with no line endings to speak of that is silent corruption.  Five files were
+# being mangled this way before the second block below was added.
 *.iqp   binary
 *.IQP   binary
 *.bmp   binary
@@ -30,3 +36,15 @@ src/engine/**     text eol=crlf
 *.EXE   binary
 *.hlp   binary
 *.HLP   binary
+
+# Added after the audit: binary, present in original/, and previously being mangled.
+# .fon is the bitmap font resource; .obj are 1990s MSVC objects; .gid is the help
+# index; .db is an Explorer thumbnail cache the author shipped by accident.
+*.fon   binary
+*.FON   binary
+*.obj   binary
+*.OBJ   binary
+*.gid   binary
+*.GID   binary
+*.db    binary
+*.DB    binary
