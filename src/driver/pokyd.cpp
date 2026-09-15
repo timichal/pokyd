@@ -1,46 +1,39 @@
 /* IQ Pokyd - src/driver/pokyd.cpp - the console driver.
 
-   Phase 1.5 of PLAN.md, and the first time any of this code actually runs.
+   Phase 1.5 of PLAN.md, and the first time any of this code actually ran.
    Loads the dictionaries, reads sentences from stdin, prints what IQ Pokyd
    answers.  It is a dev tool, not part of the museum piece: the engine below it
    is the original, everything in this file is ours.
 
-   It is also the rehearsal for phase 3.1.  The sequence in NACTI_SLOVNIKY() and
-   IQ_POKYDE_ODPOVEZ() below is exactly the surface pokyd_api.c will have to
-   export, so it is written to mirror the original's own call order rather than
-   to be convenient.
+   Since phase 3.1 it no longer drives the engine itself.  It used to carry its
+   own copies of PRIPRAV_GLOBALY, the loading sequence, IQ_POKYDE_ODPOVEZ and
+   CMfcDlg::OnNovaveta -- written as the rehearsal for the exported surface --
+   and all four have moved into src/api/pokyd_api.cpp, which is that surface.
+   So this file is now a caller of pokyd_api.h and nothing more, which is what
+   makes test/golden/ a test of the API: the wasm build at 3.3 runs the same code
+   underneath a different front end.
 
-   What it mirrors, and where the original does it
-   -----------------------------------------------
-   PRIPRAV_GLOBALY()      !Prostre/mfcDlg.cpp:403-418 (CMfcDlg::OnInitDialog)
-   NACTI_SLOVNIKY()       Aplikace/Prostred/PROSTRED.FU:550 (VLAKNO__NACITEJ_JAK_DIVEJ)
-   IQ_POKYDE_ODPOVEZ()    Aplikace/Prostred/PROSTRED.FU:212, verbatim
-   ODPOVEZ_NA_VETU()      !Prostre/mfcDlg.cpp:596-607 (CMfcDlg::OnNovaveta)
-
-   The three things that made this step awkward, all documented at their call
-   sites below: IQ_POKYDE_ODPOVEZ does not exist in a BEZ_PROSTREDI build,
-   NACTI_A_ROZSKLONUJ_ZAKLADNI_SLOVNIK frees the whole dictionary again when it
-   is done, and the engine prints to stdout on every sentence whether we want it
-   to or not.
+   Two things it still reaches past the API for, both of them console-only:
+   PREVED_Z_LATIN_2_NA_WINDOWS_1250 and PREVED_Z_WINDOWS_1250_NA_LATIN_2, the
+   engine's own CP852 converters.  Nothing on the web needs a DOS codepage, so
+   they stay out of pokyd_api.h and this file includes engine.h for them.
 
    Written by us, not ported.  ASCII only, like the rest of the non-engine code.
 */
 
-#include "engine.h"
+#include "pokyd_api.h"
+#include "engine.h"       /* only for the two CP852 converters -- see above */
 
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #ifdef _WIN32
-  #include <direct.h>
   #include <io.h>
-  #define POKYD_CHDIR  _chdir
   #define POKYD_ISATTY _isatty
   #define POKYD_FILENO _fileno
 #else
   #include <unistd.h>
-  #define POKYD_CHDIR  chdir
   #define POKYD_ISATTY isatty
   #define POKYD_FILENO fileno
 #endif
@@ -53,6 +46,8 @@ static unsigned o_seed = 0;
 static int o_seed_zadan = 0;
 static int o_cp1250 = 0;                /* console encoding: CP852 unless set */
 static int o_stav = 0;                  /* print mood/character after each line */
+static const char *o_vyvez = NULL;      /* write SLOVNIK.TMP's bytes here after loading */
+static const char *o_dovez = NULL;      /* install this as SLOVNIK.TMP before loading */
 
 static int o_charakter = -1, o_nalada = -1;
 static int o_pohlavicloveka = -1, o_pohlavipocitace = -1;
@@ -73,6 +68,8 @@ static void NAPOVEDA(const char *jmeno) {
     "  --seed N          seed rand() with N instead of time(NULL)\n"
     "  --cp1250          read and write CP1250 on the console instead of CP852\n"
     "  --state           print mood and character after every answer\n"
+    "  --export-cache F  after loading, write the SLOVNIK.TMP bytes to F\n"
+    "  --import-cache F  before loading, install F as SLOVNIK.TMP\n"
     "\n"
     "  --character 0..6  stroj, naivni, klidny, prumerny, neduverivy, naladovy, vybusny\n"
     "  --mood 1..5       vyborna, dobra, normalni, spatna, hrozna\n"
@@ -86,134 +83,23 @@ static void NAPOVEDA(const char *jmeno) {
     "and for terminals set to CP1250.  A --transcript file is always CP1250,\n"
     "whatever the console is doing.\n"
     "\n"
+    "Paths.  --data is entered before anything else is opened, because the engine\n"
+    "reads its files by bare name in the current directory, so a relative path\n"
+    "given to --transcript, --export-cache or --import-cache is relative to it.\n"
+    "\n"
     "Noise.  vstup.fu:801-809 prints every base form it recognises, on every\n"
     "sentence, unguarded -- a debug leftover the author commented out in the block\n"
     "just below but not in this one.  It is the original's behaviour and PATCHES.md\n"
     "explains why we are not deleting it, so stdout is noisy and --transcript is\n"
-    "how you get a diffable conversation out of this program.\n",
+    "how you get a diffable conversation out of this program.\n"
+    "\n"
+    "The cache.  --export-cache and --import-cache are pokyd_export_cache and\n"
+    "pokyd_import_cache on the command line, and exist so that the blob phase 4.4\n"
+    "will keep in IndexedDB can be moved around and diffed here first.  Importing\n"
+    "one turns a 4.5 s cold start into a 0.4 s warm one; importing the wrong one\n"
+    "is silently the wrong vocabulary, because nothing in the file says which\n"
+    "dictionary it was inflected from.\n",
     jmeno);
- }
-
-/* ---------------------------------------------------------------- the engine */
-
-static void PRIPRAV_GLOBALY(void) {
-  /* !Prostre/mfcDlg.cpp:405-418.  The engine assumes these five are allocated
-     before anything else runs.  UVOLNI_VESKEROU_DYNAMICKOU_PAMET is the strict
-     one: it frees all five unconditionally, and UVOLNI_X(NULL) is a fatal
-     error, so this has to be re-run after anything that frees them. */
-  g_aktualnivetacloveka=ALOKUJ_RETEZEC(1); g_aktualnivetacloveka[0]=0;
-  g_predchozivetacloveka=ALOKUJ_RETEZEC(1); g_predchozivetacloveka[0]=0;
-
-  debug_poslednipodmetcloveka=ALOKUJ_RETEZEC(DELKA_JEDNODUCHEHO_SLOVA);
-  strcpy(debug_poslednipodmetcloveka,"-");
-  debug_posledniprisudekcloveka=ALOKUJ_RETEZEC(DELKA_JEDNODUCHEHO_SLOVA);
-  strcpy(debug_posledniprisudekcloveka,"-");
-  debug_poslednipredmetcloveka=ALOKUJ_RETEZEC(DELKA_JEDNODUCHEHO_SLOVA);
-  strcpy(debug_poslednipredmetcloveka,"-");
- }
-
-static void NACTI_SLOVNIKY(void) {
-  /* Prostred/PROSTRED.FU:550, VLAKNO__NACITEJ_JAK_DIVEJ, minus the window: the
-     progress bar, the five SetWindowText calls, the cancel check between every
-     step, the click sounds and the CTI_ME.HTM integrity check.  The order of
-     what remains is the original's and it matters -- see the base dictionary
-     note in the cache-miss branch.
-
-     PROSTRED.FU is compiled out by BEZ_PROSTREDI, so this is also the loader
-     phase 3.1 has to export as pokyd_load_dictionaries. */
-
-DWORD pozice;
-
-  ALOKUJ_VSECHNY_PRVKY_G_VETACLOVEKA();
-  PRECTI_DATABAZI_SLOV_ZE_ZAKLADNIHO_SLOVNIKU();
-
-  if (PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU() == 1) {
-    /* No usable SLOVNIK.TMP, so the 11,207 base words have to be inflected into
-       every form -- the "Sklonuji slovnik..." progress bar, about five seconds
-       and 402,252 forms against a MAX_POCET_VSECH_SLOV of 500,000.
-
-       NACTI_A_ROZSKLONUJ_ZAKLADNI_SLOVNIK is not a plain loader here.  Under
-       IQPOKYDWINMFC != 1 it is the author's own DOS test harness: it re-reads
-       the base dictionary itself (SLOVNIK.FU:3248), and once it has written the
-       cache it frees the entire dictionary again, checks that every allocated
-       block came back, and waits for a keypress (SLOVNIK.FU:3344-3357).
-
-       That tail is why this is not a plain call.  Leaving our own load in place
-       would leak 11,207 strings past it and turn its block check into a fatal
-       NAHLAS_CHYBU, so we hand it a clean slate, let it run as the program it
-       is, and then load again from the cache it just wrote.  Both
-       UVOLNI_VESKEROU_DYNAMICKOU_PAMET calls -- ours here and the one in its
-       tail -- free the five PRIPRAV_GLOBALY strings, hence the two rebuilds. */
-    UVOLNI_VESKEROU_DYNAMICKOU_PAMET();
-    PRIPRAV_GLOBALY();
-
-    NACTI_A_ROZSKLONUJ_ZAKLADNI_SLOVNIK();
-
-    PRIPRAV_GLOBALY();
-    ALOKUJ_VSECHNY_PRVKY_G_VETACLOVEKA();
-    PRECTI_DATABAZI_SLOV_ZE_ZAKLADNIHO_SLOVNIKU();
-    if (PRECTI_DATABAZI_SLOV_Z_UPLNEHO_SLOVNIKU() == 1) {
-      fprintf(stderr,
-        "\npokyd: the dictionary was inflected but %s still cannot be read back.\n",
-        JMENO_UPLNEHO_SLOVNIKU);
-      exit(1);
-     }
-   }
-
-  PRECTI_INTELIGENCI_ZE_SOUBORU();
-  g_odpovedipocitace=(char **)ALOKUJ_PAMET(g_pocetiqpodminek*sizeof(*g_odpovedipocitace));
-  g_idodpovedipocitace=(WORD *)ALOKUJ_PAMET(g_pocetiqpodminek*sizeof(g_idodpovedipocitace[0]));
-  for (pozice=0; pozice < g_pocetiqpodminek; pozice++) {
-    g_odpovedipocitace[pozice]=ALOKUJ_RETEZEC(MAX_DELKA_ODPOVEDI_POCITACE+1);
-   }
-
-  PRECTI_PROFIL_ZE_SOUBORU();   /* PROFIL.IQP, what it remembers about you.  Read
-                                   if it is there, never written: see PLAN 7.5. */
- }
-
-static void IQ_POKYDE_ODPOVEZ(char *vetacloveka) {
-  /* Prostred/PROSTRED.FU:212, verbatim, minus the 25 commented-out lines at its
-     head.  The documented entry point of the whole engine lives in the one file
-     BEZ_PROSTREDI removes, so a build without MFC has to carry its own copy.
-     This is the function phase 3.1 exports as pokyd_say.
-
-     The answer comes back in the global g_odpovedpocitace -- and stays there if
-     nothing matched: VYBER_JEDNU_ODPOVED_Z_ODPOVEDI_PODLE_HISTORIE returns at
-     once when g_pocetodpovedipocitace is 0 (INTELIG.FU:89, where the author's
-     own "!" marks it as a known hole), so IQ Pokyd repeats its last answer
-     rather than saying nothing.  That is the original's behaviour; we keep it. */
-  g_pocetodpovedipocitace=0;
-  g_pocetrecenychvet++;
-  POROZUMEJ_VETE_NAPSANE_CLOVEKEM(vetacloveka);
-  ZPRACUJ_VETU();
-  VYBER_JEDNU_ODPOVED_Z_ODPOVEDI_PODLE_HISTORIE();
-  g_smyslposlednivetypocitace=ZJISTI_SMYSL_VETY_POCITACE(g_odpovedpocitace);
- }
-
-static void ODPOVEZ_NA_VETU(char *veta) {
-  /* !Prostre/mfcDlg.cpp:596-607, CMfcDlg::OnNovaveta.  The pre- and
-     post-processing around IQ_POKYDE_ODPOVEZ is not optional: the engine wants
-     lowercase, phonemically normalized text with "ses"/"bych" expanded into two
-     words, and hands back an answer that still has to be put back together.
-     Skipping any of it changes the answers.
-
-     Note that UPRAV_VETU_PRO_IQPOKYD frees what it is given and returns a new
-     pointer (SKLONOV.FU:173), so g_aktualnivetacloveka must be reassigned and
-     must come from the engine's own allocator. */
-
-  g_aktualnivetacloveka=(char *)REALOKUJ_PAMET(g_aktualnivetacloveka,strlen(veta)+1);
-  strcpy(g_aktualnivetacloveka,veta);
-
-  PREVED_NA_MALA_PISMENA(g_aktualnivetacloveka);
-  UPRAV_DLOUHE_SLOVO_PRO_IQPOKYD(g_aktualnivetacloveka);
-  g_aktualnivetacloveka=UPRAV_VETU_PRO_IQPOKYD(g_aktualnivetacloveka);
-  IQ_POKYDE_ODPOVEZ(g_aktualnivetacloveka);
-  ODUPRAV_VETU_PRO_IQPOKYD();
-
-  strcpy(g_aktualnivetacloveka,veta);    /* the buffer is >= strlen(veta)+1 */
-
-  g_predchozivetacloveka=(char *)REALOKUJ_PAMET(g_predchozivetacloveka,strlen(veta)+1);
-  strcpy(g_predchozivetacloveka,veta);
  }
 
 /* ------------------------------------------------------------------- console */
@@ -270,6 +156,79 @@ static void ZAPIS_DO_PREPISU(const char *predpona,const char *text_cp1250) {
   fflush(f_prepis);
  }
 
+/* --------------------------------------------------------------------- cache */
+
+/* pokyd_export_cache and pokyd_import_cache on the command line.  Nothing else
+   in this repository calls either yet -- the web build is where they earn their
+   keep, at phase 4.4 -- so they are wired up here to be exercised rather than
+   merely compiled.  Plain malloc and fopen on this side of the boundary: the
+   blob is ours, not the engine's, and pokyd_free is what frees the other one. */
+
+static int VYVEZ_CACHE(const char *jmeno) {
+unsigned char *blok;
+unsigned long delka=0;
+FILE *f;
+size_t zapsano;
+
+  if ((blok=pokyd_export_cache(&delka)) == NULL) {
+    fprintf(stderr,"pokyd: %s\n",pokyd_error());
+    return(1);
+   }
+  if ((f=fopen(jmeno,"wb")) == NULL) {
+    pokyd_free(blok);
+    fprintf(stderr,"pokyd: cannot write \"%s\"\n",jmeno);
+    return(1);
+   }
+  zapsano=fwrite(blok,1,(size_t)delka,f);
+  fclose(f);
+  pokyd_free(blok);
+
+  if (zapsano != (size_t)delka) {
+    fprintf(stderr,"pokyd: short write on \"%s\"\n",jmeno);
+    return(1);
+   }
+  fprintf(stderr,"pokyd: exported %lu cache bytes to \"%s\"\n",delka,jmeno);
+  return(0);
+ }
+
+static int DOVEZ_CACHE(const char *jmeno) {
+FILE *f;
+long velikost;
+unsigned char *blok;
+int vysledek;
+
+  if ((f=fopen(jmeno,"rb")) == NULL) {
+    fprintf(stderr,"pokyd: cannot read \"%s\"\n",jmeno);
+    return(1);
+   }
+  if (fseek(f,0,SEEK_END) != 0 || (velikost=ftell(f)) <= 0 || fseek(f,0,SEEK_SET) != 0) {
+    fclose(f);
+    fprintf(stderr,"pokyd: cannot measure \"%s\"\n",jmeno);
+    return(1);
+   }
+  if ((blok=(unsigned char *)malloc((size_t)velikost)) == NULL) {
+    fclose(f);
+    fprintf(stderr,"pokyd: out of memory reading \"%s\"\n",jmeno);
+    return(1);
+   }
+  if (fread(blok,1,(size_t)velikost,f) != (size_t)velikost) {
+    free(blok); fclose(f);
+    fprintf(stderr,"pokyd: short read on \"%s\"\n",jmeno);
+    return(1);
+   }
+  fclose(f);
+
+  vysledek=pokyd_import_cache(blok,(unsigned long)velikost);
+  free(blok);
+
+  if (vysledek != 0) {
+    fprintf(stderr,"pokyd: %s\n",pokyd_error());
+    return(1);
+   }
+  fprintf(stderr,"pokyd: imported %ld cache bytes from \"%s\"\n",velikost,jmeno);
+  return(0);
+ }
+
 /* ---------------------------------------------------------------------- main */
 
 static int POHLAVI(const char *co,const char *prepinac) {
@@ -280,16 +239,12 @@ static int POHLAVI(const char *co,const char *prepinac) {
   return(0);
  }
 
-static int JE_TAM(const char *jmeno) {
-FILE *f=fopen(jmeno,"rb");
-  if (f == NULL) return(0);
-  fclose(f);
-  return(1);
- }
-
 int main(int argc,char **argv) {
 int i,interaktivni;
 char *radek=NULL;
+const char *odpoved;
+unsigned long neuvolneno;
+pokyd_settings nastaveni;
 
   for (i=1; i < argc; i++) {
     if (strcmp(argv[i],"--help") == 0 || strcmp(argv[i],"-h") == 0) {
@@ -302,6 +257,8 @@ char *radek=NULL;
      }
     else if (strcmp(argv[i],"--cp1250") == 0) o_cp1250=1;
     else if (strcmp(argv[i],"--state") == 0) o_stav=1;
+    else if (strcmp(argv[i],"--export-cache") == 0 && i+1 < argc) o_vyvez=argv[++i];
+    else if (strcmp(argv[i],"--import-cache") == 0 && i+1 < argc) o_dovez=argv[++i];
     else if (strcmp(argv[i],"--character") == 0 && i+1 < argc) o_charakter=atoi(argv[++i]);
     else if (strcmp(argv[i],"--mood") == 0 && i+1 < argc) o_nalada=atoi(argv[++i]);
     else if (strcmp(argv[i],"--human") == 0 && i+1 < argc)
@@ -321,31 +278,35 @@ char *radek=NULL;
     fprintf(stderr,"pokyd: --mood is 1..5\n"); return(2);
    }
 
-  /* The engine opens its files by bare name in the current directory
-     (OTEVRI_SOUBOR, SLOVNIK.FU:195, the IQPOKYDWINMFC != 1 branch), so the
-     working directory is the data directory. */
-  if (POKYD_CHDIR(o_data) != 0) {
-    fprintf(stderr,"pokyd: cannot enter \"%s\"\n",o_data); return(1);
+  /* pokyd_init chdirs into the data directory, because the engine opens its
+     files by bare name in the current one, and applies NASTAV_STANDARDNE. */
+  if (pokyd_init(o_data) != 0) {
+    fprintf(stderr,"pokyd: %s (\"%s\")\n",pokyd_error(),o_data); return(1);
    }
-  if (JE_TAM(JMENO_ZAKLADNIHO_SLOVNIKU) == 0 || JE_TAM(JMENO_SOUBORU_S_INTELIGENCI) == 0) {
+
+  pokyd_get_settings(&nastaveni);
+  if (o_pohlavicloveka != -1) nastaveni.pohlavicloveka=(unsigned char)o_pohlavicloveka;
+  if (o_pohlavipocitace != -1) nastaveni.pohlavipocitace=(unsigned char)o_pohlavipocitace;
+  if (o_charakter != -1) nastaveni.charakter=(unsigned char)o_charakter;
+  pokyd_set_settings(&nastaveni);
+  /* after set_settings, not inside it: naladabody is what drifts and nalada is
+     derived from it, so a mood has to be set through the engine's own
+     SPOCITEJ_NALADABODY_Z_NALADY.  See pokyd_api.h. */
+  if (o_nalada != -1) pokyd_set_mood((unsigned char)o_nalada);
+
+  /* Before loading, never during: hazard 10 wants the base-dictionary read and
+     the cache read adjacent, which is why this is its own step.  See pokyd_api.h. */
+  if (o_dovez != NULL && DOVEZ_CACHE(o_dovez) != 0) return(1);
+
+  if (pokyd_load_dictionaries() != 0) {
     fprintf(stderr,
-      "pokyd: \"%s\" holds no %s / %s.\n"
-      "       tools/build.py lays out build/run/ with both; point --data at it.\n",
-      o_data,JMENO_ZAKLADNIHO_SLOVNIKU,JMENO_SOUBORU_S_INTELIGENCI);
+      "pokyd: %s\n"
+      "       tools/build.py lays out build/run/ with both data files; point --data at it.\n",
+      pokyd_error());
     return(1);
    }
 
-  g_nastaveni.NASTAV_STANDARDNE();       /* mfcDlg.cpp:403 */
-  if (o_pohlavicloveka != -1) g_nastaveni.pohlavicloveka=(BYTE)o_pohlavicloveka;
-  if (o_pohlavipocitace != -1) g_nastaveni.pohlavipocitace=(BYTE)o_pohlavipocitace;
-  if (o_charakter != -1) g_nastaveni.charakter=(BYTE)o_charakter;
-  if (o_nalada != -1) {
-    g_nastaveni.nalada=(BYTE)o_nalada;
-    g_nastaveni.SPOCITEJ_NALADABODY_Z_NALADY();   /* naladabody is what drifts */
-   }
-
-  PRIPRAV_GLOBALY();
-  NACTI_SLOVNIKY();
+  if (o_vyvez != NULL && VYVEZ_CACHE(o_vyvez) != 0) return(1);
 
   /* Seed last, not first: ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU reseeds from
      the clock on its way out (SLOVNIK.FU:1732, after a fixed seed obfuscates
@@ -354,7 +315,7 @@ char *radek=NULL;
      1.6 it is ours, not the C runtime's (src/shim/nahoda.h), so the same seed
      gives the same conversation on any toolchain.  That is what makes the
      test/golden/ transcript worth diffing at 3.3. */
-  srand(o_seed_zadan ? o_seed : (unsigned)time(NULL));
+  pokyd_seed(o_seed_zadan ? o_seed : (unsigned long)time(NULL));
 
   if (o_prepis != NULL && (f_prepis=fopen(o_prepis,"wb")) == NULL) {
     fprintf(stderr,"pokyd: cannot write \"%s\"\n",o_prepis); return(1);
@@ -378,15 +339,15 @@ char *radek=NULL;
     if (interaktivni == 0) NAPIS_NA_KONZOLI("> ",radek);
     ZAPIS_DO_PREPISU("> ",radek);
 
-    ODPOVEZ_NA_VETU(radek);
-
-    NAPIS_NA_KONZOLI("< ",g_odpovedpocitace);
-    ZAPIS_DO_PREPISU("< ",g_odpovedpocitace);
+    odpoved=pokyd_say(radek);
+    NAPIS_NA_KONZOLI("< ",odpoved);
+    ZAPIS_DO_PREPISU("< ",odpoved);
 
     if (o_stav) {
+      pokyd_get_settings(&nastaveni);
       printf("  [character %u, mood %u (%u points), sentence %lu]\n",
-             (unsigned)g_nastaveni.charakter,(unsigned)g_nastaveni.nalada,
-             (unsigned)g_nastaveni.naladabody,(unsigned long)g_pocetrecenychvet);
+             (unsigned)nastaveni.charakter,(unsigned)nastaveni.nalada,
+             (unsigned)nastaveni.naladabody,pokyd_sentence_count());
       fflush(stdout);
      }
 
@@ -397,10 +358,9 @@ char *radek=NULL;
 
   /* Not politeness: the block counter is the only leak detector this code has,
      and phase 3 runs it in a wasm heap that has to be sized. */
-  UVOLNI_VESKEROU_DYNAMICKOU_PAMET();
-  if (debug_pocetalokovani != 0) {
-    fprintf(stderr,"pokyd: %lu memory blocks were not freed\n",
-            (unsigned long)debug_pocetalokovani);
+  neuvolneno=pokyd_shutdown();
+  if (neuvolneno != 0) {
+    fprintf(stderr,"pokyd: %lu memory blocks were not freed\n",neuvolneno);
    }
 
   return(0);

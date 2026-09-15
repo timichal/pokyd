@@ -4,7 +4,7 @@
    it was: forward-declare the classes, pull in Aplikace/hlavicky.in (every
    function, constant and prototype), then define the classes, then list the
    globals.  Anything that drives the engine -- the phase 1.5 console driver,
-   later pokyd_api.c -- includes this and nothing else.
+   src/api/pokyd_api.cpp -- includes this and nothing else.
 
    Build with:  -I src/shim -I build/cp1250 -DBEZ_PROSTREDI=1
    or just run tools/build.py.  See src/README.md for why the compiler is pointed

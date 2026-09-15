@@ -69,11 +69,57 @@ Compiling `Aplikace/` without `!Prostre/` means bringing them back. They live in
 `src/shim/tridy.h` rather than in `src/engine/`, which keeps that tree a byte-exact
 mirror of the original — `transcode.py --check` still reports it clean.
 
+## `src/api/` — the exported surface
+
+`pokyd_api.h` is everything outside the engine may use: sixteen `extern "C"`
+functions and one flat struct, no C++ type anywhere in it, so Emscripten can bind
+it with `EXPORTED_FUNCTIONS` and the phase 4.2 worker never sees a class layout.
+`pokyd_api.cpp` is that surface implemented — and it is also where the four things
+the engine cannot supply itself now live:
+
+| | Where the original does it |
+|---|---|
+| `PRIPRAV_GLOBALY` | `!Prostre/mfcDlg.cpp:405-418`, `CMfcDlg::OnInitDialog` |
+| `pokyd_load_dictionaries` | `Prostred/PROSTRED.FU:550`, `VLAKNO__NACITEJ_JAK_DIVEJ` minus the window |
+| `IQ_POKYDE_ODPOVEZ` | `Prostred/PROSTRED.FU:212`, verbatim |
+| `pokyd_say` | `!Prostre/mfcDlg.cpp:596-607`, `CMfcDlg::OnNovaveta` |
+
+Two of those exist nowhere else in a build without MFC: `PROSTRED.FU` is the file
+`BEZ_PROSTREDI` removes, and it holds both the documented entry point and the
+loader. `src/driver/` rehearsed all four at phase 1.5 and now calls them from here,
+so there is exactly one copy and `test/golden/` tests it.
+
+Everything crossing this boundary is **CP1250 bytes**, both directions. Phase 4.1's
+codec is the only place they become text.
+
+Three constraints the header states and the implementation re-states at the call
+that enforces it, because getting any of them wrong fails silently:
+
+- **Seed after loading, never before.** `ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU`
+  reseeds from the clock on its way out (`SLOVNIK.FU:1732`).
+- **Import a cache before loading, not during.** Hazard 10 needs the
+  base-dictionary read and the cache read adjacent, which is why
+  `pokyd_import_cache` is its own call and not an argument to
+  `pokyd_load_dictionaries`.
+- **`nalada` is derived, `naladabody` is the state.** Writing `nalada` through
+  `pokyd_set_settings` is undone after the next sentence (`INTELIG.FU:1047`);
+  `pokyd_set_mood` is what the original's own dialog does.
+
+`PLAN.md` 3.1 called this file `src/engine/pokyd_api.c`. It is `.cpp` because
+`engine.h` declares classes, so the translation unit is C++ whatever the extension
+says, and it is in `src/api/` because `src/engine/` is the byte-exact mirror of
+`original/` that `transcode.py --check` verifies — new code of ours has no business
+in it. The exported surface is `extern "C"` either way.
+
 ## `src/driver/` — the console driver
 
 `pokyd.cpp`, a `main()` that loads the dictionaries, reads sentences from stdin
 and prints what IQ Pokyd answers. A dev tool, not part of the exhibit; ours, not
 ported. `tools/build.py` links it automatically because the directory exists.
+
+Since phase 3.1 it drives nothing itself: it is a caller of `pokyd_api.h` and a
+console front end, which is what makes the golden transcript a test of the API
+rather than of the driver.
 
 ```sh
 python3 tools/build.py                                   # also lays out build/run/
@@ -90,19 +136,21 @@ startup is 0.4 s. `build.py` fills
 `build/run/` from `original/` and drops the cache if the dictionary underneath it
 changed.
 
-Three things worth knowing before reading the code, all of them the original's:
+Two things worth knowing before reading the code:
 
-- **The entry point had to be brought back.** `IQ_POKYDE_ODPOVEZ` lives in
-  `Prostred/PROSTRED.FU`, which `BEZ_PROSTREDI` removes, so the driver carries a
-  copy — and so will `pokyd_api.c`. The same goes for the loading sequence, which
-  is `VLAKNO__NACITEJ_JAK_DIVEJ` minus the window.
-- **The pre-processing around it is not optional.** `CMfcDlg::OnNovaveta` lowercases,
-  normalizes phonemically and expands *ses* / *bych* into two words before the
-  engine sees a sentence, and reverses the last step on the answer. Skip any of it
-  and the answers change.
 - **stdout is noisy on purpose.** `vstup.fu:801-809` prints every base form it
   recognises, on every sentence — a debug leftover `PATCHES.md` explains we are not
   deleting. `--transcript FILE` is how you get a clean conversation out.
+- **`--export-cache` / `--import-cache`** are `pokyd_export_cache` and
+  `pokyd_import_cache` on the command line. Nothing else calls either yet — phase
+  4.4 is where they earn their keep — so they are wired up here to be exercised
+  rather than merely compiled. Importing a blob turns a 5.6 s cold start into
+  0.23 s and produces the same transcript to the byte.
+
+The two things the driver used to explain and no longer does — that the entry point
+and the loader had to be brought back out of `PROSTRED.FU`, and that
+`CMfcDlg::OnNovaveta`'s pre-processing is not optional — are now `src/api/`'s
+business; see above.
 
 Encodings: the engine is CP1250 end to end. The console gets CP852, because that
 is what the engine's own `printf`s produce (`NAPIS_TEXT_V_LATIN_2`) and what a

@@ -9,7 +9,8 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 2 — data. **Done, all of it: 2.1 through 2.5.** Phase 1 likewise, 1.1–1.6.
+**Phase:** 3 — WebAssembly. **3.1 is done**; 3.2 is blocked on installing Emscripten.
+Phases 1 and 2 are complete, 1.1–1.6 and 2.1–2.5.
 **The engine runs, answers in Czech, and the conversation is on disk.**
 `python3 tools/build.py` builds `build/native/pokyd.exe` and lays out `build/run/`;
 `build/native/pokyd.exe --data build/run` holds a conversation. The patch set against
@@ -47,8 +48,32 @@ check runs on every build and fails it if the recompiled rules ever stop matchin
 author's — which is what makes building from source the safer option rather than the
 braver one. The dictionary is the 11,207-word `original/slovnik.iqp` (2.2).
 
-**Next action:** Phase 3 — WebAssembly, starting with 3.1, the exported surface in
-`src/engine/pokyd_api.c`. **Install Emscripten first**; there is no `emcc` on this
+**3.1 is done.** The exported surface is `src/api/pokyd_api.h` — sixteen `extern "C"`
+functions and one flat struct, no C++ type in it — implemented in `pokyd_api.cpp`,
+which is now the one place that holds `PRIPRAV_GLOBALY`, the loading sequence,
+`IQ_POKYDE_ODPOVEZ` and `CMfcDlg::OnNovaveta`. The console driver stopped carrying
+its own copies of all four and became a caller, which is what makes `test/golden/`
+a test of the API rather than of the driver: the transcript still reproduces byte
+for byte, **cold and warm**, and the 18,131,435-byte `SLOVNIK.TMP` the cold path
+writes is byte-identical too.
+
+`pokyd_export_cache` / `pokyd_import_cache` are wired to `--export-cache` /
+`--import-cache` on the driver so they are exercised rather than merely compiled,
+and phase 4.4 already has its answer: exporting the blob and importing it into an
+empty data directory turns a **5.6 s cold start into 0.23 s** with the same
+transcript to the byte.
+
+Two notes for whoever reads 3.1 next. The file is `.cpp` in `src/api/`, not the
+`.c` in `src/engine/` this plan asked for — `engine.h` declares classes, so the
+translation unit is C++ whatever it is called, and `src/engine/` is the byte-exact
+mirror `transcode.py --check` verifies. And `pokyd_progress()` is the one thing 3.1
+could not test: loading is a single synchronous call, so nothing on the calling
+thread can watch it. It compiles, it reads `g_procentanacitani`, and **4.3 owns the
+question of who does the reading** — see the note under `pokyd_phase` about the
+author's 0-50/50-100 subdivision being behind `IQPOKYDWINMFC == 1` and therefore
+absent here.
+
+**Next action:** 3.2. **Install Emscripten first**; there is no `emcc` on this
 machine and 3.2 cannot start without it. 3.3 is the gate that matters: the wasm build
 must reproduce `test/golden/rozhovor.txt` byte for byte.
 
@@ -306,7 +331,7 @@ Specific things that will bite. Each has a task attached in the phases below.
 
     Two consequences, both for phase 3. **Nothing may `fopen` between those two calls** —
     the accident only holds while the cache file is the very next thing opened, so the
-    loader's order in `pokyd_api.c` is load-bearing. And **under Emscripten the `FILE` is
+    loader's order in `pokyd_api.cpp` is load-bearing. And **under Emscripten the `FILE` is
     `malloc`ed and `fclose` frees it**, so this is a use-after-free; musl will probably
     hand back the same block and it will probably keep working, but if it ever does not,
     the failure is silent — the header checksum mismatches, the engine reports
@@ -518,8 +543,9 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
 
       - **`IQ_POKYDE_ODPOVEZ` is gone with `Prostred/`**, so the driver carries a verbatim
         copy of `PROSTRED.FU:212`, and the loader is `VLAKNO__NACITEJ_JAK_DIVEJ`
-        (`PROSTRED.FU:550`) minus the window. Both are written to be lifted into
-        `pokyd_api.c` as they stand.
+        (`PROSTRED.FU:550`) minus the window. Both were written to be lifted into
+        the exported surface as they stand, and 3.1 lifted them: they live in
+        `src/api/pokyd_api.cpp` now and the driver calls them.
       - **The pre-processing around the entry point is not optional, and it is not in
         `Prostred/` either** — it is in `CMfcDlg::OnNovaveta` (`mfcDlg.cpp:596-607`):
         `PREVED_NA_MALA_PISMENA` → `UPRAV_DLOUHE_SLOVO_PRO_IQPOKYD` →
@@ -700,14 +726,43 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
 
 ## Phase 3 — WebAssembly
 
-- [ ] 3.1 `src/engine/pokyd_api.c` — the exported surface. `src/driver/pokyd.cpp` is the
-      rehearsal: its `NACTI_SLOVNIKY` and the `ODPOVEZ_NA_VETU` sequence are what
-      `pokyd_load_dictionaries` and `pokyd_say` have to be, in that order, including the
-      `OnNovaveta` pre-processing and the two calls hazard 10 says must stay adjacent.
-      Keep it minimal:
-      `pokyd_init`, `pokyd_load_dictionaries`, `pokyd_say` (CP1250 in → CP1250 out),
+- [x] 3.1 ~~`src/engine/pokyd_api.c`~~ **`src/api/pokyd_api.h` + `.cpp`** — the exported
+      surface. `.cpp` because `engine.h` declares classes, so the translation unit is C++
+      whatever the extension says; `src/api/` because `src/engine/` is the byte-exact
+      mirror `transcode.py --check` verifies and new code of ours has no business in it.
+      The surface itself is `extern "C"` and exposes no C++ type, so 3.2 can hand the
+      names straight to `EXPORTED_FUNCTIONS`.
+
+      Everything the plan asked for is there — `pokyd_init`,
+      `pokyd_load_dictionaries`, `pokyd_say` (CP1250 in → CP1250 out),
       `pokyd_get_settings` / `pokyd_set_settings`, `pokyd_progress`,
-      `pokyd_export_cache` / `pokyd_import_cache`.
+      `pokyd_export_cache` / `pokyd_import_cache` — plus six that earned their place:
+      `pokyd_shutdown` (returns the unfreed-block count, which is the only leak detector
+      this code has), `pokyd_error`, `pokyd_seed` (hazard 11, and it has to be callable
+      *after* loading), `pokyd_set_mood` (`nalada` is derived from `naladabody`, so
+      writing it through the settings struct alone is undone after the next sentence —
+      `INTELIG.FU:1047`), `pokyd_sentence_count` (rules test `g_pocetrecenychvet`, so it
+      is state), `pokyd_phase`, and `pokyd_free`.
+
+      `src/driver/pokyd.cpp` was the rehearsal and is now a caller: all four of
+      `PRIPRAV_GLOBALY`, the loading sequence, `IQ_POKYDE_ODPOVEZ` and `OnNovaveta` moved
+      into `pokyd_api.cpp`, so there is one copy and `test/golden/` tests *it*. Verified
+      after the move: the transcript reproduces byte for byte on the warm path and on the
+      cold path, `SLOVNIK.TMP` comes out byte-identical to the 1.6 one (18,131,435 bytes),
+      and teardown still reports zero unfreed blocks.
+
+      The cache pair is wired to the driver's `--export-cache` / `--import-cache` so it is
+      exercised and not merely compiled: export the blob, delete `SLOVNIK.TMP`, import it
+      back, and the 5.6 s cold start becomes 0.23 s with the same transcript. That is
+      phase 4.4's mechanism proven natively, and hazard 10's adjacency held.
+
+      One thing 3.1 could not test: `pokyd_progress`. Loading is a single synchronous
+      call, so nothing on the calling thread can read it — whose job that is, is 4.3's.
+      The header also records why the progress bar will look odd if nobody thinks about
+      it: the author's 0–50 / 50–100 subdivision of the inflection step is
+      `g_praveprovadenaakce` 2/3/4 at `SLOVNIK.FU:3260`, `:3329`, `:3340`, all three
+      inside `#if IQPOKYDWINMFC == 1`, so in a `BEZ_PROSTREDI` build `g_procentanacitani`
+      runs 0→100 three times over during `POKYD_FAZE_SKLONOVANI`.
 - [ ] 3.2 Emscripten build: `-fsigned-char -O1 -fwrapv -fno-strict-aliasing`,
       `ALLOW_MEMORY_GROWTH`, `MODULARIZE`, preload `slovnik.iqp` + `IQPOKYD.IQP` into MEMFS.
       Take both from `build/run/`, which `tools/build.py` already lays out with the right

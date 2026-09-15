@@ -8,7 +8,8 @@ What gets built
 One translation unit for the engine -- `src/shim/engine.cpp`, which #includes
 `vsechno.in` exactly as `!Prostre/IQPokyd.cpp` did, because vsechno.in is not a
 header, it is the program -- plus the small `src/shim/` replacement for the
-Win32/MFC surface, plus a driver if there is one.
+Win32/MFC surface, plus `src/api/`, the exported surface (phase 3.1), plus a
+driver if there is one.
 
 The compiler is pointed at `build/cp1250/`, never at `src/engine/`.  This script
 regenerates that tree first (tools/transcode.py --to-cp1250), so a build can
@@ -61,6 +62,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SHIM = ROOT / "src" / "shim"
+API = ROOT / "src" / "api"                   # phase 3.1: pokyd_api.h, the exported surface
 DRIVER = ROOT / "src" / "driver"             # phase 1.5 lives here; absent until then
 CP1250 = ROOT / "build" / "cp1250"
 OUT = ROOT / "build" / "native"
@@ -90,7 +92,7 @@ CXX = "g++"
 STD = ["-std=gnu++98"]
 HAZARDS = ["-fsigned-char", "-fwrapv", "-fno-strict-aliasing", "-O1"]
 DEFINES = ["-DBEZ_PROSTREDI=1"]
-INCLUDES = ["-I", str(SHIM), "-I", str(CP1250)]
+INCLUDES = ["-I", str(SHIM), "-I", str(API), "-I", str(CP1250)]
 WARNINGS = ["-Wall", "-Wno-write-strings", "-Wno-misleading-indentation"]
 
 CXXFLAGS = STD + HAZARDS + DEFINES + WARNINGS + INCLUDES
@@ -168,7 +170,7 @@ def main() -> int:
 
     OUT.mkdir(parents=True, exist_ok=True)
 
-    sources = sorted(SHIM.glob("*.cpp"))
+    sources = sorted(SHIM.glob("*.cpp")) + sorted(API.glob("*.cpp"))
     if DRIVER.is_dir():
         sources += sorted(DRIVER.glob("*.cpp"))
         entry = "driver"
