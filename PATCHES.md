@@ -21,6 +21,14 @@ Not covered here, because they are not changes to original code:
   transformation and never touch `src/engine/`.
 - The CP1250 ⇄ UTF-8 re-encoding done by `tools/transcode.py` (hazard 6), proven a
   round-trip identity by `--check` and therefore invisible to the compiler.
+- `Data/Intelig/GRAMATIK.C`, the author's rule compiler, because it has **no patches**.
+  `tools/build-gramatik.py` (phase 2.3) compiles it straight out of `original/`, byte for
+  byte, and it builds on this gcc as it stands: six warnings, no errors. It therefore has
+  no working copy under `src/` and nothing to record here — a file identical to the
+  archive is not a patch. If it ever does need one, that is the moment to give it a copy
+  and an entry, and the tool's docstring says so. Note that it is *not* covered by
+  `transcode.py --check` either, since `gen-src.py` only ever mirrored `Aplikace/`; the
+  proof that we built the real thing is 2.4's byte-identical rule stream instead.
 
 ---
 

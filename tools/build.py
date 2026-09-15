@@ -71,12 +71,17 @@ RUN = ROOT / "build" / "run"                 # where the driver is meant to be r
 # and OTEVRI_SOUBOR opens them by bare name in the current directory.
 #
 # slovnik.iqp is the full 11,207-word dictionary lifted from the released binary,
-# not the 301-word remnant in the source drop -- see PLAN.md 2.2, which is where
-# that choice gets made for good.  IQPOKYD.IQP is the shipped compiled rule base;
-# PLAN.md 2.3-2.5 may replace it with one rebuilt from GRAMATIK.IQZ.
+# not the 301-word remnant in the source drop -- PLAN.md 2.2.
+#
+# IQPOKYD.IQP is *built*, not copied: PLAN.md 2.5 chose to compile it from the
+# readable GRAMATIK.IQZ with the author's own GRAMATIK.C rather than ship the 2004
+# binary next to it.  That is only defensible because 2.4 proved the two agree on
+# all 1,456 strings, so tools/build-gramatik.py re-proves it on every build and
+# fails the build if they ever stop agreeing.
+GRAMATIK = ROOT / "build" / "gramatik"
 DATA = {
     "SLOVNIK.IQP": ROOT / "original" / "slovnik.iqp",
-    "IQPOKYD.IQP": ROOT / "original" / "IQ Pokyd" / "Data" / "Intelig" / "IQPOKYD.IQP",
+    "IQPOKYD.IQP": GRAMATIK / "IQPOKYD.IQP",
 }
 CACHE = "SLOVNIK.TMP"        # the inflected dictionary, written by the engine
 
@@ -110,8 +115,9 @@ def priprav_run_adresar():
 
     The engine opens its data files by bare name in the current directory, so
     they have to be somewhere writable: SLOVNIK.TMP, the inflected dictionary,
-    is written next to them and is 17 MB.  original/ is the archive and read
-    only, hence a copy.
+    is written next to them and is 17 MB.  The dictionary comes from original/,
+    which is the archive and read only, hence a copy; the rule base comes from
+    build/gramatik/, where build-gramatik.py just compiled it.
 
     The copy is refreshed whenever the source differs, and changing the base
     dictionary drops the cache.  It has to: nothing in SLOVNIK.TMP identifies
@@ -149,6 +155,15 @@ def main() -> int:
 
     # Never build stale bytes.
     if run([sys.executable, ROOT / "tools" / "transcode.py", "--to-cp1250"], args.verbose):
+        return 1
+
+    # The rule base is data we build, not data we copy -- see DATA above.  Cheap
+    # when nothing changed: build-gramatik.py keeps a stamp and only recompiles
+    # when GRAMATIK.IQZ, GRAMATIK.C, the shim or the flags move.  It always
+    # re-verifies, though, so a corrupted IQPOKYD.IQP fails here and not three
+    # minutes later inside the engine.
+    if run([sys.executable, ROOT / "tools" / "build-gramatik.py", "--quiet"]
+           + (["-v"] if args.verbose else []), args.verbose):
         return 1
 
     OUT.mkdir(parents=True, exist_ok=True)

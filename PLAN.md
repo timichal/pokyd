@@ -9,7 +9,7 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 1 — building the engine natively. **Done, all of it: 1.1 through 1.6.**
+**Phase:** 2 — data. **Done, all of it: 2.1 through 2.5.** Phase 1 likewise, 1.1–1.6.
 **The engine runs, answers in Czech, and the conversation is on disk.**
 `python3 tools/build.py` builds `build/native/pokyd.exe` and lays out `build/run/`;
 `build/native/pokyd.exe --data build/run` holds a conversation. The patch set against
@@ -27,10 +27,30 @@ exact sequence, so it costs nothing here and buys 3.3 its byte-for-byte diff. Th
 23-sentence golden conversation is in `test/golden/`, with a README recording the command
 that made it.
 
-**Next action:** Phase 2, step 2.3 — build `GRAMATIK.C` as a host tool and recompile
-`GRAMATIK.IQZ` → `IQPOKYD.IQP`, which 2.4 then diffs against the shipped one. That
-settles both the 2004/2005 question and the line-endings question below. 2.2 (which
-dictionary ships) can be decided on paper at any point; 2.3 is the one with work in it.
+Phase 2 then turned out to be one afternoon and two answered questions.
+`python3 tools/build-gramatik.py` builds the author's own rule compiler out of
+`original/` — no patch, no working copy, it compiles as it stands — recompiles
+`GRAMATIK.IQZ`, and decodes both the result and the shipped `IQPOKYD.IQP` the way
+`PRECTI_INTELIGENCI_ZE_SOUBORU` does. **The two rule streams are byte-identical**:
+182 rules, 1,456 strings, 69,697 bytes, all four checksums verifying. The only
+differences in the whole file are the copyright year in the header banner (2005 vs
+2004) and the random obfuscation padding, which is reseeded from the clock on every
+run by design. So `GRAMATIK.IQZ` in the source drop *is* the source of the shipped
+rule base, the 2004/2005 discrepancy is a string literal and nothing more, and the
+line-endings worry is settled: CRLF is right, and an LF checkout fails loudly rather
+than quietly. Both open questions below are closed. Running the engine against the
+rebuilt file reproduces `test/golden/rozhovor.txt` byte for byte.
+
+2.5 then decided to **build the rule base rather than copy it**: `tools/build.py` now
+runs `build-gramatik.py` and takes `IQPOKYD.IQP` from `build/gramatik/`. The equivalence
+check runs on every build and fails it if the recompiled rules ever stop matching the
+author's — which is what makes building from source the safer option rather than the
+braver one. The dictionary is the 11,207-word `original/slovnik.iqp` (2.2).
+
+**Next action:** Phase 3 — WebAssembly, starting with 3.1, the exported surface in
+`src/engine/pokyd_api.c`. **Install Emscripten first**; there is no `emcc` on this
+machine and 3.2 cannot start without it. 3.3 is the gate that matters: the wasm build
+must reproduce `test/golden/rozhovor.txt` byte for byte.
 
 ---
 
@@ -94,7 +114,7 @@ variants a rule uses, and each matched rule nudges mood for the rest of the conv
 | `original/slovnik.iqp` | 90 KB | **The full base dictionary — 11,207 words.** Copied from the released binary, not part of the GPL source drop. Decodes clean, checksums verify. |
 | `original/IQ Pokyd/Data/ZaklSlov/SLOVNIK.IQP` | 4 KB | The crippled 301-word dictionary from the source drop (author stripped it to "a" words + exceptions). Superseded by the above. |
 | `original/IQ Pokyd/Data/Intelig/GRAMATIK.IQZ` | 106 KB | Rule base in **text** form — 182 rules, clean 14-line records. The readable source of truth. |
-| `original/IQ Pokyd/Data/Intelig/IQPOKYD.IQP` | 71 KB | Same rules, compiled + obfuscated. Header says 1999-**2004** while `GRAMATIK.C` writes 1999-**2005**, so this was built by an older compiler than the source we have. See task 2.4. |
+| `original/IQ Pokyd/Data/Intelig/IQPOKYD.IQP` | 71 KB | Same rules, compiled + obfuscated. **Verified (2.4) to be exactly what `GRAMATIK.C` makes of `GRAMATIK.IQZ`** — all 1,456 strings identical. The header's 1999-**2004** against `GRAMATIK.C`'s 1999-**2005** is a copyright-year literal the author bumped after his last data build, not an older compiler. |
 
 ### Rule format (`GRAMATIK.IQZ`)
 
@@ -325,9 +345,21 @@ Specific things that will bite. Each has a task attached in the phases below.
 
 ## Open questions
 
-- [ ] Does the shipped `IQPOKYD.IQP` match `GRAMATIK.IQZ`? (task 2.4) If not, which wins?
-      Leaning: recompile from the text source, since that's readable and diffable.
-- [ ] **Line endings in the archive.** Every text file in `original/` was first committed
+- [x] ~~Does the shipped `IQPOKYD.IQP` match `GRAMATIK.IQZ`?~~ **Yes, exactly.** Task 2.4:
+      recompiling `GRAMATIK.IQZ` with the author's own `GRAMATIK.C` reproduces all 1,456
+      strings of the shipped rule base byte for byte. Nothing has to win — the only
+      differences are the header's copyright year (a string literal, bumped 2004→2005
+      after the data was last built) and the deliberately random obfuscation padding.
+      Which file *ships* is 2.5, and is now a question of provenance rather than content.
+- [x] **Line endings in the archive.** ~~Open.~~ **Answered by 2.4, in the good
+      direction**, for the one file where it mattered: `GRAMATIK.IQZ`. The recompiled rule
+      base matches the shipped one on all 69,697 bytes of rule text, which it could not do
+      if git's CRLF round trip had misplaced a single byte of the input. The `.gitattributes`
+      checkout is the author's bytes. The paragraphs below stand as the record of how that
+      came to be in doubt, and the five binaries at the end of it are still worth re-adding
+      if the original archive ever turns up.
+
+      Every text file in `original/` was first committed
       under `core.autocrlf=true`, so git stores it LF-normalized and checks it out CRLF —
       the true bytes of the source drop are not recoverable from this repo. Harmless for
       source (whitespace), but `GRAMATIK.IQZ` is *data* the rule compiler parses by line, so
@@ -557,15 +589,114 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       `pancéřový:\x1f` = `_mlady_`), verbs carry paradigm + aspect (`žvatlá:J\x01` =
       `_dela_` 74, vid 1). Only needed for inspection — the wasm engine reads the binary
       itself.
-- [ ] 2.2 Decide which dictionary ships. Default: `original/slovnik.iqp` (11,207 words).
-      Note in the README that it came from the released binary, not the source drop.
-- [ ] 2.3 Build `GRAMATIK.C` as a host tool; recompile `GRAMATIK.IQZ` → `IQPOKYD.IQP`.
-- [ ] 2.4 Diff the recompiled `IQPOKYD.IQP` against the shipped one, modulo the random
-      obfuscation padding and header text. Resolves the 2004/2005 question above — and the
-      line-endings question, since the shipped `.IQP` is binary and was never normalized
-      while `GRAMATIK.IQZ` was. If they differ only in ways that track `\r`, that is the
-      answer.
-- [ ] 2.5 Pick the shipping rule base and record the decision here.
+- [x] 2.2 Decide which dictionary ships — **`original/slovnik.iqp`, the full 11,207-word
+      one, same as the released program used.** Decided; nothing to build. The alternative
+      was `Data/ZaklSlov/SLOVNIK.IQP` from the source drop, and it is not a real
+      alternative: the author stripped it to 301 words (the `a`-words plus exceptions) so
+      the GPL drop would not carry his dictionary. A 301-word IQ Pokyd is not IQ Pokyd —
+      most sentences would fall through to the "I don't know that word" rules. So the
+      museum piece ships the museum piece's vocabulary. `tools/build.py` already lays it
+      out as `build/run/SLOVNIK.IQP` and phase 3.2 preloads the same file.
+
+      The one thing this owes the reader is **provenance**, because it is the single file
+      here that did not come from the source drop: it was lifted out of the released
+      binary. That belongs in the 9.1 README, alongside the licensing note in 9.2 — the
+      dictionary is the part of the archive whose GPL status the author was evidently
+      least comfortable with, and the honest thing is to say where it came from rather
+      than let it look like source. Noted here so 9.1 cannot forget it.
+- [x] 2.3 Build `GRAMATIK.C` as a host tool; recompile `GRAMATIK.IQZ` → `IQPOKYD.IQP`.
+      **Done — `python3 tools/build-gramatik.py`.** It needed no patch: the author's rule
+      compiler builds on this gcc exactly as it sits in `original/`, six warnings and no
+      errors, so there is no working copy of it under `src/` and nothing for `PATCHES.md`.
+      The tool copies `GRAMATIK.C` and `GRAMATIK.IQZ` byte-for-byte into `build/gramatik/`
+      (lowercased, because `main()` `fopen`s `"gramatik.iqz"` by that exact name),
+      compiles with the engine's own hazard flags, and runs it in that directory.
+
+      Three things worth carrying forward:
+      - **The `-Warray-bounds` hit is real and is left alone.** `strcpy(prostoridslov,
+        "<14 spaces>")` writes 15 bytes into a `char[14]`. `prostoridslov` is a global
+        declared between `hlavicka[5000]` and `znak`, so the stray NUL lands on `znak` or
+        on padding, and `znak` is not read until after the last `strcpy`. Harmless in
+        2005, harmless here, and the byte-identical output proves it.
+      - **CRLF is not optional.** `PRECTI_RADEK` treats `\r` as the terminator and eats
+        the byte after it, so an LF-only `GRAMATIK.IQZ` runs the whole file into one line
+        and dies at 10,000 characters. The tool checks the line endings up front and says
+        so, rather than letting the author's error message stand in for the diagnosis.
+      - `src/shim/nahoda.h` is force-included so the obfuscation padding comes from the
+        MS CRT LCG, the 2005 build's generator. A verified no-op on ucrt64 (`PATCHES.md`),
+        kept so it stays one on a toolchain where it would not be.
+- [x] 2.4 Diff the recompiled `IQPOKYD.IQP` against the shipped one — **done, and the
+      answer is that they are the same file.** `build-gramatik.py` decodes both exactly as
+      `PRECTI_INTELIGENCI_ZE_SOUBORU` (`Slovnik/SLOVNIK.FU:1348`) does — same header walk,
+      same per-string position-keyed obfuscation, both checksum pairs verified — and
+      compares the decoded rule streams. **All 1,456 strings match, byte for byte**: 182
+      conditions plus 7 answers each, 69,697 bytes of rule text, and the encoded bodies are
+      the same length too (71,155 B). What differs is exactly two things, neither of them
+      data:
+
+      | | shipped | rebuilt |
+      |---|---|---|
+      | header banner | `… KYBLSoft 1999-2004` | `… KYBLSoft 1999-2005` |
+      | obfuscation | 2 padding bytes, key `0x74` | random per run |
+
+      So the 2004/2005 discrepancy is a **copyright-year string literal the author bumped
+      after he last rebuilt the data**, not an older rule compiler and not an older rule
+      base. `GRAMATIK.IQZ` as it sits in the source drop is the true source of the shipped
+      `IQPOKYD.IQP`.
+
+      And it settles the line-endings question for free, in the direction we hoped. The
+      shipped `.IQP` is binary and was never normalized; `GRAMATIK.IQZ` was. If git's
+      round trip had put a single byte of that file wrong, the rule stream could not
+      match — and it matches on all 69,697 bytes. **The CRLF checkout reproduces the
+      author's bytes.** (Checked the other way too: feeding the tool an LF-converted copy
+      fails on the first read.)
+
+      End-to-end as well, not just on paper: with the rebuilt `IQPOKYD.IQP` in place of
+      the shipped one, `build/native/pokyd.exe` reproduces `test/golden/rozhovor.txt`
+      byte for byte.
+
+      `--dump` writes the decoded rule base as readable CP1250 text — 182 blocks of
+      condition + mood + 7 answers, attributes in their compiled single-char form. Useful
+      for reading what the engine actually evaluates, as opposed to what `GRAMATIK.IQZ`
+      says; `build/gramatik/rules.txt` if you want it.
+- [x] 2.5 Pick the shipping rule base — **build it from `GRAMATIK.IQZ`.** Michal's call,
+      and it holds the original plan's leaning: with 2.4 showing the two candidates are
+      byte-for-byte equivalent in every string the engine reads, the tie breaks on which
+      is *cleaner*, and deriving the artefact from readable source beats trusting a binary
+      we cannot read. So the repo ships a rule base it can regenerate, not one it has to
+      be taken on faith about.
+
+      Wired up: `tools/build.py`'s `DATA` now points `IQPOKYD.IQP` at
+      `build/gramatik/IQPOKYD.IQP`, and `build.py` runs `build-gramatik.py --quiet` right
+      after `transcode.py`, before laying out `build/run/`. One line in the build output:
+
+          rules   IQPOKYD.IQP: 182 rules, 1456 strings, checksums verify, identical to
+                  the shipped rule base
+
+      That line is the point. The equivalence proof is not a thing we did once in
+      September 2026 — it **runs on every build and fails it** if the recompiled rule
+      stream ever stops matching the author's. Building from source is only defensible
+      because that check is standing, so the two changes belong together.
+
+      Two consequences worth knowing:
+      - **The rebuild is conditional.** `ZAPIS_HLAVICKU` reseeds from the clock, so an
+        unconditional rebuild would hand a different `IQPOKYD.IQP` to every build for no
+        change in any rule — bad for a content-hashed deploy (9.3) and just noisy in a
+        working tree. `build/gramatik/otisk.txt` holds a SHA-256 of both archive files,
+        the `nahoda` shim, the compilers and the flags; the compile and run are skipped
+        while it matches, `--force` overrides. Verification is *not* conditional and runs
+        every time.
+      - **The bytes are still not reproducible across machines**, only stable on one.
+        Two clones building the same commit get rule bases with different padding and
+        different keys — identical content, different files. That is the author's
+        obfuscator, not our build, and nothing downstream reads the padding. If 9.3 ever
+        wants a deterministic asset, the cheapest fix is to pin the seed through the
+        `nahoda` shim rather than to go back to copying the 2004 file.
+
+      What this does **not** change: `original/IQ Pokyd/Data/Intelig/IQPOKYD.IQP` stays
+      exactly where it is. It is the archive, it is the comparison target, and 9.1 should
+      say that the rule base the site runs on was rebuilt from the author's own text
+      source with the author's own compiler — and that it matches what he shipped.
 
 ## Phase 3 — WebAssembly
 
@@ -579,6 +710,9 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       `pokyd_export_cache` / `pokyd_import_cache`.
 - [ ] 3.2 Emscripten build: `-fsigned-char -O1 -fwrapv -fno-strict-aliasing`,
       `ALLOW_MEMORY_GROWTH`, `MODULARIZE`, preload `slovnik.iqp` + `IQPOKYD.IQP` into MEMFS.
+      Take both from `build/run/`, which `tools/build.py` already lays out with the right
+      two files under the bare names `KONSTANT.K` expects — the rule base there is the one
+      compiled from `GRAMATIK.IQZ` (2.5), not the 2004 binary.
 - [ ] 3.3 Node smoke test: same inputs as 1.6, diff against the native transcript.
       **They must match exactly.** Any divergence is a hazard-1/4 bug — fix before moving on.
       Hazard 11 is already settled — `src/shim/nahoda.h` gives both builds the same
@@ -662,9 +796,17 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
 - Source pipeline and how to regenerate it: `src/README.md`.
   `tools/gen-src.py` (original → `build/src/`), `tools/transcode.py`
   (`build/src/` ⇄ `src/engine/` → `build/cp1250/`), `tools/dump-dict.py` (dictionary decoder).
+- Rule base: `python3 tools/build-gramatik.py` builds the author's `GRAMATIK.C` out of
+  `original/` (unpatched), recompiles `GRAMATIK.IQZ` → `build/gramatik/IQPOKYD.IQP`,
+  verifies both checksum pairs and compares the result against the shipped `IQPOKYD.IQP`.
+  **`tools/build.py` runs it**, so this is a build step and not just an audit — phase 2.5.
+  `--force` rebuilds past the stamp, `--dump FILE` writes the decoded rules as readable
+  CP1250 text. It is also the `.IQP` decoder, mirroring `PRECTI_INTELIGENCI_ZE_SOUBORU`
+  (`Slovnik/SLOVNIK.FU:1348`).
 - Building: `python3 tools/build.py`. Every flag is justified in that file's docstring, and
   the Win32/MFC replacement it compiles against is `src/shim/`, described in `src/README.md`.
-  It also lays out `build/run/`, the working directory the driver wants.
+  It also compiles the rule base (via `build-gramatik.py`) and lays out `build/run/`, the
+  working directory the driver wants.
 - Running it: `build/native/pokyd.exe --data build/run` (`--help` for the options).
   `src/driver/pokyd.cpp` says at each call site which line of the original it mirrors.
 - Engine entry point: `IQ_POKYDE_ODPOVEZ` — `Aplikace/Prostred/PROSTRED.FU:212`, and it is
