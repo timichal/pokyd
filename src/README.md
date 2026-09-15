@@ -72,12 +72,35 @@ mirror of the original — `transcode.py --check` still reports it clean.
 ## `src/web/` — the JS side of the boundary
 
 Phase 4.1 onward. TypeScript, no dependencies, no build step needed to test it:
-node 24 strips the types itself, so `node test/web/cp1250.test.ts` runs as it stands.
-Vite arrives at phase 5.1 and will consume these files unchanged.
+node 24 strips the types itself, so `node test/web/cp1250.test.ts` runs as it stands,
+and `test/browser.mjs` does the same stripping on the way out to a browser, so Chrome
+runs these files rather than a build of them. Vite arrives at phase 5.1 and will
+consume them unchanged.
 
 | File | What it is |
 |---|---|
 | `cp1250.ts` | The codec. The full 256-entry CP1250 table and both directions across it, and the only place in the project where a byte becomes a character or the reverse. `pokyd_api.h` says every `char *` crossing the API is CP1250 and has to stay CP1250; this is the one door in that wall. |
+| `protocol.ts` | The vocabulary of the worker boundary: twelve requests mirroring `pokyd_api.h` one for one, the reply union, and `PokydSettings`. Types only — nothing in it survives to runtime except the phase constants. |
+| `engine.ts` | `PokydEngine`, the wasm module driven from JavaScript: the malloc/copy/free dance, the 220-byte settings struct, and the codec applied at every crossing. Transport-free on purpose — no `self`, no DOM — which is what lets node test it without a Worker. It also enforces the ordering rules `pokyd_api.h` only states. |
+| `worker.ts` | The engine on its own thread. A strict FIFO queue, the throttled output relay, and errors turned into rejected replies. Thin: everything else is in the two files above. |
+| `client.ts` | `PokydClient`, the page's half — one awaitable method per request, plus `start()`, which is the ordering rules expressed once so no caller has to remember them. |
+
+The worker is the point of phase 4.2, not a refinement of it. 3.4 measured
+`pokyd_load_dictionaries()` at 15.3 s in Chrome, as **one synchronous call**: on the
+main thread that is a page that does not repaint, scroll or answer the mouse for a
+quarter of a minute. Measured through the worker, the longest the main thread was
+kept waiting across the whole of that load is **12 ms**, and 902 animation frames
+were drawn during it.
+
+One consequence worth knowing before phase 4.3 draws a progress bar: **`pokyd_progress()`
+is dead through the step that takes the time.** The assignment that would move it
+through the inflection loop is `SLOVNIK.FU:3318`, behind `#if IQPOKYDWINMFC == 1`, so
+a `BEZ_PROSTREDI` build never compiles it. The author reported that step to the console
+instead — `printf("\r%.1Lf%%", ...)` every tenth word — and Emscripten hands those
+characters to a JS callback *synchronously, from inside the call that has not returned*.
+So the progress signal is the engine's own output, decoded from CP1250 and relayed as
+`output` events; the cold load produced 207 usable percentages. `PROGRESS` at the foot
+of `protocol.ts` has the argument and the measurements.
 
 The table is a **bijection on all 256 byte values**, including the five CP1250 leaves
 undefined, so decode loses nothing and encode invents nothing. That is what lets
@@ -118,8 +141,10 @@ so there is exactly one copy and `test/golden/` tests it.
 Everything crossing this boundary is **CP1250 bytes**, both directions. Phase 4.1's
 codec is the only place they become text.
 
-Three constraints the header states and the implementation re-states at the call
-that enforces it, because getting any of them wrong fails silently:
+Four constraints the header states and the implementation re-states at the call
+that enforces it. The first three fail silently; the fourth is louder. Phase 4.2
+enforces all four again in `src/web/engine.ts`, on the JavaScript side of the
+boundary, where the message can say why:
 
 - **Seed after loading, never before.** `ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU`
   reseeds from the clock on its way out (`SLOVNIK.FU:1732`).
@@ -130,6 +155,14 @@ that enforces it, because getting any of them wrong fails silently:
 - **`nalada` is derived, `naladabody` is the state.** Writing `nalada` through
   `pokyd_set_settings` is undone after the next sentence (`INTELIG.FU:1047`);
   `pokyd_set_mood` is what the original's own dialog does.
+- **Shut down only after a load that succeeded.** Found at phase 4.2, the first
+  caller to try it any other way. `UVOLNI_VESKEROU_DYNAMICKOU_PAMET` walks
+  `g_vetacloveka` calling `Typ_slova::VYMAZ_OBSAH` (`INTELIG.FT:54`), which frees
+  some twenty pointers unconditionally, and `UVOLNI_X(NULL)` is a fatal error by
+  design (`SKLONOV.FU:1348`). Those pointers are allocated while the base dictionary
+  is read, so on an engine that only ever ran `pokyd_init` they are all NULL and the
+  call aborts. Left unguarded rather than fixed: a load that never happened has
+  nothing to tear down, so drop the module or terminate the worker.
 
 `PLAN.md` 3.1 called this file `src/engine/pokyd_api.c`. It is `.cpp` because
 `engine.h` declares classes, so the translation unit is C++ whatever the extension

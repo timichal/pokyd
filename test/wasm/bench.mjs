@@ -26,7 +26,7 @@
            first run of a process is a clean reading.  In a browser it is
            performance.measureUserAgentSpecificMemory(), the whole tab, which is
            the number 3.4 is actually asking for and which needs the cross-origin
-           isolation the bench server sends.
+           isolation test/browser.mjs sends.
 
    Usage
    -----
@@ -41,15 +41,12 @@
    Written by us, not ported.  ASCII only, like the rest of the non-engine code.
 */
 
-import { readFileSync, existsSync, statSync, mkdtempSync, rmSync } from "node:fs";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { dirname, join, extname, normalize, sep } from "node:path";
-import { createServer } from "node:http";
-import { spawn } from "node:child_process";
-import { tmpdir } from "node:os";
+import { readFileSync, existsSync, statSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+import { join } from "node:path";
 import { zmer } from "./bench-core.mjs";
+import { KOREN, spustStranku } from "../browser.mjs";
 
-const KOREN = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MODUL = join(KOREN, "build", "wasm", "pokyd.mjs");
 
 function vety_ze_souboru() {
@@ -93,96 +90,19 @@ async function zmer_v_node(opakovani, hluk) {
 
 /* ------------------------------------------------------------- in a browser */
 
-const PROHLIZECE = [
-  "C:/Program Files/Google/Chrome/Application/chrome.exe",
-  "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
-  "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
-  "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
-  "/usr/bin/google-chrome",
-  "/usr/bin/chromium",
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-];
-
-const TYPY = {
-  ".html": "text/html; charset=utf-8",
-  ".mjs": "text/javascript; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".wasm": "application/wasm",
-  ".txt": "application/octet-stream",
-  ".in": "application/octet-stream",
-};
-
-function server(hotovo, chybne) {
-  /* Serves the repo read-only over 127.0.0.1 and takes the results back on
-     POST /vysledek.  The two Cross-Origin-* headers are not decoration: they are
-     what makes the page crossOriginIsolated, which is what lets it call
-     performance.measureUserAgentSpecificMemory() -- the only per-tab memory
-     figure a browser will give out. */
-  return createServer((req, res) => {
-    const hlavicky = {
-      "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Embedder-Policy": "require-corp",
-      "Cross-Origin-Resource-Policy": "same-origin",
-      "Cache-Control": "no-store",
-    };
-
-    if (req.method === "POST" && req.url === "/vysledek") {
-      const kusy = [];
-      req.on("data", (k) => kusy.push(k));
-      req.on("end", () => {
-        res.writeHead(204, hlavicky).end();
-        try { hotovo(JSON.parse(Buffer.concat(kusy).toString("utf8"))); }
-        catch (e) { chybne(e); }
-      });
-      return;
-    }
-
-    const cesta = normalize(join(KOREN, decodeURIComponent(req.url.split("?")[0])));
-    if (!cesta.startsWith(KOREN + sep) || !existsSync(cesta) || !statSync(cesta).isFile()) {
-      res.writeHead(404, hlavicky).end("no");
-      return;
-    }
-    res.writeHead(200, { ...hlavicky, "Content-Type": TYPY[extname(cesta)] || "application/octet-stream" });
-    res.end(readFileSync(cesta));
-  });
-}
+/* The server and the browser launcher moved to test/browser.mjs at phase 4.2,
+   when test/web/worker.test.mjs became their second caller.  What is left here
+   is what is specific to a benchmark: the query the page is given, and taking
+   the rows back. */
 
 async function zmer_v_prohlizeci(opakovani, hluk, viditelne) {
-  const exe = PROHLIZECE.find((p) => existsSync(p));
-  if (!exe) throw new Error("no Chrome or Edge found -- looked in:\n  "
-    + PROHLIZECE.join("\n  "));
-
-  let hotovo, chybne;
-  const vysledek = new Promise((a, b) => { hotovo = a; chybne = b; });
-  const srv = server(hotovo, chybne);
-  await new Promise((a) => srv.listen(0, "127.0.0.1", a));
-  const port = srv.address().port;
-  const url = `http://127.0.0.1:${port}/test/wasm/bench.html`
-    + `?n=${opakovani}&noise=${hluk ? 1 : 0}`;
-
-  const profil = mkdtempSync(join(tmpdir(), "pokyd-bench-"));
-  const prepinace = [
-    viditelne ? "--new-window" : "--headless=new",
-    "--disable-gpu", "--no-first-run", "--no-default-browser-check",
-    "--disable-background-timer-throttling", "--disable-renderer-backgrounding",
-    "--disable-backgrounding-occluded-windows",
-    "--user-data-dir=" + profil, url,
-  ];
-  console.log("browser " + exe);
-  console.log("url     " + url);
-  const proces = spawn(exe, prepinace, { stdio: "ignore" });
-
-  const cekani = new Promise((_, b) => setTimeout(
-    () => b(new Error("the browser did not report back within 180 s")), 180000));
-  try {
-    const data = await Promise.race([vysledek, cekani]);
-    if (data.chyba) throw new Error("the page failed:\n" + data.chyba);
-    return { behy: data.behy, kde: data.kde, tab: data.tab };
-  } finally {
-    proces.kill();
-    srv.close();
-    try { rmSync(profil, { recursive: true, force: true }); } catch { /* it is a temp dir */ }
-  }
+  const { data } = await spustStranku({
+    stranka: "test/wasm/bench.html",
+    dotaz: { n: opakovani, noise: hluk ? 1 : 0 },
+    viditelne,
+  });
+  if (data.chyba) throw new Error("the page failed:\n" + data.chyba);
+  return { behy: data.behy, kde: data.kde, tab: data.tab };
 }
 
 /* -------------------------------------------------------------------- output */

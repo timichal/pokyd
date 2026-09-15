@@ -95,9 +95,17 @@ typedef struct pokyd_settings {
    g_procentanacitani remapped to 0-50%, 50-100% and then a fresh bar for the
    write (PROSTRED.FU:515-523).  Those three assignments sit inside
    `#if IQPOKYDWINMFC == 1` (SLOVNIK.FU:3260, :3329, :3340) and so are not
-   compiled into a BEZ_PROSTREDI build.  The consequence is visible and worth
-   knowing before phase 4.3 designs a progress bar: during POKYD_FAZE_SKLONOVANI,
-   pokyd_progress() runs 0..100 three times over, once per sub-step. */
+   compiled into a BEZ_PROSTREDI build.
+
+   Phase 4.2 measured what that actually leaves, and it is worse than this
+   comment used to predict.  There is no 0..100 three times over: sampled a few
+   hundred times across a real cold load, g_procentanacitani takes the values 0
+   and 100 during POKYD_FAZE_SKLONOVANI and nothing in between.  The assignment
+   that would give the fourteen-second inflection loop a gradient is
+   SLOVNIK.FU:3318, behind the same guard.  What the author put in the #else
+   branch instead is a printf of the percentage, so the progress signal in this
+   build is the engine's console output and not this counter -- see PROGRESS in
+   src/web/protocol.ts. */
 #define POKYD_FAZE_NECINNY       0   /* not loading */
 #define POKYD_FAZE_ZAKLADNI      1   /* "Nacitam zakladni slovnik..."  SLOVNIK.IQP */
 #define POKYD_FAZE_SLOVNI_ZASOBA 2   /* "Nacitam slovni zasobu..."     SLOVNIK.TMP */
@@ -126,7 +134,21 @@ int pokyd_load_dictionaries(void);
 
 /* Free everything and return the number of blocks the engine did not account for,
    which should be 0.  That counter is the only leak detector this code has, and
-   phase 3 runs it in a heap that has to be sized, so it is worth reading. */
+   phase 3 runs it in a heap that has to be sized, so it is worth reading.
+
+   Only after a pokyd_load_dictionaries() that succeeded.  Found at phase 4.2,
+   which was the first caller to try it any other way: UVOLNI_VESKEROU_DYNAMICKOU_
+   PAMET walks g_vetacloveka calling Typ_slova::VYMAZ_OBSAH (INTELIG.FT:54), which
+   frees some twenty pointers unconditionally, and UVOLNI_X(NULL) is a fatal error
+   by design (SKLONOV.FU:1348).  Those pointers are allocated while the base
+   dictionary is read, so on an engine that only ever ran pokyd_init they are all
+   NULL.  Measured in wasm, where it comes out as an Emscripten abort; the path
+   is NAHLAS_CHYBU(..., _UKONCIT_), which raise()s SIGABRT (DEBUG.FU:119), so
+   nothing about it is toolchain-specific.
+
+   Left as it is rather than guarded, because a load that never happened has
+   nothing to tear down: drop the module, or terminate the worker.  src/web/
+   engine.ts refuses the call for the same reason, with the reference. */
 unsigned long pokyd_shutdown(void);
 
 /* What went wrong, in English, ASCII, valid until the next failing call.  Never

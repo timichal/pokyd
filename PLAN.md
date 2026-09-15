@@ -9,9 +9,9 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 4 — the JS boundary — **is under way: 4.1 is done.** Phase 3 is complete,
-3.1 through 3.4; the gate is passed and the numbers are in. Phases 1 and 2 are complete,
-1.1–1.6 and 2.1–2.5.
+**Phase:** 4 — the JS boundary — **is under way: 4.1 and 4.2 are done.** Phase 3 is
+complete, 3.1 through 3.4; the gate is passed and the numbers are in. Phases 1 and 2 are
+complete, 1.1–1.6 and 2.1–2.5.
 **The engine runs, answers in Czech, and the conversation is on disk.**
 `python3 tools/build.py` builds `build/native/pokyd.exe` and lays out `build/run/`;
 `build/native/pokyd.exe --data build/run` holds a conversation. The patch set against
@@ -144,9 +144,42 @@ cases — and Chrome's own `TextDecoder("windows-1250")` agrees with our table o
 bytes. The module imports nothing, from node or anywhere, and typechecks clean under
 `tsc --strict`.
 
-**Next action:** 4.2, the Web Worker, then 4.4, the IndexedDB cache — 3.4's order, and
-both load-bearing rather than refinements. 4.3 follows 4.2 because it has to. Then the
-5.1 slice.
+**4.2 is done, and the tab no longer freezes.** `src/web/worker.ts` runs the engine on
+its own thread, `src/web/client.ts` is the page's half, `src/web/protocol.ts` is the
+vocabulary between them — twelve requests mirroring `pokyd_api.h` one for one — and
+`src/web/engine.ts` is the wasm module driven from JavaScript, transport-free so that
+node can test it without a Worker. Measured in Chrome 152: a **15.01 s** cold load
+during which the longest the main thread was kept waiting is **12 ms**, with 902
+animation frames drawn. That is 3.4's frozen quarter-minute answered.
+
+Both runs reproduce `test/golden/rozhovor.txt` **byte for byte** — through the protocol,
+through the client, and through 4.1's codec in both directions, which is the first time
+the golden conversation has been held in strings rather than bytes. The cold run's
+`SLOVNIK.TMP` is the same 18,131,435 bytes, transferred to the main thread and back into
+a second worker. `node test/web/engine.test.ts` puts 33 checks on the same ground in
+node; `node test/web/worker.test.mjs` puts 21 on it in a real browser.
+
+**4.3 got its answer here, and it is not the one 3.1 expected.** `pokyd_progress()` is
+*dead* through the step that takes the time: `SLOVNIK.FU:3318`, the assignment that would
+move it through the fourteen-second inflection loop, is behind `#if IQPOKYDWINMFC == 1`.
+Sampled 200-odd times across a real cold load it takes the values 0 and 100 and nothing
+in between — so 3.1's predicted "0→100 three times over" does not happen either; there is
+no ramp at all. What the author did instead was report that step to the console —
+`printf("\r%.1Lf%%", ...)` every tenth word — and **Emscripten hands those characters to
+a JS callback synchronously, from inside the call that has not returned**. So the worker
+reads them while the load is still running, and the cold load yields 207 usable
+percentages. The progress channel is the engine's own output, decoded from CP1250; 4.3
+is a regular expression away, not a research project.
+
+One thing found by being the first caller to try it: **`pokyd_shutdown()` aborts if the
+load never succeeded.** `Typ_slova::VYMAZ_OBSAH` (`INTELIG.FT:54`) frees twenty pointers
+unconditionally and `UVOLNI_X(NULL)` is fatal by design (`SKLONOV.FU:1348`); those
+pointers are allocated while the base dictionary is read. Left unguarded — a load that
+never happened has nothing to tear down — but now written down in `pokyd_api.h` and
+refused by `engine.ts` with the reference.
+
+**Next action:** 4.4, the IndexedDB cache — 3.4's order, and load-bearing for 5.2 rather
+than a refinement. Then 4.3, which 4.2 has already de-risked. Then the 5.1 slice.
 
 ---
 
@@ -201,11 +234,15 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   — `python3 tools/bench-native.py` and `node test/wasm/bench.mjs [--browser]` — diff the
   same transcript on every run, so they are slower ways of asking the same question and
   never a faster way of avoiding it.
-- **A third command asks a different question.** `node test/web/cp1250.test.ts` says
-  whether the boundary still converts CP1250 both ways without losing anything. It never
-  loads the engine and it is not a substitute for the two above; run it after touching
-  `src/web/`. Anything under `src/web/` is UTF-8, ASCII-only in content, and CRLF like
-  everything else.
+- **Three more ask about the JS boundary**, and they are not substitutes for the two
+  above — run them after touching `src/web/`. `node test/web/cp1250.test.ts` says whether
+  the codec still converts CP1250 both ways without losing anything, and never loads the
+  engine. `node test/web/engine.test.ts` drives the golden conversation through the codec
+  and the wasm module in node (`--no-cold` skips the fourteen-second cold load).
+  `node test/web/worker.test.mjs` does the same in headless Chrome, through the worker
+  and the message protocol, and is the one that measures whether the main thread stayed
+  alive. Anything under `src/web/` is UTF-8, ASCII-only in content, and CRLF like
+  everything else, and it typechecks clean under `tsc --strict`.
 
 ---
 
@@ -883,7 +920,9 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       it: the author's 0–50 / 50–100 subdivision of the inflection step is
       `g_praveprovadenaakce` 2/3/4 at `SLOVNIK.FU:3260`, `:3329`, `:3340`, all three
       inside `#if IQPOKYDWINMFC == 1`, so in a `BEZ_PROSTREDI` build `g_procentanacitani`
-      runs 0→100 three times over during `POKYD_FAZE_SKLONOVANI`.
+      runs 0→100 three times over during `POKYD_FAZE_SKLONOVANI`. **4.2 measured that and
+      it is worse than predicted** — there is no ramp at all, only 0 and 100 — because
+      `SLOVNIK.FU:3318` is behind the same guard. See 4.3.
 - [x] 3.2 **Emscripten build — `python3 tools/build.py --wasm`.** Same script as the native
       build, one flag. The compile flags are the native ones unchanged: the hazard set is the
       engine's requirement, not a g++ preference, and `-fsigned-char` is the one that
@@ -1077,13 +1116,56 @@ is not a refinement and the cache is not an optimization.
       covering `ě š č ř ž ý á í é ů ú ň ť ď ó`. **Done** — `src/web/cp1250.ts`,
       71 checks in `test/web/cp1250.test.ts`, all 30 accented Czech letters and all 256
       bytes both ways. See the Status section for the two decisions encode had to make.
-- [ ] 4.2 Run the engine in a Web Worker; typed message protocol. **Required, not a
-      refinement** — 3.4 measured `pokyd_load_dictionaries()` at 15.3 s on a first visit,
-      and it is one synchronous call.
-- [ ] 4.3 Wire up loading progress (`g_procentanacitani`) to real UI feedback. Needs 4.2
-      first: the load is synchronous, so only another thread can read the counter. See the
-      note under `pokyd_phase` about 0–100 running three times over in a `BEZ_PROSTREDI`
-      build.
+- [x] 4.2 **Run the engine in a Web Worker; typed message protocol. Done.** Four files:
+      `src/web/protocol.ts` (the vocabulary — twelve requests mirroring `pokyd_api.h` one
+      for one, the reply union, `PokydSettings`), `src/web/engine.ts` (`PokydEngine`, the
+      wasm module driven from JavaScript), `src/web/worker.ts` (the thread) and
+      `src/web/client.ts` (`PokydClient`, the page's half). Two tests:
+      `node test/web/engine.test.ts`, 33 checks with no Worker anywhere, and
+      `node test/web/worker.test.mjs`, 21 checks in headless Chrome.
+
+      **The measurement the phase exists for: a 15.01 s cold load during which the main
+      thread was never blocked for more than 12 ms**, with 902 animation frames drawn
+      through it. Against 3.4's 15.3 s of frozen tab, that is the whole argument.
+
+      `engine.ts` is transport-free on purpose — no `self`, no DOM — which is what lets
+      node drive it directly and makes `worker.ts` thin enough to trust: a FIFO queue, a
+      throttled output relay, and errors turned into rejected replies. It also enforces
+      the ordering rules `pokyd_api.h` only states, on the JS side where the message can
+      name the line of the engine that makes each one necessary.
+
+      The transcript is now held in **strings**: `rozhovor.in` decoded, said, the answers
+      re-encoded, and the result compared against `rozhovor.txt` byte for byte. It
+      matches cold and warm, in node and in Chrome — so 4.1's codec is provably invisible
+      to the conversation and not merely invisible on a round trip. The cold run's
+      `SLOVNIK.TMP` is the same 18,131,435 bytes, and it survives being transferred to
+      the main thread and back into a second worker.
+
+      Two things learned here, both written up at 4.3 and in `pokyd_api.h`:
+      `pokyd_progress()` has no gradient through the inflection loop, and
+      `pokyd_shutdown()` aborts if the load never succeeded.
+
+      `test/browser.mjs` came out of `test/wasm/bench.mjs` on the way: the loopback
+      server and the headless-Chrome launcher, now shared by both browser tests, plus one
+      addition — it strips the types out of any `.ts` it serves with node's own
+      `stripTypeScriptTypes`, so Chrome imports `src/web/*.ts` unbundled, at the same
+      specifiers node uses. Still no `package.json`. The bench reproduces 3.4's numbers
+      exactly after the move (15,330 ms cold, 28.3 MB wasm, 17.4 MB MEMFS, 48.7 MB tab).
+- [ ] 4.3 Wire up loading progress to real UI feedback. **4.2 answered the hard part and
+      changed the question.** `g_procentanacitani` is not the source: `SLOVNIK.FU:3318`,
+      the assignment that would move it through the fourteen-second inflection loop, is
+      behind `#if IQPOKYDWINMFC == 1`, so a `BEZ_PROSTREDI` build never compiles it.
+      Sampled 200-odd times across a cold load the counter reads 0 and 100 and nothing in
+      between — 3.1's predicted "0–100 three times over" does not happen either.
+
+      The source is the engine's own console output, which the author wrote for exactly
+      this purpose in the `#else` branch two lines below: `printf("\r%.1Lf%%", ...)` every
+      tenth word, then `"\rTřídím...\n"` and `"\rZapisuji...\n"`, all CP1250. Emscripten
+      hands those characters to a JS callback *synchronously from inside the blocked
+      call*, so `src/web/worker.ts` already relays them as throttled `output` events with
+      `phase` and `percent` beside them; a cold load produces 207 segments matching
+      `/^\d+\.\d%$/`. What is left for 4.3 is the parse and the UI — and deciding what to
+      show during the two short steps either side, where the counter does work.
 - [ ] 4.4 Persist the `SLOVNIK.TMP` cache blob to IndexedDB, keyed by dictionary hash.
       Restore on subsequent loads. **Load-bearing for 5.2** — 3.4's decision. Its three
       measured constraints are there too: three copies of the blob live at once on a naive
@@ -1169,6 +1251,14 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
   character in either direction — phase 4.1. Its 256-entry table's provenance, and the
   two policy decisions encode had to make, are in that file's header; the evidence is in
   `test/web/cp1250.test.ts`, run with plain `node`.
+- The worker: `src/web/protocol.ts` is the vocabulary, `src/web/engine.ts` drives the
+  wasm module, `src/web/worker.ts` is the thread and `src/web/client.ts` the page's half
+  — phase 4.2, and `src/README.md` has the table. Read `PROGRESS` at the foot of
+  `protocol.ts` before designing anything that shows a loading bar.
+- Running a page in a browser: `test/browser.mjs` serves the repo over loopback, launches
+  headless Chrome or Edge at it, and takes the results back on `POST /vysledek`. It
+  strips the types out of `.ts` on the way through, so a browser imports `src/web/*.ts`
+  unbundled at the same specifiers node uses. No driver, no puppeteer, no `package.json`.
 - Engine entry point: `IQ_POKYDE_ODPOVEZ` — `Aplikace/Prostred/PROSTRED.FU:212`, and it is
   not the whole story: `!Prostre/mfcDlg.cpp:596-607` wraps it in the pre-processing the
   engine assumes has happened. Both are reproduced in `src/driver/pokyd.cpp`.
