@@ -9,9 +9,11 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 6 — the retro UI — **is under way: 6.1, 6.2 and 6.3 are done, and the
+**Phase:** 6 — the retro UI — **is under way: 6.1 through 6.4 are done, and the
 exhibit now wears the author's own window — his photograph, his menu, his colours
-and his bottom-anchored conversation.**
+and his bottom-anchored conversation — and greets the visitor in it before a word
+is typed.** Only 6.5 is left, and it is one question rather than a piece of work:
+what to do about a window that forgets.
 Phase 5 is complete, 5.1 through 5.3, and
 **IQ Pokyd is live at <https://timichal.github.io/pokyd/>.** A twenty-year-old Czech
 Windows program holds a conversation in a browser, at a URL, saying byte for byte what
@@ -641,15 +643,21 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   was wrong with. `node tools/extract-assets.mjs --check` is the byte comparison, and
   it is for this machine, not for CI. Run the extractor rather than editing
   `src/app/assets.ts` or anything under `src/app/assets/`.
-- **And one asks whether the status line is the author's words.**
-  `node test/app/caption.test.ts` — phase 6.3, no browser, no engine, a fifth of a
-  second. `src/app/caption.ts` is the one module phase 6 wrote that spells Czech by
-  hand, because `ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI` builds its fourteen words
-  with `strcat` and there is no resource to read them from; this parses both
-  switches back out of `PROSTRED.FU` and holds the arrays against them case by
-  case, as CP1250 bytes. It does the same to the seven `SetMenuItemBitmaps`
-  pairings in `mfcDlg.cpp`. `test/app/resources.test.ts` is where the other half
-  lives: it fails if any *other* module under `src/app/` starts spelling Czech.
+- **And two ask whether the Czech we spell by hand is the author's.** Two modules
+  under `src/app/` do, and only two, because in both places his words are string
+  literals inside a function rather than resources.
+  `node test/app/caption.test.ts` — phase 6.3, a fifth of a second — holds
+  `src/app/caption.ts` against `ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI`, which
+  builds the status line's fourteen words with `strcat`: it parses both switches
+  back out of `PROSTRED.FU` and compares them case by case, as CP1250 bytes, and
+  does the same to the seven `SetMenuItemBitmaps` pairings in `mfcDlg.cpp`.
+  `node test/app/greeting.test.ts` — phase 6.4, a tenth of one — does it to
+  `src/app/greeting.ts` and `NAPIS_UVODNI_UVITANI`: his ten greetings parsed back
+  out of the same file *with his `+`s in them*, both `if`s that inflect the three
+  CStrings, the `rand()%10` that picks between them, and the LCG read out of
+  `src/shim/nahoda.cpp` so the draw cannot drift from the engine's own.
+  `test/app/resources.test.ts` is where the other half lives: it fails if any
+  *other* module under `src/app/` starts spelling Czech, in an escape or in UTF-8.
 - **And one asks whether the page works**, which since 5.2 is the question that
   matters: `node test/app/chat.test.mjs` builds the app with Vite, drives the built
   `index.html` through the golden conversation in Chrome by typing into it, and
@@ -657,8 +665,10 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   reads the window back: the colours against PALETTE, the transcript box against
   `WINDOW_LAYOUT`, the menu against `MENUS`, and the live caption at both ends of the
   conversation — which is how the mood drift becomes something a test can see.
-  **`npm test` runs all twelve**, in phase order, in a little over two minutes;
-  `node test/run.mjs --quick` keeps the eight that do not launch a browser.
+  Since 6.4 the first turn on the screen is the welcome line rather than a typed
+  sentence, so it is held out of the golden comparison and checked on its own.
+  **`npm test` runs all thirteen**, in phase order, in a little over two minutes;
+  `node test/run.mjs --quick` keeps the nine that do not launch a browser.
   `npm run typecheck` covers every `.ts` in `src/` and `test/` at once.
 
 ---
@@ -1845,8 +1855,40 @@ All the original assets are in `original/IQ Pokyd/!Prostre/res/`.
       and the test asserts it is the only enabled one. `?bezpozadi` is
       `prikaz_nezobrazovatpozadi`, spelled as `ROZEBER_PRIKAZOVY_RADEK` spells
       it.
-- [ ] 6.4 Rebuild the welcome line — `NAPIS_UVODNI_UVITANI` picks one of 10 greetings,
-      gender-inflected.
+- [x] 6.4 **Done** — `src/app/greeting.ts` is `NAPIS_UVODNI_UVITANI`
+      (`PROSTRED.FU:299`), and the exhibit now says hello before a word is typed.
+      A greeting there is not a string but a **list of parts** — his literals with
+      a slot wherever he wrote a `+`, named after the CString he put there — so
+      `test/app/greeting.test.ts` can parse his own switch back out of the file
+      and compare it part for part. **37 checks**, no browser and no engine: the
+      ten cases in his order, both `if`s that inflect the three CStrings (all four
+      branches, the empty masculine one included), all 18 literals found in
+      `PROSTRED.FU` as runs of CP1250 bytes, all 10 × 4 gender combinations
+      against a second reading of the same switch, and the draw.
+
+      **The draw is the interesting part, and it is not the engine's.**
+      `mfcDlg.cpp:443` calls the greeting *before* `NactiSlovniky()` and it
+      reseeds from the clock on the way in (`:307`); a cold load then reseeds
+      once more on its way out (`SLOVNIK.FU:1732`). So in 2005 the welcome line
+      was never part of the conversation's `rand()` stream, and it is not part of
+      ours: `greetingIndex()` is one draw off a mirror of `src/shim/nahoda.cpp`
+      with the same seed `chat.ts` hands `pokyd_seed`, and the engine's generator
+      is untouched. That is the faithful answer *and* the one that leaves
+      `test/golden/rozhovor.txt` byte for byte where it was — the test reads the
+      LCG's three constants out of the shim so the two cannot drift apart.
+
+      The one deviation, and it is a timing one: he had the greeting on the
+      window all through the load, and here it waits for the engine, because the
+      two `pohlavi` that inflect it are the engine's and the page cannot ask
+      before `pokyd_init` has run. Seed 20050415 draws greeting 3, so
+      `test/app/chat.test.mjs` now knows exactly what the top of the transcript
+      says; it grew to **111 checks** and still reproduces the golden
+      conversation byte for byte under it.
+
+      It also closed a hole in 6.1: the guard that says no *other* module under
+      `src/app/` spells Czech was looking for `\uXXXX` escapes, and this
+      repository writes its Czech in UTF-8, so it had been passing vacuously. It
+      now looks for both, and covers `main.ts` and `assets.ts` as well.
 - [ ] 6.5 Decide how far to take it — window chrome? XP styling? (See open questions.)
 
       6.3 sharpened it into one concrete question, and it is not chrome: **the

@@ -136,14 +136,18 @@ line, so the two can still be read against each other.
 ## `src/app/` — the page
 
 Phase 5.1 onward: the exhibit, and the first code in this repository that a
-visitor rather than a test ever runs. Five files and a directory of pictures,
+visitor rather than a test ever runs. Eight files and a directory of pictures,
 two of them generated.
 
 | File | What it is |
 |---|---|
-| `chat.ts` | `mountChat(parent, options)` — a transcript, a line to type into, and four states published on the root element as `data-state`: `loading`, `ready`, `busy`, `failed`. A caller of phase 4 and nothing else: `PokydClient` for the worker, `startCached` for the eighteen megabytes, `mountLoading` for the fifteen seconds. |
+| `chat.ts` | `mountChat(parent, options)` — the author's main window: his photograph, his menu, his three headings, and the conversation growing upwards out of the bottom. Four states published on the root element as `data-state`: `loading`, `ready`, `busy`, `failed`. A caller of phase 4 and nothing else: `PokydClient` for the worker, `startCached` for the eighteen megabytes, `mountLoading` for the fifteen seconds. |
 | `main.ts` | What `index.html` runs, and the only file here that needs Vite: where the worker chunk ended up (`?worker&url`), where the engine was emitted, and what the query string asked for. |
-| `chat.css` | Plain, and only as far as usable. Phase 6 replaces it rather than extends it. |
+| `chat.css` | Phase 6.3, and **nothing in it is a decision**: every measurement and every colour is a custom property `chat.ts` sets from `resources.ts`, so a colour that moves in `PROSTRED.PR` moves on the page. |
+| `menu.ts` | Phase 6.3. `IDR_MENU` drawn — two popups, the accelerator text, the seven gutter bitmaps, and the right-justified caption. Anything with no handler yet is `MF_GRAYED` rather than silent. |
+| `caption.ts` | Phase 6.3, and one of the two files here that spell Czech by hand: `ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI` builds the status line with `strcat` out of two switches, so there is no resource to read its fourteen words from. `node test/app/caption.test.ts` finds every one of them in `PROSTRED.FU` as CP1250 bytes. |
+| `greeting.ts` | Phase 6.4, and the other one: `NAPIS_UVODNI_UVITANI`'s ten greetings, three of them inflected for the two `pohlavi`, plus the `rand()%10` that picks between them. `node test/app/greeting.test.ts` parses his switch back out of `PROSTRED.FU` and compares it part for part. |
+| `dlu.ts` | Phase 6.3. `MapDialogRect`'s base units, measured off the face the visitor actually got rather than the one the author had — which is what puts a fallback font on his 20 pixels. |
 | `assets.ts` | Phase 6.2, and **generated**: one Vite import per file in `assets/`, and `BITMAP_ASSETS` / `ICON_ASSETS` keyed by the author's own symbol, with the pixel size of each. Import the URL from here; never build one by hand, or a fingerprinted deploy will hand the visitor a 404. |
 | `assets/` | Phase 6.2, and **generated**: the eleven bitmaps and three icons of `resources.ts`, decoded out of the archive and written as lossless PNG — eighteen files, because each `.ico` holds more than one size. `favicon.ico` beside them is `res/IQPokyd.ico` copied out byte for byte. |
 | `resources.ts` | Phase 6.1, and **generated**: `original/IQ Pokyd/!Prostre/IQPokyd.rc` parsed by `tools/extract-rc.mjs`. Six dialogs, the menu, the accelerator table, the version block and the eighteen image files, with the author's strings, ids and geometry. Plus the two things the .rc does not contain — `PALETTE` and `WINDOW_LAYOUT` — which come out of `PROSTRED.PR` and `PROSTRED.FU`. |
@@ -190,10 +194,17 @@ Three things in it are worth knowing before changing any of them.
 
 - **The app seeds the engine, and it has to.** `pokyd_seed` is `srand`, and the
   original called it twice — `mfcDlg.cpp:363` at startup and `PROSTRED.FU:307`
-  after the load, where the greeting is drawn. A cold load reseeds from the clock
+  again, where the greeting is drawn. A cold load reseeds from the clock
   on its way out (`SLOVNIK.FU:1732`) but **a warm one from the cache never seeds at
   all**, so without `Math.floor(Date.now() / 1000)` in `chat.ts` every returning
   visitor would get the same conversation, word for word, forever.
+- **The welcome line is not drawn from the engine's `rand()`, and never was.**
+  `NAPIS_UVODNI_UVITANI` ran *before* `NactiSlovniky()` (`mfcDlg.cpp:443`) and
+  reseeded on the way in, and a cold load then reseeded again on the way out — so
+  its draw was never part of the conversation's sequence. `greetingIndex()` in
+  `greeting.ts` is one draw off a mirror of `src/shim/nahoda.cpp` with the same
+  seed, which is both the faithful answer and the one that leaves
+  `test/golden/rozhovor.txt` byte for byte where it was.
 - **`workerUrl` and `moduleUrl` are required, with no defaults.** A default would
   have to be spelled `new URL("../web/worker.ts", import.meta.url)`, and Vite
   rewrites exactly that expression at build time into an emitted asset — so the

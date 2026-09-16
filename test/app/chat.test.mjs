@@ -14,6 +14,11 @@
    a browser and a person with a 2005 Windows binary are talking to the same
    program.
 
+   Since phase 6.4 the first turn on the screen is not part of that comparison
+   and is checked on its own: NAPIS_UVODNI_UVITANI greets the visitor before
+   anything is typed, and which of its ten lines it picks is rand()%10 off the
+   same seed the page is pinned to -- so it is a fixed string here too.
+
    Twice over. A first visit inflects 402,252 word forms and leaves 18 MB in
    IndexedDB; a second iframe -- new worker, new wasm module, new database
    connection -- finds that blob and is ready in a fifth of a second. Both have
@@ -44,6 +49,10 @@ import {
   DIALOGS, MENUS, PALETTE, WINDOW_LAYOUT,
 } from "../../src/app/resources.ts";
 import { MENU_BITMAPS, settingsCaption } from "../../src/app/caption.ts";
+/* Phase 6.4.  The welcome line is drawn off the seed the page was pinned to, so
+   node can say which of the ten it should be -- and test/app/greeting.test.ts is
+   what says those ten are the author's. */
+import { greeting, greetingIndex } from "../../src/app/greeting.ts";
 
 const MODULE_PATH = join(ROOT, "build", "wasm", "pokyd.mjs");
 const VITE_BIN = join(ROOT, "node_modules", "vite", "bin", "vite.js");
@@ -114,7 +123,7 @@ function firstDifference(got, expected) {
 
 /* ------------------------------------------------------------- the checks */
 
-function checkVisit(run, golden, cold) {
+function checkVisit(run, golden, cold, seed) {
   heading(run.kind + " visit -- " + (run.loadMs / 1000).toFixed(2)
     + " s to the first typed character, " + run.turns + " turns on the screen");
 
@@ -126,7 +135,17 @@ function checkVisit(run, golden, cold) {
   ok("and the cursor is in the input, so the visitor can just type",
     run.focused === true);
 
-  /* 2. the conversation, which is the whole point. */
+  /* 2. NAPIS_UVODNI_UVITANI, phase 6.4: the one line on the screen that nobody
+        typed anything to get.  It is IQ Pokyd's, it comes before the 23, and
+        which of the ten it is, is `rand()%10` off the seed the page was pinned
+        to -- so a fixed seed makes it a fixed string, and this is that string. */
+  eq("IQ Pokyd said hello before a word was typed", run.greeting.who, "pokyd");
+  eq("  with the computer's own marker", run.greeting.marker, "<");
+  eq("  and it is greeting " + greetingIndex(seed) + " of ten, which is what"
+    + " seed " + seed + " draws", run.greeting.text,
+    greeting(greetingIndex(seed), run.settings));
+
+  /* 3. the conversation, which is the whole point. */
   const got = Uint8Array.from(run.transcript);
   ok("the transcript on the screen is test/golden/rozhovor.txt, byte for byte"
     + " -- " + got.length + " bytes",
@@ -140,7 +159,7 @@ function checkVisit(run, golden, cold) {
   ok("the input was locked while the engine answered", run.busySeen > 0,
     "the busy state was never observed between a click and an answer");
 
-  /* 3. the settings the golden file leans on, read back rather than set. */
+  /* 4. the settings the golden file leans on, read back rather than set. */
   eq("character is still 3 (prumerny)", run.settings.character, CHARACTER);
   eq("mood is still 3 (normalni)", run.settings.mood, MOOD);
   eq("both genders are still the default", run.settings.humanGender, GENDER);
@@ -151,7 +170,7 @@ function checkVisit(run, golden, cold) {
      five, which is what 23 civil sentences get you. */
   eq("and the mood it ended the conversation in", run.moodAfter, MOOD_AFTER);
 
-  /* 4. the cache, from phase 4.4, now doing its job for a real page. */
+  /* 5. the cache, from phase 4.4, now doing its job for a real page. */
   if (cold) {
     ok("a first visit wrote the cache -- " + run.report.bytes + " bytes",
       run.report.saved === true && run.report.bytes > 18000000);
@@ -165,7 +184,7 @@ function checkVisit(run, golden, cold) {
   }
   eq("no storage failure", run.report.error, null);
 
-  /* 5. the teardown. */
+  /* 6. the teardown. */
   eq("the engine freed everything it allocated", run.unfreed, 0);
 }
 
@@ -320,9 +339,9 @@ async function main() {
   eq("the transcript is marked up with the golden file's own two characters",
     data.cold.markers.join(""), "<>");
 
-  checkVisit(data.cold, golden, true);
+  checkVisit(data.cold, golden, true, data.seed);
   checkWindow(data.cold);
-  checkVisit(data.warm, golden, false);
+  checkVisit(data.warm, golden, false, data.seed);
   checkWindow(data.warm);
 
   heading("the two visits together");
@@ -331,6 +350,11 @@ async function main() {
   ok("and they are the same conversation",
     Buffer.compare(Uint8Array.from(data.cold.transcript),
       Uint8Array.from(data.warm.transcript)) === 0);
+  /* Phase 6.4.  The greeting is drawn from the seed and not from the engine, so
+     a warm visit has to open with the same line a cold one did -- which is the
+     half of "the same conversation" the transcript above does not cover. */
+  eq("and IQ Pokyd greeted both of them the same way",
+    data.warm.greeting.text, data.cold.greeting.text);
   ok("the second visit was " + (data.cold.loadMs / data.warm.loadMs).toFixed(0)
     + " times faster to start", data.warm.loadMs * 4 < data.cold.loadMs,
     "cold " + data.cold.loadMs + " ms, warm " + data.warm.loadMs + " ms");

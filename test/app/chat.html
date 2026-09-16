@@ -104,6 +104,12 @@ async function visit({ kind, sentences }) {
   await until("the engine to load", () => root.dataset.state === "ready");
   const loadMs = performance.now() - t0;
 
+  /* Phase 6.4.  data-state says "ready" one settings round trip before the
+     greeting and the focus land, so wait for the line rather than race it --
+     everything read below happens after IQ Pokyd has said hello. */
+  await until("the welcome line",
+    () => doc.querySelector(".pokyd-turn") !== null, 30000);
+
   const input = doc.querySelector(".pokyd-input");
   const send = doc.querySelector(".pokyd-send");
   const inputLive = !input.disabled && !send.disabled;
@@ -220,11 +226,19 @@ async function visit({ kind, sentences }) {
 
   /* What is on the screen, read back out of the transcript in the order it was
      drawn, and written in the two characters the golden file uses. */
-  const turns = Array.from(doc.querySelectorAll(".pokyd-turn")).map((li) => ({
+  const all = Array.from(doc.querySelectorAll(".pokyd-turn")).map((li) => ({
     who: li.dataset.who,
     marker: li.querySelector(".pokyd-marker").textContent,
     text: li.querySelector(".pokyd-text").textContent,
   }));
+  /* Phase 6.4.  NAPIS_UVODNI_UVITANI put a line on the screen before anything
+     was typed (PROSTRED.FU:299, mfcDlg.cpp:443), and its first call writes only
+     the computer's half -- `static BYTE prvniveta` at :132 -- so the very first
+     turn is IQ Pokyd's and belongs to nobody's sentence.  The golden file is the
+     23 that were typed, so the greeting is reported on its own and kept out of
+     the transcript below. */
+  const greeting = all[0];
+  const turns = all.slice(1);
   let transcript = "";
   for (const turn of turns) {
     transcript += (turn.who === "human" ? "> " : "< ") + turn.text + "\r\n";
@@ -243,10 +257,10 @@ async function visit({ kind, sentences }) {
 
   return {
     kind, loadMs, sentenceCount, unfreed, busySeen, moodAfter,
-    captionBefore, window: window63,
+    captionBefore, window: window63, greeting,
     firstState, loadingShown, loadingGone, inputLive, focused,
     turns: turns.length,
-    markers: Array.from(new Set(turns.map((t) => t.marker))).sort(),
+    markers: Array.from(new Set(all.map((t) => t.marker))).sort(),
     whoOrder: turns.map((t) => t.who).join(","),
     emptyAnswers: turns.filter((t) => t.who === "pokyd" && t.text.trim() === "").length,
     title: doc.title,
@@ -272,7 +286,12 @@ async function main() {
     .split("\n").map((r) => r.replace(/\r+$/, "")).filter((r) => r.length > 0);
   log("input   " + sentences.length + " sentences, seed " + SEED);
 
-  const out = { sentences: sentences.length, where: navigator.userAgent, app: APP };
+  /* `seed` goes back too, because phase 6.4's welcome line is a function of it
+     and node has to be able to work out which of the ten it should be. */
+  const out = {
+    sentences: sentences.length, seed: SEED,
+    where: navigator.userAgent, app: APP,
+  };
 
   log("cold    first visit, the dictionary is inflected...");
   out.cold = await visit({ kind: "cold", sentences });

@@ -60,6 +60,7 @@ import { DIALOGS, PALETTE, WINDOW_LAYOUT, dluToPx } from "./resources.ts";
 import { BITMAP_ASSETS } from "./assets.ts";
 import { mountMenu } from "./menu.ts";
 import { settingsCaption } from "./caption.ts";
+import { openingGreeting } from "./greeting.ts";
 import { dialogBaseUnits, emForCellHeight } from "./dlu.ts";
 
 /* ----------------------------------------------------- the author's strings */
@@ -355,14 +356,24 @@ export function mountChat(
    *  sentence because nalada moves on its own: it is recomputed from naladabody
    *  after each answer (INTELIG.FU:532), so a civil conversation visibly talks
    *  IQ Pokyd into a better mood.  A settings read that fails leaves the caption
-   *  where it was; it is a status line, not the conversation. */
-  async function refreshCaption(): Promise<void> {
+   *  where it was; it is a status line, not the conversation.
+   *
+   *  It hands the settings back because phase 6.4 wants the same read: the
+   *  greeting is inflected for the two pohlavi, and one round trip is enough
+   *  for both. */
+  async function refreshCaption(): Promise<PokydSettings | null> {
+    let settings: PokydSettings;
     try {
-      const settings: PokydSettings = await pokyd.getSettings();
+      settings = await pokyd.getSettings();
+    } catch {
+      return null;      /* deliberately nothing */
+    }
+    try {
       menu.setCaption(settingsCaption(settings));
     } catch {
-      /* deliberately nothing */
+      /* charakter or nalada out of range: keep the caption we had */
     }
+    return settings;
   }
 
   function turn(who: "human" | "pokyd", text: string): HTMLLIElement {
@@ -418,15 +429,22 @@ export function mountChat(
 
   const ready = (async (): Promise<PokydCacheReport> => {
     try {
-      /* srand(time(NULL)): mfcDlg.cpp:363, and again at PROSTRED.FU:307 after
-         the load, where the greeting is drawn.  Without it a visit off the
-         cache would hold the same conversation every time -- nothing else seeds
-         a warm start, and the cold path's own reseed (SLOVNIK.FU:1732) never
-         happens on one. */
+      /* srand(time(NULL)): mfcDlg.cpp:363, and again at PROSTRED.FU:307, where
+         the greeting is drawn.  Without it a visit off the cache would hold the
+         same conversation every time -- nothing else seeds a warm start, and the
+         cold path's own reseed (SLOVNIK.FU:1732) never happens on one. */
       const seed = startOptions.seed ?? Math.floor(Date.now() / 1000);
       const report = await startCached(pokyd, { ...startOptions, seed });
       setState("ready");
-      await refreshCaption();
+      const settings = await refreshCaption();
+      /* NAPIS_UVODNI_UVITANI, mfcDlg.cpp:443 -- one turn on the screen that
+         nobody typed anything to get.  He drew it *before* NactiSlovniky(), so
+         it was on the window while the dictionary inflected; here it waits for
+         the load, because the two pohlavi that inflect it are the engine's and
+         the page cannot ask until the engine is up.  The number it is picked
+         with is not the engine's rand() and never was -- see
+         src/app/greeting.ts. */
+      if (settings !== null) turn("pokyd", openingGreeting(seed, settings));
       input.focus();
       return report;
     } catch (e) {

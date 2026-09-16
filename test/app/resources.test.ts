@@ -275,21 +275,28 @@ heading("the strings src/app/chat.ts used to copy by hand");
   ok("it reads IDD_HLAVNI_OKNO out of this module instead",
     chat.includes("DIALOGS[\"IDD_HLAVNI_OKNO\"]"));
 
-  /* The same rule in its sharper form, and the one phase 6.3 has to keep: of
-     everything phase 6 wrote, only src/app/caption.ts spells Czech, because the
-     author's status line is strcat and not a resource.  Everything else reads
-     its words from a generated module.  A \uXXXX escape in code is how a
-     hand-written one would show up; the two failure lines chat.ts does own are
-     named rather than exempted by shape. */
+  /* The same rule in its sharper form, and the one every later phase has to
+     keep: of everything phase 6 wrote, only src/app/caption.ts and
+     src/app/greeting.ts spell Czech, because the author's status line and his
+     ten greetings are strcat and `+` rather than resources.  Everything else
+     reads its words from a generated module, and each of those two has a test
+     of its own that holds it against PROSTRED.FU.
+
+     A Czech letter is how a hand-written word shows up, whether it is written
+     as a \uXXXX escape or straight in UTF-8 -- both are looked for, because
+     this repository has ended up using the second.  The two failure lines
+     chat.ts does own are named rather than exempted by shape. */
   const ours: [string, string[]][] = [
     ["src/app/chat.ts", ["FAILED_TITLE", "FAILED_SAY"]],
     ["src/app/menu.ts", []],
     ["src/app/dlu.ts", []],
+    ["src/app/main.ts", []],
+    ["src/app/assets.ts", []],
   ];
   for (const [file, exempt] of ours) {
     const text = readFileSync(join(ROOT, ...file.split("/")), "utf8");
     const lines = text.split(/\r?\n/)
-      .filter((line) => /\\u0[0-9a-f]{3}/.test(line))
+      .filter((line) => /\\u0[0-9a-f]{3}/.test(line) || /[^\x00-\x7f]/.test(line))
       .filter((line) => !line.trimStart().startsWith("*"))
       .filter((line) => !exempt.some((name) => line.includes(name)));
     eq(file + " spells no Czech of its own", lines, []);
