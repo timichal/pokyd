@@ -233,9 +233,12 @@ int pokyd_phase(void);
    Nothing in SLOVNIK.TMP identifies which dictionary it was inflected from.  The
    engine checksums it and rejects a corrupt one (_SPATNY_UPLNY_SLOVNIK_, after
    which it silently re-inflects), but it cannot tell a *wrong* one from a right
-   one -- so the caller owns that check.  Phase 4.4 keys the stored blob by
-   dictionary hash for exactly this reason, and tools/build.py drops the file
-   whenever SLOVNIK.IQP changes underneath it. */
+   one -- so the caller owns that check.  tools/build.py drops the file whenever
+   SLOVNIK.IQP changes underneath it, and on the web src/web/cache.ts keys the
+   stored blob by a hash of the dictionary it read back out of MEMFS -- plus a
+   version string for the half a dictionary hash cannot see, which is that this
+   blob is what the *engine* made of that dictionary.  See POKYD_CACHE_VERSION
+   there. */
 unsigned char *pokyd_export_cache(unsigned long *delka);
 int pokyd_import_cache(const unsigned char *data, unsigned long delka);
 void pokyd_free(void *blok);

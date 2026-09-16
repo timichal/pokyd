@@ -8,7 +8,8 @@
 
    What it is not: it is not a place for policy.  It does not decide what a
    loading screen looks like (phase 4.3), it does not know about IndexedDB
-   (phase 4.4) and it holds no conversation state of its own -- the engine's
+   (src/web/cache.ts does, and startCached() there is start() with the cache in
+   it) and it holds no conversation state of its own -- the engine's
    settings and sentence count are the truth, and they are one await away.  The
    one convenience it does offer is start(), because getting init/import/load/
    seed out of order is silent rather than loud: a seed set before a cold load
@@ -188,6 +189,12 @@ export class PokydClient {
    *  it rather than copying it. */
   exportCache(): Promise<Uint8Array | null> {
     return this.posli({ type: "exportCache" });
+  }
+
+  /** Which SLOVNIK.IQP the worker is holding, as sixteen hex digits.  Valid
+   *  from init() onwards; src/web/cache.ts turns it into the IndexedDB key. */
+  dictionaryHash(): Promise<string> {
+    return this.posli({ type: "dictionaryHash" });
   }
 
   /** Blocks the engine did not account for; it should be 0. */

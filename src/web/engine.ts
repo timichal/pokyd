@@ -19,6 +19,7 @@
        load()            ~14 s cold in wasm, ~0.2 s warm
        seed()            after load(), never before
        say()             as often as you like
+       dictionaryHash()  any time; it is a read of MEMFS, not of the engine
        exportCache()     any time after load()
        shutdown()        once, and only after a load that succeeded
 
@@ -40,6 +41,11 @@
    Written by us, not ported.  ASCII only, like the rest of the non-engine code.
 */
 
+/* One function, and the direction is deliberate: the argument for *which* hash
+   belongs next to the thing the hash is a key for, and src/web/cache.ts has no
+   top-level side effects and touches IndexedDB only inside its own methods --
+   so importing it here costs a node process nothing. */
+import { fnv1a64 } from "./cache.ts";
 import { decodeCp1250, encodeCp1250, encodeCp1250Z } from "./cp1250.ts";
 import type { PokydProgress, PokydSettings } from "./protocol.ts";
 import { POKYD_PHASE_DONE } from "./protocol.ts";
@@ -51,6 +57,10 @@ import { POKYD_PHASE_DONE } from "./protocol.ts";
    as the linker sees it. */
 export interface PokydWasm {
   HEAPU8: Uint8Array;
+  /* Emscripten's MEMFS, in EXPORTED_RUNTIME_METHODS because tools/build.py
+     --embed-file puts the data files in it.  Only dictionaryHash() uses it, and
+     only to read; the engine reaches its own files through libc. */
+  FS: { readFile(cesta: string): Uint8Array };
   _malloc(bajtu: number): number;
   _free(ukazatel: number): void;
 
@@ -158,15 +168,23 @@ const DELKA_SEGMENTU = 1024;
 
 /* --------------------------------------------------------------- the engine */
 
+/* JMENO_ZAKLADNIHO_SLOVNIKU (src/engine/konstant.k:24) -- the base dictionary,
+   the file dictionaryHash() identifies the cache by. */
+const JMENO_SLOVNIKU = "SLOVNIK.IQP";
+
 export class PokydEngine {
   private readonly M: PokydWasm;
   private readonly drzakVystupu: { fn: ((text: string) => void) | null };
+  private readonly adresar: string;
+  private hashSlovniku: string | null = null;
   private nacteno = false;
   private ukonceno = false;
 
-  private constructor(M: PokydWasm, drzak: { fn: ((text: string) => void) | null }) {
+  private constructor(M: PokydWasm, drzak: { fn: ((text: string) => void) | null },
+                      adresar: string) {
     this.M = M;
     this.drzakVystupu = drzak;
+    this.adresar = adresar;
   }
 
   /* Instantiate the module, install the output hook, run pokyd_init and check
@@ -215,8 +233,8 @@ export class PokydEngine {
       printErr: () => { /* superseded by stderr */ },
     });
 
-    const motor = new PokydEngine(M, drzak);
     const adresar = volby.dataDir ?? VYCHOZI_ADRESAR;
+    const motor = new PokydEngine(M, drzak, adresar);
     const p = motor.uloz(encodeCp1250Z(adresar));
     try {
       if (M._pokyd_init(p) !== 0) {
@@ -413,6 +431,38 @@ export class PokydEngine {
     } finally {
       this.M._free(pDelka);
     }
+  }
+
+  /* Which dictionary this engine is holding, as sixteen hex digits -- phase
+     4.4's cache key, and the only thing that can tell a stored SLOVNIK.TMP from
+     one inflected out of a different SLOVNIK.IQP.  The engine cannot: it
+     checksums the cache and rejects a damaged one, but a *wrong* one checksums
+     perfectly well and it would answer out of it all session (pokyd_api.h, at
+     pokyd_export_cache).
+
+     Read out of MEMFS rather than taken on trust, because that is the copy the
+     engine will actually inflect: tools/build.py embeds the file into pokyd.wasm
+     with --embed-file, so there is no separately served dictionary for a page to
+     hash instead.  Available from create() onwards -- the file is in MEMFS before
+     the module resolves -- and the answer is cached because it cannot change
+     while the module lives. */
+  dictionaryHash(): string {
+    this.vyzadujZivy("dictionaryHash");
+    if (this.hashSlovniku !== null) return this.hashSlovniku;
+    const cesta = this.adresar.replace(/\/+$/, "") + "/" + JMENO_SLOVNIKU;
+    let bajty: Uint8Array;
+    try {
+      bajty = this.M.FS.readFile(cesta);
+    } catch (e) {
+      throw new Error("dictionaryHash: cannot read " + cesta + " out of MEMFS ("
+        + (e instanceof Error ? e.message : String(e))
+        + ") -- tools/build.py embeds it there with --embed-file");
+    }
+    if (bajty.length === 0) {
+      throw new Error("dictionaryHash: " + cesta + " is empty");
+    }
+    this.hashSlovniku = fnv1a64(bajty);
+    return this.hashSlovniku;
   }
 
   /* ------------------------------------------------------------- internals */

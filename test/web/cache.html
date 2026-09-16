@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<!-- IQ Pokyd - test/web/cache.html - phase 4.4 of PLAN.md, in a real browser.
+
+     The browser half of test/web/cache.test.mjs.  test/browser.mjs serves this
+     page, strips the types out of the .ts files it imports on the way through,
+     and waits for the POST at the bottom.  Nothing here decides whether the run
+     passed: it reports, and node judges.
+
+     What this establishes, and what test/web/cache.test.ts could not:
+
+       1. that the whole loop closes.  A first visit inflects the dictionary for
+          fifteen seconds and puts the result in IndexedDB; a second visit, with
+          its own worker, its own wasm module and its own database connection,
+          finds it, hands it to the engine and loads in a fraction of a second.
+       2. that what comes back out is the same eighteen megabytes that went in.
+          The blob is hashed on the way out of the store and node compares that
+          against the hash of build/run/SLOVNIK.TMP, the file the native engine
+          wrote -- so the claim is byte-identity with the native cache, through
+          a structured clone and a database, and not merely a matching length.
+       3. that the conversation is still the golden one, on both visits.  A
+          cache that restored *something* plausible and answered differently is
+          the failure this whole key scheme exists to prevent.
+       4. that the misses miss: a different dictionary hash and a different
+          engine version both find nothing, and a damaged record is thrown away
+          rather than handed to the engine.
+
+     Written by us, not ported.  ASCII only, like the rest of the non-engine
+     code, and no dependencies: it is loaded from a static file server.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IQ Pokyd - cache test</title>
+</head>
+<body>
+<pre id="log">running...</pre>
+<script type="module">
+import {
+  fnv1a64, pokydCacheKey, startCached,
+  PokydCacheStore, POKYD_CACHE_DB, POKYD_CACHE_STORE, POKYD_CACHE_VERSION,
+} from "/src/web/cache.ts";
+import { PokydClient } from "/src/web/client.ts";
+import { decodeCp1250, encodeCp1250 } from "/src/web/cp1250.ts";
+
+/* The settings the golden conversation was recorded with -- test/golden/README.md.
+   Only the mood is set; character 3 and both genders are NASTAV_STANDARDNE's own
+   defaults (NASTAVEN.PR:25-43), so rather than write them again this page reads
+   them back after the load and lets node say whether they are still what the
+   golden file was recorded under. */
+const SEMENO = 20050415;
+const NALADA = 3;               /* normalni */
+
+const ADRESY = {
+  workerUrl: "/src/web/worker.ts",
+  moduleUrl: "/build/wasm/pokyd.mjs",
+};
+
+const zaznam = document.getElementById("log");
+const radky = [];
+function pis(text) {
+  radky.push(text);
+  zaznam.textContent = radky.join("\n");
+}
+
+/* --------------------------------------------------------------------- a visit */
+
+/* One visit to the page, from an empty worker to a closed one.  `sklad` is the
+   store it is allowed to use; whether the load is cold or warm is not decided
+   here, it is decided by what is in that store -- which is the thing being
+   tested. */
+async function navsteva(vety, { sklad, druh }) {
+  const klient = new PokydClient(ADRESY);
+
+  const t0 = performance.now();
+  const zprava = await startCached(klient, {
+    store: sklad, mood: NALADA, seed: SEMENO,
+  });
+  const celkem_ms = performance.now() - t0;
+
+  /* The defaults the golden conversation leans on.  If one of them ever moves,
+     this says so here rather than as a mystifying transcript diff. */
+  const nastaveni = await klient.getSettings();
+
+  let prepis = "";
+  for (const veta of vety) {
+    prepis += "> " + veta + "\r\n< " + (await klient.say(veta)) + "\r\n";
+  }
+
+  const poctvet = await klient.sentenceCount();
+  const neuvolneno = await klient.close();
+
+  return {
+    druh, celkem_ms, poctvet, neuvolneno,
+    zprava: { ...zprava, error: zprava.error ? zprava.error.message : null },
+    nastaveni: {
+      charakter: nastaveni.charakter,
+      nalada: nastaveni.nalada,
+      pohlavicloveka: nastaveni.pohlavicloveka,
+      pohlavipocitace: nastaveni.pohlavipocitace,
+    },
+    prepis: Array.from(encodeCp1250(prepis)),
+  };
+}
+
+/* ------------------------------------------------------------------ raw records */
+
+/* A record written straight into the object store, going round PokydCacheStore
+   so that the store can be asked what it makes of one.  Nothing but a test has
+   any business doing this. */
+function vlozSyrove(zaznamek) {
+  return new Promise((splni, odmitni) => {
+    const r = indexedDB.open(POKYD_CACHE_DB, 1);
+    r.onerror = () => odmitni(r.error);
+    r.onsuccess = () => {
+      const db = r.result;
+      const t = db.transaction(POKYD_CACHE_STORE, "readwrite");
+      t.objectStore(POKYD_CACHE_STORE).put(zaznamek);
+      t.oncomplete = () => { db.close(); splni(); };
+      t.onerror = () => { db.close(); odmitni(t.error); };
+    };
+  });
+}
+
+/* --------------------------------------------------------------------- driver */
+
+async function main() {
+  const vstup = await (await fetch("/test/golden/rozhovor.in")).arrayBuffer();
+  /* Exactly what the driver's loop does: strip the CR, drop empty lines
+     (mfcDlg.cpp:556). */
+  const vety = decodeCp1250(new Uint8Array(vstup))
+    .split("\n").map((r) => r.replace(/\r+$/, "")).filter((r) => r.length > 0);
+  pis("input   " + vety.length + " sentences");
+
+  const ven = { vety: vety.length, kde: navigator.userAgent };
+
+  /* A fresh browser profile, so this is a genuine first visit. */
+  const prvni = new PokydCacheStore();
+  ven.naZacatku = await prvni.keys();
+  pis("store   " + POKYD_CACHE_DB + "/" + POKYD_CACHE_STORE
+    + ", " + ven.naZacatku.length + " records");
+
+  /* ---- the first visit: nothing stored, so fifteen seconds and a save ---- */
+  pis("cold    first visit (nothing in IndexedDB, so the dictionary is inflected)...");
+  const studeny = await navsteva(vety, { sklad: prvni, druh: "cold" });
+  pis("cold    " + (studeny.zprava.loadMs / 1000).toFixed(2) + " s, saved "
+    + studeny.zprava.bytes + " bytes under " + studeny.zprava.key);
+  ven.cold = studeny;
+  ven.poStudenem = await prvni.keys();
+
+  /* Let go of the connection the way a closing tab would. */
+  prvni.close();
+
+  /* ---- what is actually in there, read through a new connection ---- */
+  const druhy = new PokydCacheStore();
+  ven.klicePriDruhemOtevreni = await druhy.keys();
+
+  {
+    const blob = await druhy.get(studeny.zprava.key);
+    ven.ulozeny = blob === null ? null
+      : { delka: blob.length, hash: fnv1a64(blob) };
+    pis("store   read back " + (blob ? blob.length : 0) + " bytes, fnv1a64 "
+      + (ven.ulozeny ? ven.ulozeny.hash : "-"));
+  }
+
+  /* ---- the misses, which are the whole point of keying it ---- */
+  ven.hashSlovniku = studeny.zprava.key.split("/").pop();
+  ven.minulo = {
+    jinySlovnik: await druhy.get(pokydCacheKey("0000000000000000")) === null,
+    jinaVerze: await druhy.get(
+      pokydCacheKey(ven.hashSlovniku, POKYD_CACHE_VERSION + "-next")) === null,
+  };
+
+  /* ---- the second visit: a new worker, a new module, a warm load ---- */
+  pis("warm    return visit (the stored blob is imported before the load)...");
+  const teply = await navsteva(vety, { sklad: druhy, druh: "warm" });
+  pis("warm    " + (teply.zprava.loadMs / 1000).toFixed(2) + " s, hit="
+    + teply.zprava.hit);
+  ven.warm = teply;
+
+  /* ---- pruning: a stale key must not be left holding 18 MB ---- */
+  const cizi = pokydCacheKey("ffffffffffffffff", "0");
+  await druhy.put(cizi, new Uint8Array([1, 2, 3, 4]));
+  ven.prorez = { pred: (await druhy.keys()).sort() };
+  ven.prorez.smazano = await druhy.pruneExcept(studeny.zprava.key);
+  ven.prorez.po = (await druhy.keys()).sort();
+  {
+    const porad = await druhy.get(studeny.zprava.key);
+    ven.prorez.zustalo = porad === null ? 0 : porad.length;
+  }
+
+  /* ---- a damaged record is thrown away, not handed to the engine ---- */
+  const poskozenyKlic = pokydCacheKey("deadbeefdeadbeef");
+  await vlozSyrove({
+    key: poskozenyKlic,
+    blob: new Uint8Array(16),
+    length: 999999,               /* what it claims, not what it is */
+    savedAt: Date.now(),
+  });
+  ven.poskozeny = {
+    bylTam: (await druhy.keys()).includes(poskozenyKlic),
+    vratil: await druhy.get(poskozenyKlic),
+    zbylTam: (await druhy.keys()).includes(poskozenyKlic),
+  };
+
+  await druhy.clear();
+  ven.poVycisteni = await druhy.keys();
+  druhy.close();
+
+  ven.isolated = self.crossOriginIsolated === true;
+  return ven;
+}
+
+let vysledek;
+try {
+  vysledek = await main();
+} catch (e) {
+  vysledek = { chyba: (e && e.stack) ? e.stack : String(e) };
+  pis("FAILED: " + vysledek.chyba);
+}
+await fetch("/vysledek", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(vysledek),
+});
+</script>
+</body>
+</html>

@@ -9,7 +9,7 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 4 — the JS boundary — **is under way: 4.1 and 4.2 are done.** Phase 3 is
+**Phase:** 4 — the JS boundary — **is under way: 4.1, 4.2 and 4.4 are done.** Phase 3 is
 complete, 3.1 through 3.4; the gate is passed and the numbers are in. Phases 1 and 2 are
 complete, 1.1–1.6 and 2.1–2.5.
 **The engine runs, answers in Czech, and the conversation is on disk.**
@@ -178,8 +178,42 @@ pointers are allocated while the base dictionary is read. Left unguarded — a l
 never happened has nothing to tear down — but now written down in `pokyd_api.h` and
 refused by `engine.ts` with the reference.
 
-**Next action:** 4.4, the IndexedDB cache — 3.4's order, and load-bearing for 5.2 rather
-than a refinement. Then 4.3, which 4.2 has already de-risked. Then the 5.1 slice.
+**4.4 is done, and a second visit is 81× cheaper than the first.** `src/web/cache.ts`
+keeps the 18 MB `SLOVNIK.TMP` in IndexedDB, and `startCached()` is the whole visit in one
+call — init, settings, lookup, import, load, seed, save — in the order `pokyd_api.h` fixes.
+Measured in Chrome 152: a first visit inflects for **14.53 s** and stores 18,131,435 bytes;
+a return visit, with its own worker, its own wasm module and its own database connection,
+loads in **0.18 s**. Both reproduce `test/golden/rozhovor.txt` byte for byte.
+
+What comes back out of the store is not merely the right length. Hashed on its way out and
+compared against the native `build/run/SLOVNIK.TMP`, it is **byte-identical** — 18 MB
+through a structured clone and a database, still agreeing with what the MinGW build wrote.
+
+The key is `pokyd/<version>/<dictionary hash>`, and the hash is read out of the module's
+own MEMFS rather than assumed: `tools/build.py` embeds the dictionary *inside*
+`pokyd.wasm`, so the only copy certainly in use is the one on the far side of the worker.
+That cost the protocol its one addition, `dictionaryHash`, which is not an engine call at
+all. The hash is FNV-1a 64 and not SHA-256, because `crypto.subtle` exists only in a secure
+context and a cache that vanishes silently over plain HTTP is a worse failure than anything
+64 bits risks here; it is checked against the published vectors and against Python's own
+arithmetic over `original/slovnik.iqp` (`a620640e93e20cf3`).
+
+**What a dictionary hash cannot see is the one thing 4.4 leaves to a human**, and it is
+written down at `POKYD_CACHE_VERSION`. `SLOVNIK.TMP` is not a copy of the dictionary, it is
+what the *engine* made of it — so a change to the inflection, to the flags, or to
+`src/shim/nahoda.h` yields a blob that is wrong and still checksums perfectly, and the
+engine would answer out of it all session. Bump that constant when the engine moves, or
+pass a deploy id as `version`. It is the only known way left to serve a stale cache.
+
+Storage never fails the load. A database that will not open, a full quota, a record that
+came back damaged — each ends with IQ Pokyd loading the slow way and saying exactly the
+same things, with the reason in the returned report rather than in an exception.
+`node test/web/cache.test.ts` puts **48 checks** on the hash, the key and every one of
+those branches in node, against a recording client and a store that fails on demand;
+`node test/web/cache.test.mjs` puts **40** on the real thing in Chrome.
+
+**Next action:** 4.3 — the loading UI, which 4.2 already de-risked down to a regular
+expression, and the last thing between here and the 5.1 slice.
 
 ---
 
@@ -234,15 +268,18 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   — `python3 tools/bench-native.py` and `node test/wasm/bench.mjs [--browser]` — diff the
   same transcript on every run, so they are slower ways of asking the same question and
   never a faster way of avoiding it.
-- **Three more ask about the JS boundary**, and they are not substitutes for the two
+- **Five more ask about the JS boundary**, and they are not substitutes for the two
   above — run them after touching `src/web/`. `node test/web/cp1250.test.ts` says whether
   the codec still converts CP1250 both ways without losing anything, and never loads the
   engine. `node test/web/engine.test.ts` drives the golden conversation through the codec
   and the wasm module in node (`--no-cold` skips the fourteen-second cold load).
   `node test/web/worker.test.mjs` does the same in headless Chrome, through the worker
   and the message protocol, and is the one that measures whether the main thread stayed
-  alive. Anything under `src/web/` is UTF-8, ASCII-only in content, and CRLF like
-  everything else, and it typechecks clean under `tsc --strict`.
+  alive. `node test/web/cache.test.ts` checks the cache key and every branch of
+  `startCached` in node, with no engine and no browser, and `node test/web/cache.test.mjs`
+  runs the real IndexedDB round trip in Chrome — two visits, and the 18 MB blob hashed
+  against the native `SLOVNIK.TMP`. Anything under `src/web/` is UTF-8, ASCII-only in
+  content, and CRLF like everything else, and it typechecks clean under `tsc --strict`.
 
 ---
 
@@ -1166,11 +1203,36 @@ is not a refinement and the cache is not an optimization.
       `phase` and `percent` beside them; a cold load produces 207 segments matching
       `/^\d+\.\d%$/`. What is left for 4.3 is the parse and the UI — and deciding what to
       show during the two short steps either side, where the counter does work.
-- [ ] 4.4 Persist the `SLOVNIK.TMP` cache blob to IndexedDB, keyed by dictionary hash.
-      Restore on subsequent loads. **Load-bearing for 5.2** — 3.4's decision. Its three
-      measured constraints are there too: three copies of the blob live at once on a naive
-      warm start, the *export* is the memory peak (41.9 MB of linear memory, not 28.3),
-      and the blob gzips to 11.3 MB if shipping a prebuilt one ever beats computing it.
+- [x] 4.4 **Persist the `SLOVNIK.TMP` cache blob to IndexedDB, keyed by dictionary hash.
+      Done.** `src/web/cache.ts` is the whole of it: `fnv1a64`, `pokydCacheKey`,
+      `PokydCacheStore` and `startCached()`, which is `PokydClient.start()` with the
+      lookup and the save inserted at the two places `pokyd_api.h` allows them — after
+      init, because the dictionary hash is read out of the module's MEMFS, and before
+      load, because the engine looks for `SLOVNIK.TMP` as it starts and never again.
+
+      **14.53 s on a first visit, 0.18 s on the next one, in Chrome 152**, with the
+      golden transcript byte for byte on both. The stored blob is byte-identical to the
+      native `build/run/SLOVNIK.TMP` — hashed on its way back out of the database and
+      compared, rather than measured.
+
+      The key is `pokyd/<version>/<dictionary hash>`. It had to come from the worker: the
+      dictionary is embedded inside `pokyd.wasm`, so the page has no copy of its own to
+      hash, and `dictionaryHash` is the protocol's one addition that is not an engine
+      call. `POKYD_CACHE_VERSION` covers what the dictionary hash cannot — see the Status
+      section for why that constant is the last hand-maintained thing in this phase.
+
+      3.4's three constraints, revisited. The blob still lives three times over on a warm
+      start (IndexedDB's copy, the wasm heap, the MEMFS file) and none of the three can
+      be skipped from JavaScript; what `startCached` does avoid is a fourth, by handing
+      `importCache` the buffer to *transfer*. The export is still the memory peak, and it
+      now happens exactly once per dictionary. Shipping a prebuilt 11.3 MB gzip was not
+      needed and is not done: 15 s once is cheaper than 11 MB every deploy, and it would
+      have wanted the same `POKYD_CACHE_VERSION` discipline anyway.
+
+      Storage failure is never load failure — a refused database, a full quota and a
+      damaged record all end in a slow load and a line in the report. 48 checks in
+      `test/web/cache.test.ts` (node, no engine), 40 in `test/web/cache.test.mjs`
+      (Chrome, the real thing).
 
 ## Phase 5 — Vertical slice
 

@@ -123,6 +123,7 @@ async function vyrid(pozadavek: PokydRequest): Promise<[unknown, unknown[]]> {
     case "setSettings": M.setSettings(pozadavek.settings); return [null, []];
     case "setMood":     M.setMood(pozadavek.mood);     return [null, []];
     case "progress":    return [M.progress(), []];
+    case "dictionaryHash": return [M.dictionaryHash(), []];
     case "exportCache": {
       const blob = M.exportCache();
       return blob === null ? [null, []] : [blob, [blob.buffer]];

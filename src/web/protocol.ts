@@ -7,12 +7,20 @@
    requests, one reply union, and the struct that crosses it.
 
    The rule the protocol is built on: it mirrors src/api/pokyd_api.h and adds
-   nothing.  One request per exported function, same names in the same order,
-   same constraints.  Two deliberate compressions -- pokyd_error() is folded into
-   a rejected reply, because a message that failed should not need a second round
-   trip to say why, and pokyd_phase()/pokyd_progress() share one request because
-   neither is meaningful without the other.  pokyd_free() does not appear: it is
-   the worker's business and never the page's.
+   almost nothing.  One request per exported function, same names in the same
+   order, same constraints.  Two deliberate compressions -- pokyd_error() is
+   folded into a rejected reply, because a message that failed should not need a
+   second round trip to say why, and pokyd_phase()/pokyd_progress() share one
+   request because neither is meaningful without the other.  pokyd_free() does
+   not appear: it is the worker's business and never the page's.
+
+   And one deliberate addition, "dictionaryHash", which is not an engine call at
+   all -- it is a read of SLOVNIK.IQP out of the module's own MEMFS.  It is here
+   because phase 4.4 has to know *which* dictionary the engine holds before it
+   can decide whether a stored SLOVNIK.TMP belongs to it (pokyd_api.h says why at
+   pokyd_export_cache), and the page cannot work that out for itself: the
+   dictionary is embedded inside pokyd.wasm by tools/build.py, so the only copy
+   that is certainly the one in use is the one on the far side of this boundary.
 
    Nothing above this line knows about the ordering rules in pokyd_api.h -- init
    before load, import before load, seed after load.  src/web/engine.ts enforces
@@ -96,6 +104,7 @@ export type PokydRequest =
   | { type: "setMood"; mood: number }
   | { type: "progress" }
   | { type: "exportCache" }
+  | { type: "dictionaryHash" }
   | { type: "shutdown" };
 
 export type PokydRequestType = PokydRequest["type"];
@@ -129,6 +138,10 @@ export interface PokydResultMap {
   /* null is not an error: there is no SLOVNIK.TMP before a cold load has
      finished writing one, and none at all under prikaz_readonlymod. */
   exportCache: Uint8Array | null;
+  /* Sixteen hex digits, src/web/cache.ts's fnv1a64 over the bytes of
+     SLOVNIK.IQP as the engine's MEMFS holds them.  Available from init onwards
+     and constant for the life of the worker. */
+  dictionaryHash: string;
   /* pokyd_shutdown's count of blocks the engine did not account for.  It should
      be 0, and it is the only leak detector this code has. */
   shutdown: number;
