@@ -15,12 +15,18 @@
         ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI puts in the right-justified item,
         and the seven bitmaps mfcDlg.cpp hangs on seven commands.
 
-   **A command with nothing behind it is greyed, not silent.**  Everything this
-   menu can reach belongs to a later phase -- the settings dialog is 7.1, the
-   help and about screens are 8.2 and 8.3 -- so `commands` is a map from the
-   author's symbolic id to a handler, an item with no entry in it is drawn
-   MF_GRAYED, and a phase that lands adds a key.  The one command 6.3 can honour
-   is ID_NAPOVEDA_INTERNET, which is a URL (mfcDlg.cpp:1005).
+     3. **the author's accelerator table**, added at phase 7.1: IDR_ZKRATKY
+        names the same commands by key, and four of them -- the mood and the
+        character, F7, F8 and the two with Ctrl -- are in no menu at all, so
+        that table is the only way to reach them.  It is bound by the same rule
+        as the items: an entry whose command is not in `commands` is not bound.
+
+   **A command with nothing behind it is greyed, not silent.**  `commands` is a
+   map from the author's symbolic id to a handler, an item with no entry in it
+   is drawn MF_GRAYED, and a phase that lands adds a key.  Phase 6.3 could
+   honour one, ID_NAPOVEDA_INTERNET, which is a URL (mfcDlg.cpp:1005); 7.1 added
+   ID_NASTAVENI and the four shortcuts, and the help and about screens are 8.2
+   and 8.3.
 
    The caption is a menu item too, and the same ID_NASTAVENI as "Nastaveni...",
    which is the author's doing: IQPokyd.rc:150 gives it the HELP flag, and that
@@ -31,8 +37,8 @@
    word it draws is read from a module generated out of the author's own bytes.
 */
 
-import { MENUS } from "./resources.ts";
-import type { RcMenu, RcMenuItem } from "./resources.ts";
+import { ACCELERATORS, MENUS } from "./resources.ts";
+import type { RcAccelerators, RcMenu, RcMenuItem } from "./resources.ts";
 import { BITMAP_ASSETS } from "./assets.ts";
 import { MENU_BITMAPS } from "./caption.ts";
 
@@ -46,6 +52,13 @@ export interface PokydMenuOptions {
   commands?: Record<string, () => void>;
   /** IDR_MENU by default; a test can hand in another. */
   menu?: RcMenu;
+  /** IDR_ZKRATKY by default.  Phase 7.1: the same commands, reached by key
+   *  instead of by pointer -- and four of them are reachable no other way,
+   *  because ID_ZLEPSENINALADY and its three neighbours are in the accelerator
+   *  table and in no menu (mfcDlg.cpp:118-121).  An entry whose command is not
+   *  in `commands` is not bound, exactly as an item with no command is greyed:
+   *  a key that does nothing quietly is the same broken promise. */
+  accelerators?: RcAccelerators;
 }
 
 export interface PokydMenuHandle {
@@ -268,8 +281,46 @@ export function mountMenu(
     items[next].focus();
   };
 
+  /* ------------------------------------------------------ the accelerators */
+
+  /* IDR_ZKRATKY, as a browser spells it.  The table is VIRTKEY throughout, so
+     an entry is either a VK_ name -- which is the browser's own `key` with the
+     prefix taken off, for every key this table uses -- or a single letter,
+     which `key` gives back in whatever case the shift state produced. */
+  const table = options.accelerators ?? ACCELERATORS["IDR_ZKRATKY"];
+  const bindings = (table === undefined ? [] : table.entries)
+    .filter((entry) => entry.id !== null && commands[entry.id] !== undefined)
+    .map((entry) => ({
+      id: entry.id!,
+      key: entry.key.startsWith("VK_")
+        ? entry.key.slice(3).replace(/^ESCAPE$/, "Escape")
+        : entry.key.toLowerCase(),
+      ctrl: entry.flags.includes("CONTROL"),
+      alt: entry.flags.includes("ALT"),
+      shift: entry.flags.includes("SHIFT"),
+    }));
+
+  const onAccelerator = (event: KeyboardEvent): void => {
+    /* A key that reaches a dialog belongs to the dialog: TranslateAccelerator
+       ran on the main window's messages and a modal has its own loop.  The
+       target is an Element for a key pressed into a control and the Document
+       itself for one pressed into the page, so it is asked rather than cast. */
+    const target = event.target;
+    if (target instanceof Element
+      && target.closest(".pokyd-dialog") !== null) return;
+    for (const binding of bindings) {
+      if (event.key.toLowerCase() !== binding.key.toLowerCase()) continue;
+      if (event.ctrlKey !== binding.ctrl || event.altKey !== binding.alt) continue;
+      if (event.shiftKey !== binding.shift) continue;
+      event.preventDefault();
+      run(binding.id);
+      return;
+    }
+  };
+
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("keydown", onKeyDown);
+  document.addEventListener("keydown", onAccelerator);
 
   parent.appendChild(element);
 
@@ -282,6 +333,7 @@ export function mountMenu(
     remove: (): void => {
       document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onAccelerator);
       element.remove();
     },
   };

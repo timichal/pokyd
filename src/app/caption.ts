@@ -39,9 +39,17 @@ import type { PokydSettings } from "../web/protocol.ts";
  * gives the masculine "prisel"), and SLOVNIK.FU:2091, which writes it into the
  * debug dump as `== 1 ? "muz" : "zena"`.  NASTAV_STANDARDNE's own default is 1,
  * with "muzi" in the margin.  The comments in src/api/pokyd_api.h and
- * src/web/protocol.ts are corrected to match; no code ever read them. */
+ * src/web/protocol.ts are corrected to match; no code ever read them.
+ *
+ * Phase 7.1 finished the correction: the other value is **2**, not 0.  His own
+ * settings dialog writes 1 or 2 (Nastaveni.cpp:140-143), his settings file
+ * parses them as MUZ__ and ZENA__ + 1 (SLOVNIK.FU:1970), and VSTUP.FU:1070
+ * assigns the number straight into Typ_slova::rod, where 1 and 2 are the two
+ * genders the paradigms are indexed by.  Nothing below changes -- the array is
+ * indexed by "is it a 1", which is what the author's own `if` asks -- but
+ * src/app/settings.ts is what writes one, and it has to write a 2. */
 export const GENDERS = [
-  "žena",  /* zena  -- pohlavi 0 */
+  "žena",  /* zena  -- pohlavi 2, and anything that is not a 1 */
   "muž",   /* muz   -- pohlavi 1 */
 ] as const;
 

@@ -276,11 +276,13 @@ heading("the strings src/app/chat.ts used to copy by hand");
     chat.includes("DIALOGS[\"IDD_HLAVNI_OKNO\"]"));
 
   /* The same rule in its sharper form, and the one every later phase has to
-     keep: of everything phase 6 wrote, only src/app/caption.ts and
-     src/app/greeting.ts spell Czech, because the author's status line and his
-     ten greetings are strcat and `+` rather than resources.  Everything else
-     reads its words from a generated module, and each of those two has a test
-     of its own that holds it against PROSTRED.FU.
+     keep: of everything phases 6 and 7 wrote, only src/app/caption.ts,
+     src/app/greeting.ts and src/app/settings.ts spell Czech, because the
+     author's status line, his ten greetings and the four strings his settings
+     dialog holds as literals are strcat, `+` and MessageBox rather than
+     resources.  Everything else reads its words from a generated module, and
+     each of those three has a test of its own that holds it against the file it
+     came out of.
 
      A Czech letter is how a hand-written word shows up, whether it is written
      as a \uXXXX escape or straight in UTF-8 -- both are looked for, because
@@ -292,6 +294,15 @@ heading("the strings src/app/chat.ts used to copy by hand");
     ["src/app/dlu.ts", []],
     ["src/app/main.ts", []],
     ["src/app/assets.ts", []],
+    /* Phase 7.1.  It draws IDD_NASTAVENI, which is as Czech as the dialog gets
+       -- and every word of it comes from src/app/resources.ts or from
+       src/app/settings.ts, so this file holds none. */
+    ["src/app/dialog.ts", []],
+    /* Phase 7.3.  It writes the author's own settings file, every word of
+       which he wrote without a diacritic -- so it keeps this rule by
+       accident rather than by effort, and test/app/config.test.ts is what
+       checks that those words are his. */
+    ["src/app/config.ts", []],
   ];
   for (const [file, exempt] of ours) {
     const text = readFileSync(join(ROOT, ...file.split("/")), "utf8");

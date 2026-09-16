@@ -48,7 +48,7 @@
    every sentence.  Writing mood through setSettings does nothing lasting --
    use setMood, which is what the original's own settings dialog does. */
 export interface PokydSettings {
-  humanGender: number;                 /* pohlavicloveka: 1 male, 0 female */
+  humanGender: number;                 /* pohlavicloveka: 1 male, 2 female */
   computerGender: number;              /* pohlavipocitace */
   humanName: string;                   /* jmenocloveka; at most 100 CP1250 bytes */
   computerName: string;                /* jmenopocitace */

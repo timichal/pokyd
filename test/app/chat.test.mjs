@@ -48,7 +48,20 @@ import { ROOT, runPage } from "../browser.mjs";
 import {
   DIALOGS, MENUS, PALETTE, WINDOW_LAYOUT,
 } from "../../src/app/resources.ts";
-import { MENU_BITMAPS, settingsCaption } from "../../src/app/caption.ts";
+import { GENDERS, MENU_BITMAPS, settingsCaption } from "../../src/app/caption.ts";
+/* Phase 7.1.  The same three rules again: data only, and data that
+   test/app/settings.test.ts has already held against Nastaveni.cpp -- so what
+   is compared with the dialog on the screen is the author's own dialog. */
+import {
+  ADVANCED_CONTROLS, ADVANCED_GROUP_CAPTIONS, BASIC_CONTROLS, CHARACTERS,
+  HUMAN_NAME_ERROR, MOODS, NAME_ERROR_TITLE,
+} from "../../src/app/settings.ts";
+/* Phase 7.3.  The page wrote IQPOKYD.CFG into localStorage with this module;
+   node reads it back with the same one, which is how the round trip is checked
+   without a second parser existing to disagree with the first. */
+import {
+  CONFIG_MISSING, CONFIG_OK, read as readConfig,
+} from "../../src/app/config.ts";
 /* Phase 6.4.  The welcome line is drawn off the seed the page was pinned to, so
    node can say which of the ten it should be -- and test/app/greeting.test.ts is
    what says those ten are the author's. */
@@ -66,9 +79,19 @@ const CHARACTER = 3;
 const MOOD = 3;
 const GENDER = 1;
 /* What 23 sentences of test/golden/rozhovor.in do to it: nalada 3 -> 1, the
-   best of the five.  Phase 7.2 owns the drift; this is here so that a change to
-   it is noticed by something. */
+   best of the five.  That drift is phase 7.2, and since 7.1 the dialog is a
+   second place a visitor sees it: the mood list opens on this number. */
 const MOOD_AFTER = 1;
+
+/* The four controls of IDD_NASTAVENI that are on both pages -- the two buttons
+   that switch them, OK and Storno -- plus the two group boxes, which are
+   relabelled rather than hidden.  test/app/settings.test.ts is what proves this
+   is exactly what his two functions leave alone. */
+const ALWAYS_SHOWN = ["IDOK", "IDCANCEL", "IDC_RAMECEK1", "IDC_RAMECEK2",
+  "IDC_ZAKLADNINASTAVENI", "IDC_ROZSIRENENASTAVENI"];
+
+/* GENDERS[1], "muz" -- what the caption says for a computer with no name. */
+const GENDER_WORD = GENDERS[1];
 
 /* 4.4 measured 14.53 s cold and 0.18 s warm in Chrome 152.  These are the
    bounds that would mean something had gone wrong -- a cold path taken twice,
@@ -285,11 +308,12 @@ function checkWindow(run) {
   eq("seven items carry a bitmap", w.menu.bitmaps,
     Object.keys(MENU_BITMAPS).length);
   eq("and seven carry accelerator text", w.menu.accelerators.length, menuItems);
-  /* Everything else in this menu opens a dialog phase 7 or 8 has still to
-     build, so it is drawn MF_GRAYED rather than doing nothing quietly. */
+  /* Everything else in this menu opens a dialog phase 8 has still to build, so
+     it is drawn MF_GRAYED rather than doing nothing quietly.  Phase 7.1 added
+     the second of the two: ID_NASTAVENI now opens IDD_NASTAVENI. */
   /* eq() here is Object.is, so the list is compared as a string. */
-  eq("the one command 6.3 can honour is the author's web page",
-    w.menu.enabled.join(","), "ID_NAPOVEDA_INTERNET");
+  eq("the two commands the port can honour",
+    w.menu.enabled.join(","), "ID_NAPOVEDA_INTERNET,ID_NASTAVENI");
 
   /* 8. ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI, which is the point of the whole
         right-hand side of the bar -- and it is *live*: the same 23 sentences
@@ -303,6 +327,128 @@ function checkWindow(run) {
     caption(MOOD_AFTER));
   ok("which is a different line from the one it started with",
     run.captionBefore !== w.caption);
+}
+
+/* ----------------------------------------------- the settings dialog, 7.1 */
+
+/* IDD_NASTAVENI, opened and driven in the browser the two ways a visitor can
+   open it.  What it is compared with is the author's own template and the two
+   lists src/app/settings.ts re-exports -- test/app/settings.test.ts is what
+   holds those against Nastaveni.cpp, so this is the other half of the loop:
+   that what the module says is what is on the screen. */
+function checkSettings(run, cold) {
+  const d = run.dialog;
+  const template = DIALOGS["IDD_NASTAVENI"];
+  heading(run.kind + " visit -- IDD_NASTAVENI");
+
+  /* 1. the two ways in, both of them ID_NASTAVENI (IQPokyd.rc:150 gives the
+        right-justified caption the same command as the menu item). */
+  ok("the settings item is no longer greyed", d.menuEnabled);
+  ok("and neither is the status line, which is the same command",
+    d.captionEnabled);
+  ok("F4 opens the dialog, which is IDR_ZKRATKY's own accelerator",
+    d.openedByF4);
+  ok("and so does the menu item", d.openedFromMenu);
+
+  /* 2. what is on it. */
+  eq("it is titled as the template titles it", d.caption, template.caption);
+  eq("and it is modal", d.modal, "true");
+  eq("every control of IDD_NASTAVENI is on it", d.controls,
+    template.controls.length);
+  eq("a visitor opens on the basic page (Nastaveni.cpp:124)", d.page, "basic");
+  eq("which shows what OnZakladniNastaveni shows", d.basicShown.join(","),
+    [...BASIC_CONTROLS, ...ALWAYS_SHOWN].sort().join(","));
+  eq("the character list is the author's seven words", d.lists.character.join(","),
+    CHARACTERS.join(","));
+  eq("  with the engine's own charakter selected", Number(d.lists.characterValue),
+    CHARACTER);
+  eq("the mood list is his five", d.lists.mood.join(","), MOODS.join(","));
+  eq("  with the mood the conversation drifted to", Number(d.lists.moodValue),
+    MOOD_AFTER);
+  ok("both genders are on the male radio, which is what pohlavi 1 means",
+    d.genders.human && d.genders.computer);
+  /* The five the port draws and cannot honour, named in src/app/dialog.ts. */
+  eq("five controls are drawn greyed rather than lying", d.disabled.join(","),
+    ["IDC_EMULOVATKLAVESNICI", "IDC_EMULOVATCESKOUKLAVESNICI",
+      "IDC_EMULOVATSLOVENSKOUKLAVESNICI", "IDC_KLAVESNICEQWERTY",
+      "IDC_ZOBRAZOVATSTANDARDNIKURZOR", "IDC_ZOBRAZOVATPOPISKY"].sort().join(","));
+
+  /* 3. the other page, and the two captions it swaps in. */
+  eq("the second button shows the advanced page", d.advancedPage, "advanced");
+  eq("  which shows what OnRozsireneNastaveni shows", d.advancedShown.join(","),
+    [...ADVANCED_CONTROLS, ...ALWAYS_SHOWN].sort().join(","));
+  eq("  and relabels both group boxes", d.groups.advanced.join(" / "),
+    ADVANCED_GROUP_CAPTIONS["IDC_RAMECEK1"] + " / "
+    + ADVANCED_GROUP_CAPTIONS["IDC_RAMECEK2"]);
+  eq("the first button comes back", d.backToBasic, "basic");
+  eq("  and puts the template's own captions back", d.groups.basic.join(" / "),
+    template.controls.find((c) => c.id === "IDC_RAMECEK1").text + " / "
+    + template.controls.find((c) => c.id === "IDC_RAMECEK2").text);
+
+  /* 4. the one refusal, which in 2005 was a MessageBox. */
+  ok("a two-word name is refused", d.refusal.shown);
+  eq("  with his title", d.refusal.title, NAME_ERROR_TITLE);
+  eq("  and his words", d.refusal.text, HUMAN_NAME_ERROR);
+  ok("  the dialog stays open on it", d.refusal.stillOpen);
+  ok("  with the focus back in that edit (Nastaveni.cpp:149)",
+    d.refusal.focused);
+
+  /* 5. Storno, by way of Escape. */
+  ok("Escape closes it", d.closedByEscape);
+  eq("  and nothing it refused was applied", d.afterCancel, "");
+
+  /* 6. OK, and what it reaches. */
+  ok("OK closes it", d.closedByOk);
+  eq("the character it chose reached the engine", d.applied.character, 0);
+  eq("  the name was trimmed on the way (PROSTRED.FU:60-62)",
+    d.applied.humanName, "Michal");
+  eq("  spisovna cestina is on", d.applied.formalCzech, 1);
+  eq("  and so is pouzivatefekty", d.applied.useEffects, 1);
+  /* The list box was not touched, so naladabody is still the conversation's --
+     which is the whole point of Nastaveni.cpp:166 and of pokyd_set_mood being
+     a call of its own. */
+  eq("the mood the conversation earned was not reset by an OK on a name",
+    d.applied.moodPoints, d.moodPointsBefore);
+  eq("  and it is still the mood it was", d.applied.mood, MOOD_AFTER);
+  /* NASTAV_VIDITELNOST_EFEKTNICH_PROGRESSBARU, PROSTRED.FU:163. */
+  eq("both edge bars came out with pouzivatefekty", d.effectsShown, 2);
+  /* ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI, :204 -- the caption is the name and
+     the character it was just given. */
+  eq("and the menu bar says what was just set", d.captionAfterOk,
+    "Michal x " + GENDER_WORD + ", " + CHARACTERS[0] + ": " + MOODS[MOOD_AFTER - 1]);
+
+  /* 7. phase 7.4: four commands that are in no menu at all. */
+  eq("F8 is a worse mood (mfcDlg.cpp:952)", d.moodAfterF8, MOOD_AFTER + 1);
+  eq("F7 is a better one (:944)", d.moodAfterF7, MOOD_AFTER);
+  eq("Ctrl+F8 is a worse character (:960)", d.characterAfterCtrlF8, 1);
+  eq("and the menu bar moved with them", d.captionAfterKeys,
+    "Michal x " + GENDER_WORD + ", " + CHARACTERS[1] + ": " + MOODS[MOOD_AFTER - 1]);
+
+  /* 8. phase 7.3: what OnOK wrote next to the program, which here is a
+        localStorage entry under his own file name.  It is parsed back with the
+        same module the page wrote it with -- and what it has to parse back to
+        is the settings the dialog was just put back to, NASTAV_STANDARDNE's
+        own charakter and nalada included. */
+  ok("OK wrote IQPOKYD.CFG", typeof d.storedConfig === "string"
+    && d.storedConfig.length > 0);
+  const stored = readConfig(d.storedConfig, d.restored);
+  eq("  and it is a file PRECTI_NASTAVENI_ZE_SOUBORU accepts", stored.status,
+    CONFIG_OK);
+  eq("  saying what the engine now holds", JSON.stringify(stored.settings),
+    JSON.stringify(d.restored));
+  eq("  which is the charakter the golden conversation was recorded under",
+    d.restored.character, CHARACTER);
+  eq("  and the nalada", d.restored.mood, MOOD);
+  ok("  written as his own file, header and all",
+    d.storedConfig.startsWith("IQ Pokyd v0.15 - soubor s nastavenim"),
+    JSON.stringify(d.storedConfig.slice(0, 40)));
+  ok("  in CRLF, as a file opened with \"w\" on Windows was",
+    d.storedConfig.includes("\r\nPohlavi cloveka: muz\r\n"));
+
+  /* And the half that only a second visit can show: it read the file the first
+     one left, rather than starting from NASTAV_STANDARDNE. */
+  eq("this visit started from " + (cold ? "no stored settings" : "the stored ones"),
+    d.configStatus, cold ? CONFIG_MISSING : CONFIG_OK);
 }
 
 /* -------------------------------------------------------------- the driver */
@@ -360,8 +506,10 @@ async function main() {
 
   checkVisit(data.cold, golden, true, data.seed);
   checkWindow(data.cold);
+  checkSettings(data.cold, true);
   checkVisit(data.warm, golden, false, data.seed);
   checkWindow(data.warm);
+  checkSettings(data.warm, false);
 
   heading("the two visits together");
   ok("both used the same cache key: " + data.cold.report.key,

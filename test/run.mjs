@@ -43,6 +43,8 @@ const TESTS = [
   { phase: "6.2", file: "test/app/assets.test.ts", browser: false },
   { phase: "6.3", file: "test/app/caption.test.ts", browser: false },
   { phase: "6.4", file: "test/app/greeting.test.ts", browser: false },
+  { phase: "7.1", file: "test/app/settings.test.ts", browser: false },
+  { phase: "7.3", file: "test/app/config.test.ts", browser: false },
 ];
 
 const args = process.argv.slice(2);

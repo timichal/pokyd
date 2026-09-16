@@ -49,6 +49,10 @@ import { decodeCp1250, encodeCp1250 } from "/src/web/cp1250.ts";
 const SEED = 20050415;
 const MOOD = 3;
 
+/* NASTAV_STANDARDNE's charakter and nalada (NASTAVEN.PR:28-29), which the
+   dialog puts back at the end of a visit -- see step 7 of dialogReport. */
+const RESTORE = { character: 3, mood: 3 };
+
 /* The built app, not the sources.  test/app/chat.test.mjs runs `vite build`
    before it launches the browser, so this is the deliverable. */
 const APP = "/dist/index.html?seed=" + SEED + "&mood=" + MOOD;
@@ -67,7 +71,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function until(what, predicate, timeoutMs = 120000) {
   const deadline = performance.now() + timeoutMs;
   for (;;) {
-    const value = predicate();
+    /* Awaited, so that a predicate which asks the engine something can be
+       written as an async function: a bare promise is always truthy. */
+    const value = await predicate();
     if (value) return value;
     if (performance.now() > deadline) throw new Error("timed out waiting for " + what);
     await sleep(10);
@@ -281,19 +287,205 @@ async function visit({ kind, sentences }) {
     transcript += (turn.who === "human" ? "> " : "< ") + turn.text + "\r\n";
   }
 
+  /* ------------------------------------------------ the settings dialog, 7.1 */
+
+  /* IDD_NASTAVENI, opened the two ways a visitor can open it and driven the way
+     a visitor drives it: F4, the author's own accelerator (IDR_ZKRATKY), and
+     the menu item that carries the same command. Everything here happens after
+     the conversation and after windowReport() above, because it moves the
+     settings the rest of this file measures -- the character it sets and the
+     moods F7 and F8 walk through are read back out of the engine at the end.
+
+     Nothing below reaches for a module: the dialog is found in the DOM, the
+     lists and the edits are typed into, and what node compares the result with
+     is the author's own template. */
+  async function dialogReport() {
+    const dialog = () => doc.querySelector(".pokyd-dialog");
+    const item = (id) =>
+      doc.querySelector('.pokyd-dialog-item[data-control="' + id + '"]');
+    const input = (id) => {
+      const box = item(id);
+      return box === null ? null : (box.matches("input, select") ? box
+        : box.querySelector("input, select"));
+    };
+    const shownIds = () =>
+      Array.from(doc.querySelectorAll(".pokyd-dialog-item"))
+        .filter((el) => !el.hidden).map((el) => el.dataset.control).sort();
+    /* TranslateAccelerator, as a page spells it: the handler menu.ts installs
+       is on the iframe's own document. */
+    /* On whatever has the focus, because that is where a key press lands:
+       the dialog listens on itself and an event dispatched at the document
+       would never bubble down to it. */
+    const press = (key, init = {}) => (doc.activeElement || doc).dispatchEvent(
+      new win.KeyboardEvent("keydown",
+        { key, bubbles: true, cancelable: true, ...init }));
+
+    const menuItem = doc.querySelector(
+      '.pokyd-menu-item[data-command="ID_NASTAVENI"]');
+    const out = {
+      menuEnabled: menuItem !== null && !menuItem.disabled,
+      captionEnabled: !doc.querySelector(".pokyd-menu-state").disabled,
+      /* naladabody as the conversation left it, so that the OK below can be
+         shown not to have reset it (Nastaveni.cpp:166). */
+      moodPointsBefore: (await handle.client.getSettings()).moodPoints,
+      /* PRECTI_NASTAVENI_ZE_SOUBORU's own return value for this visit: 0 on a
+         first one, and 1 on the second, which reads what the first one wrote.
+         Phase 7.3. */
+      configStatus: handle.configStatus(),
+    };
+
+    /* 1. F4 opens it. */
+    press("F4");
+    await until("the settings dialog", dialog, 5000);
+    out.openedByF4 = true;
+    out.caption = doc.querySelector(".pokyd-dialog-title").textContent;
+    out.modal = dialog().getAttribute("aria-modal");
+    out.controls = doc.querySelectorAll(".pokyd-dialog-item").length;
+    out.page = dialog().dataset.page;
+    out.basicShown = shownIds();
+    out.lists = {
+      character: Array.from(input("IDC_CHARAKTER").options).map((o) => o.textContent),
+      mood: Array.from(input("IDC_NALADA").options).map((o) => o.textContent),
+      characterValue: input("IDC_CHARAKTER").value,
+      moodValue: input("IDC_NALADA").value,
+    };
+    out.genders = {
+      human: input("IDC_CLOVEKMUZ").checked,
+      computer: input("IDC_POCITACMUZ").checked,
+    };
+    /* The five controls src/app/dialog.ts draws and cannot honour. */
+    out.disabled = Array.from(doc.querySelectorAll(".pokyd-dialog-item"))
+      .filter((el) => {
+        const control = el.matches("input, select") ? el
+          : el.querySelector("input, select");
+        return control !== null && control.disabled;
+      }).map((el) => el.dataset.control).sort();
+
+    /* 2. the advanced page, and the two group captions it swaps in. */
+    item("IDC_ROZSIRENENASTAVENI").click();
+    out.advancedPage = dialog().dataset.page;
+    out.advancedShown = shownIds();
+    out.groups = {
+      advanced: [item("IDC_RAMECEK1").querySelector("legend").textContent,
+        item("IDC_RAMECEK2").querySelector("legend").textContent],
+    };
+    item("IDC_ZAKLADNINASTAVENI").click();
+    out.groups.basic = [item("IDC_RAMECEK1").querySelector("legend").textContent,
+      item("IDC_RAMECEK2").querySelector("legend").textContent];
+    out.backToBasic = dialog().dataset.page;
+
+    /* 3. a name that is two words: his MessageBox, and the dialog stays. */
+    input("IDC_JMENOCLOVEKA").value = "Michal Novak";
+    item("IDOK").click();
+    out.refusal = {
+      shown: !doc.querySelector(".pokyd-dialog-refusal").hidden,
+      title: doc.querySelector(".pokyd-dialog-refusal strong").textContent,
+      text: doc.querySelector(".pokyd-dialog-refusal p").textContent,
+      stillOpen: dialog() !== null,
+      focused: doc.activeElement === input("IDC_JMENOCLOVEKA"),
+    };
+
+    /* 4. Storno by way of Escape: nothing at all is applied. */
+    press("Escape");
+    out.closedByEscape = dialog() === null;
+    out.afterCancel = (await handle.client.getSettings()).humanName;
+
+    /* 5. and the menu item opens it too, and OK applies. "stroj" is character
+          0, which is as far from the default 3 as the list goes. */
+    doc.querySelector(".pokyd-menu-title").click();      /* open the IQ Pokyd menu */
+    menuItem.click();
+    await until("the settings dialog again", dialog, 5000);
+    out.openedFromMenu = true;
+    input("IDC_CHARAKTER").value = "0";
+    input("IDC_JMENOCLOVEKA").value = "  Michal  ";
+    input("IDC_SPISOVNACESTINA").checked = true;
+    input("IDC_POUZIVATEFEKTY").checked = true;
+    item("IDOK").click();
+    out.closedByOk = dialog() === null;
+    await until("the settings to reach the engine",
+      async () => (await handle.client.getSettings()).character === 0, 5000);
+    const applied = await handle.client.getSettings();
+    out.applied = {
+      character: applied.character,
+      humanName: applied.humanName,
+      formalCzech: applied.formalCzech,
+      useEffects: applied.useEffects,
+      /* The mood was not touched, so naladabody must still be where the
+         conversation drifted it -- Nastaveni.cpp:166. */
+      mood: applied.mood,
+      moodPoints: applied.moodPoints,
+    };
+    out.captionAfterOk = doc.querySelector(".pokyd-menu-state").textContent;
+    /* pouzivatefekty is the one setting that shows on the window itself. */
+    out.effectsShown = Array.from(doc.querySelectorAll(".pokyd-effect"))
+      .filter((el) => !el.hidden).length;
+
+    /* 6. phase 7.4: the four commands that are in no menu at all. F8 is a worse
+          mood, F7 a better one, and Ctrl+F8 a worse character. */
+    const moodNow = async () => (await handle.client.getSettings()).mood;
+    press("F8");
+    await until("the mood to worsen", async () => await moodNow() > applied.mood, 5000);
+    out.moodAfterF8 = await moodNow();
+    press("F7");
+    await until("the mood to improve",
+      async () => await moodNow() === applied.mood, 5000);
+    out.moodAfterF7 = await moodNow();
+    press("F8", { ctrlKey: true });
+    await until("the character to worsen",
+      async () => (await handle.client.getSettings()).character === 1, 5000);
+    out.characterAfterCtrlF8 = (await handle.client.getSettings()).character;
+    out.captionAfterKeys = doc.querySelector(".pokyd-menu-state").textContent;
+
+    /* 7. phase 7.3, and the reason this runs at all: everything above changed
+          the settings, and OnOK wrote them to IQPOKYD.CFG. Put them back
+          through the same dialog -- NASTAV_STANDARDNE's own values, the mood
+          included -- so that the file the *next* iframe reads is the one the
+          golden conversation was recorded under. What node then checks is that
+          the text left in storage parses back to exactly those settings, and
+          that the second visit started from it rather than from the
+          defaults. */
+    press("F4");
+    await until("the settings dialog a third time", dialog, 5000);
+    input("IDC_CHARAKTER").value = String(RESTORE.character);
+    input("IDC_NALADA").value = String(RESTORE.mood);
+    input("IDC_JMENOCLOVEKA").value = "";
+    input("IDC_SPISOVNACESTINA").checked = false;
+    input("IDC_POUZIVATEFEKTY").checked = false;
+    /* What the OK above left behind, so that the wait below is for this OK's
+       own write rather than for a file that happened to be there already:
+       ZAPIS_NASTAVENI_DO_SOUBORU is the last thing OnOK does (:207), after the
+       settings have reached the engine and the menu has been rewritten. */
+    const wrote = win.localStorage.getItem("IQPOKYD.CFG");
+    item("IDOK").click();
+    out.storedConfig = await until("IQPOKYD.CFG to be written again", () => {
+      const text = win.localStorage.getItem("IQPOKYD.CFG");
+      return text !== null && text !== wrote ? text : null;
+    }, 5000);
+    out.restored = await handle.client.getSettings();
+    return out;
+  }
+
   /* Read while the iframe is still on the page -- stage.replaceChildren()
      below takes the document with it. */
   const window63 = windowReport();
 
   /* And again at the end, which is the same number only if the mood never
-     moved.  Phase 7.2 is where that becomes something a visitor can see. */
+     moved.  It does move -- INTELIG.FU:532 -- and phase 7.2 is where that
+     became something a visitor sees, in the menu bar and in the mood list. */
   const moodAfter = (await handle.client.getSettings()).mood;
   const sentenceCount = await handle.client.sentenceCount();
+
+  /* Last of all, because it is the only thing here that *changes* the settings
+     rather than reading them: the dialog sets a character, a name and two
+     checkboxes, and the four keyboard shortcuts walk the mood and the
+     character one step each. */
+  const dialog = await dialogReport();
+
   const unfreed = await handle.client.close();
   stage.replaceChildren();
 
   return {
-    kind, loadMs, sentenceCount, unfreed, busySeen, moodAfter,
+    kind, loadMs, sentenceCount, unfreed, busySeen, moodAfter, dialog,
     captionBefore, window: window63, greeting,
     firstState, loadingShown, loadingGone, inputLive, focused,
     turns: turns.length,

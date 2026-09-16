@@ -9,7 +9,28 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 6 — the retro UI — **is complete, 6.1 through 6.5. The exhibit wears
+**Phase:** 7 — settings and state — **is complete, 7.1 through 7.5. IQ Pokyd
+can be set the way he could be set: his own dialog opens on F4, his own
+IQPOKYD.CFG is written next to the page, and the exhibit a visitor comes back to
+is the one they left.** The dialog is `src/app/dialog.ts` over
+`src/app/settings.ts`, which is CNastaveni with the window taken off; the stored
+settings are `src/app/config.ts`, and **they are his file rather than JSON**,
+because his format is a specification with a parser already written against it.
+Four commands that are in no menu at all — F7, F8 and the two with Ctrl — are
+reachable for the first time, which is 7.4 and is the first use the port has made
+of the accelerator table. 7.5 is a decision and not a thing built: `PROFIL.IQP`
+is **not** ported, because the only moment it was ever written is
+`CMfcDlg::OnClose` and a web page has no reliable close. Three tests are new —
+**78 checks** on the dialog and **67** on the settings file, both of them parsed
+back out of the author's own source, and `test/app/chat.test.mjs` grew to **219**
+and still reproduces the golden conversation byte for byte on both visits, now
+with the second one starting from the settings file the first one wrote.
+
+It corrected `pohlavi` for the second and last time: the other value is **2**,
+not 0, on four witnesses — and it matters, because `VSTUP.FU:1070` writes that
+number straight into `Typ_slova::rod`.
+
+**Phase 6** — the retro UI — **is complete, 6.1 through 6.5. The exhibit wears
 the author's own window — his photograph, his menu, his colours and his
 bottom-anchored conversation — and greets the visitor in it before a word is
 typed.** 6.5 answered the two questions it was left holding. The chrome one
@@ -22,9 +43,10 @@ back through the hundred sentences `g_poslednich100vet` keeps — the engine's o
 forgetting stays, his window's does not. Nothing a visitor *sees* moved:
 `scrollToEnd()` pins the newest sentence to the bottom after every turn, so the
 resting view is his to the pixel; what changed is only what a drag upwards does.
-`test/app/chat.test.mjs` is **123 checks** and still reproduces the golden
-conversation byte for byte under them. Phase 7 is next, and the "how faithful
-should the UI be?" question is closed with phase 6.
+`test/app/chat.test.mjs` was **123 checks** at the end of phase 6 and still
+reproduced the golden conversation byte for byte under them; the "how faithful
+should the UI be?" question is closed with phase 6, and phase 7 answered the two
+it left about settings the same way.
 Phase 5 is complete, 5.1 through 5.3, and
 **IQ Pokyd is live at <https://timichal.github.io/pokyd/>.** A twenty-year-old Czech
 Windows program holds a conversation in a browser, at a URL, saying byte for byte what
@@ -654,9 +676,9 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   was wrong with. `node tools/extract-assets.mjs --check` is the byte comparison, and
   it is for this machine, not for CI. Run the extractor rather than editing
   `src/app/assets.ts` or anything under `src/app/assets/`.
-- **And two ask whether the Czech we spell by hand is the author's.** Two modules
-  under `src/app/` do, and only two, because in both places his words are string
-  literals inside a function rather than resources.
+- **And three ask whether the Czech we spell by hand is the author's.** Three
+  modules under `src/app/` do, and only three, because in all three places his
+  words are string literals inside a function rather than resources.
   `node test/app/caption.test.ts` — phase 6.3, a fifth of a second — holds
   `src/app/caption.ts` against `ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI`, which
   builds the status line's fourteen words with `strcat`: it parses both switches
@@ -667,6 +689,19 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   out of the same file *with his `+`s in them*, both `if`s that inflect the three
   CStrings, the `rand()%10` that picks between them, and the LCG read out of
   `src/shim/nahoda.cpp` so the draw cannot drift from the engine's own.
+  `node test/app/settings.test.ts` — phase 7.1, a fifth of a second — does it to
+  `src/app/settings.ts` and `!Prostre/Nastaveni.cpp`, and it is the widest of the
+  three: **78 checks**, of which the four Czech strings are only the last. It
+  parses his twelve `LB_ADDSTRING`s back out of `OnInitDialog`, both
+  `ZOBRAZ_NA_DIALOGU_POLICKO` runs out of his two page functions with their 0s
+  and 1s, and the `IsDlgButtonChecked` pair that writes `pohlavi`, and it holds
+  `checkName` to `ZKONTROLUJ_SPRAVNOST_ZNAKU_VE_JMENE` case by case.
+  `node test/app/config.test.ts` — phase 7.3, **67 checks** — is the fourth and
+  spells no Czech at all, because his settings file has none: it derives every
+  label and every value word from `ZAPIS_NASTAVENI_DO_SOUBORU` and
+  `PRECTI_NASTAVENI_ZE_SOUBORU`, checks the writer and the reader name the same
+  seventeen parameters in the same order, round-trips every character, mood and
+  recursion depth, and breaks the file nine ways to earn each of his refusals.
   `test/app/resources.test.ts` is where the other half lives: it fails if any
   *other* module under `src/app/` starts spelling Czech, in an escape or in UTF-8.
 - **And one asks whether the page works**, which since 5.2 is the question that
@@ -678,8 +713,14 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   conversation — which is how the mood drift becomes something a test can see.
   Since 6.4 the first turn on the screen is the welcome line rather than a typed
   sentence, so it is held out of the golden comparison and checked on its own.
-  **`npm test` runs all thirteen**, in phase order, in a little over two minutes;
-  `node test/run.mjs --quick` keeps the nine that do not launch a browser.
+  Since 7.1 it also opens IDD_NASTAVENI both ways a visitor can — F4 and the
+  menu — walks its two pages, refuses a two-word name, sets a character through
+  it, and presses F7, F8 and Ctrl+F8; and since 7.3 the second visit starts from
+  the IQPOKYD.CFG the first one wrote, which is the one thing only two visits can
+  show. **219 checks**, and the golden transcript still byte for byte under all
+  of them.
+  **`npm test` runs all fifteen**, in phase order, in a little over two minutes;
+  `node test/run.mjs --quick` keeps the eleven that do not launch a browser.
   `npm run typecheck` covers every `.ts` in `src/` and `test/` at once.
 
 ---
@@ -1958,16 +1999,158 @@ All the original assets are in `original/IQ Pokyd/!Prostre/res/`.
 
 ## Phase 7 — Settings and state
 
-Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
+Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`) and the dialog over it
+(`!Prostre/Nastaveni.cpp`). **Done, 7.1 through 7.5**, and 7.5 is a decision
+rather than a thing built.
 
-- [ ] 7.1 Settings dialog: genders, names, character (0–6), mood (1–5), `spisovná čeština`
-      toggle, save-conversation toggle.
-- [ ] 7.2 Mood drift across a session; menu caption updates live.
-- [ ] 7.3 Persist settings to localStorage (the original used `IQPOKYD.CFG`).
-- [ ] 7.4 Mood/character keyboard shortcuts from the original menu
-      (`OnZlepseniNalady` / `OnZhorseniNalady` / `OnZlepseniCharakteru` / `OnZhorseniCharakteru`).
-- [ ] 7.5 Decide whether to port the profile file (`PROFIL.IQP`) — what the bot remembers
-      about you between sessions.
+- [x] 7.1 **Done** — `src/app/dialog.ts` draws IDD_NASTAVENI and
+      `src/app/settings.ts` is CNastaveni with the window taken off: his
+      `OnInitDialog`, his `OnOK`, his two pages, his name check.
+      `node test/app/settings.test.ts` puts **78 checks** on it, every one of
+      them parsed back out of `Nastaveni.cpp` rather than written down twice —
+      the twelve `LB_ADDSTRING`s, the two `ZOBRAZ_NA_DIALOGU_POLICKO` runs with
+      their 0s and 1s, the `IsDlgButtonChecked` pair that writes the gender, and
+      all four Czech strings as runs of CP1250 bytes.
+
+      **The layout of this window *is* the resource script**, which the main
+      window's was not: a modal dialog is laid out by `MapDialogRect` once and
+      nothing moves afterwards, so there is not one measurement in `dialog.ts`.
+      Everything else about it came out of `Nastaveni.cpp` — the two pages his
+      two buttons switch between (a `CTabCtrl` he left commented out at :340),
+      the group captions they relabel, and `ZOBRAZ_NA_DIALOGU_POLICKO`'s
+      `&`↔`~` swap, which is how a hidden control loses its mnemonic and is
+      `accessKey` here.
+
+      **It corrected `pohlavi` again, and this time finished it: the second
+      value is 2, not 0.** 6.3 got half of it off the `if` that prints "muž";
+      the other half is that the `else` branch is a **2**, from four witnesses —
+      `OnOK` (:140-143), `PRECTI_NASTAVENI_ZE_SOUBORU` computing
+      `kodhodnoty-MUZ__+1` off `MUZ__` 3 and `ZENA__` 4, `NASTAV_STANDARDNE`'s
+      own 1, and `PROSTRED.FU:779` inflecting on `== 2`. It matters because
+      `VSTUP.FU:1070` assigns the number straight into `Typ_slova::rod`, where 1
+      and 2 are the genders the paradigms are indexed by: a 0 written there is
+      not a gender at all. The author's own header said "0...muz, 1...zena"
+      (`IQPokyd.h:84`), which is wrong twice over and is where the port's
+      comments got it.
+
+      **Five controls are drawn greyed rather than lying**, by the same rule
+      `src/app/menu.ts` greys a command with no handler: the three keyboard
+      ones, because `EMULUJ_KLAVESNICI` is a whole layout that is not ported and
+      a tick that did not change what a keystroke produces would be worse than a
+      grey one; the standard-cursor one, because the caret it asks for is the
+      DOS underscore the program drew itself; and the tool tips, because the
+      twenty-odd bubbles are `Nastaveni.cpp` literals that nothing shows. The
+      rest are live. **"Používat zvuky" is live and does nothing**, and that is
+      faithful rather than sloppy: the archive ships no `TUKNUTI.WAV`, and the
+      author's own bubble help for that checkbox says in capitals that the value
+      does not matter while the file is missing.
+
+      **Two deviations, both small and both the platform's.** A two-word name
+      got `MessageBox(...,MB_SYSTEMMODAL)` in 2005; `alert()` blocks the whole
+      page, so the same two sentences of his are written into the dialog over
+      the button row and the focus goes to the edit he sent it to. And the frame
+      is ours: phase 6.5 refused to draw an XP title bar on the main window
+      because a maximized window has none, but this one is a `DS_MODALFRAME |
+      WS_CAPTION | WS_SYSMENU` popup that did have one — so it is drawn, in the
+      same XP defaults `chat.css` already dresses IDR_MENU in, carrying the
+      template's own CAPTION and an IDCANCEL close box and nothing invented.
+
+      `pouzivatefekty` also stopped being dead: the checkbox is
+      `NASTAV_VIDITELNOST_EFEKTNICH_PROGRESSBARU` (`PROSTRED.FU:163`) and the
+      two edge bars climb once per sentence, which is `VLAKNO__EFEKTY`'s case 1
+      — `pozice += 100` every 20 ms to 1000 and then off, started by
+      `mfcDlg.cpp:568` and by nothing else in this build.
+- [x] 7.2 **Done, and mostly already done by 6.3.** The caption has moved with
+      `nalada` since phase 6.3, because `ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI`
+      is called after every answer and `nalada` is recomputed from `naladabody`
+      after every sentence (`INTELIG.FU:532`). What 7.1 added is the two other
+      places a visitor now sees the same drift: the mood list box opens on it,
+      and F7/F8 walk it. `test/app/chat.test.mjs` has watched the caption move
+      from `normální` to `výborná` across the golden conversation since 6.3 and
+      now checks the list box agrees with it.
+- [x] 7.3 **Done — and the stored settings are his file, not JSON.**
+      `src/app/config.ts` is `ZAPIS_NASTAVENI_DO_SOUBORU` and
+      `PRECTI_NASTAVENI_ZE_SOUBORU` (`SLOVNIK.FU:2081` and `:1911`), written to
+      `localStorage` under his own `IQPOKYD.CFG`. That is the decision in the
+      phase, and it is not sentiment: his format is a specification with a
+      parser already written against it, and porting the parser is how the port
+      learns what the settings are. JSON would have been a schema of our
+      invention with our own idea of a valid mood.
+
+      `node test/app/config.test.ts` is **67 checks** and almost all of them are
+      derived rather than declared: every label his `fprintf` writes, in order;
+      every `strcmp(parametr,...)` his reader knows, compared with the lines the
+      writer writes, so a file this port wrote would be read by the 2005 binary;
+      the four value vocabularies parsed out of his `strcmp` chains; the whole
+      round trip for all 35 characters and moods and all five recursion depths
+      with their check digit; and nine ways to break the file, each one of his
+      `goto CHYBAVSOUBORU`s. His three return values are kept — 0 no file, 1
+      read, 2 somebody has been playing with it — and `mfcDlg.cpp:438`'s answer
+      to a 2 is kept with them: start again from `NASTAV_STANDARDNE`.
+
+      Two things fell out of writing it. **His reader trusts the first two lines
+      absolutely** (`:1931-1934` skips them unread), so a file that has lost its
+      header is not refused — the third line is eaten in the header's place and
+      whatever it said is quietly not applied. Found by expecting a refusal and
+      not getting one; kept, and written down in the test. And **the settings
+      file is the one place in this port that spells Czech without diacritics**,
+      because he wrote it that way: `prumerny` in the file, `průměrný` on the
+      screen.
+
+      **A first visit does not open the settings dialog, and in 2005 it did.**
+      `PRECTI_NASTAVENI_ZE_SOUBORU` returning 0 or 2 set `g_zobrazitnastaveni`
+      and the background thread sent the window `ID_NASTAVENI`
+      (`PROSTRED.FU:498`). Three reasons it is not put back: that thread is in
+      `Aplikace/Prostred/`, which `BEZ_PROSTREDI` drops whole, so it is absent
+      here for the same reason the loading window has no Cancel button; every
+      visitor with a clean browser profile is a "first run" on the web, where in
+      2005 it happened once per installation; and the front door of an exhibit
+      should be the conversation. F4 is one keystroke away. The one thing lost
+      is the prompt itself — `PokydChatHandle.configStatus()` still reports his
+      three values, so a page that wants to act on them can.
+- [x] 7.4 **Done**, and it is four lines of `mfcDlg.cpp` (:944-972) plus a
+      table. `src/app/menu.ts` now binds IDR_ZKRATKY as well as drawing
+      IDR_MENU, by the same rule: an accelerator whose command has no handler is
+      not bound, exactly as an item with no command is greyed. F7 and F8 move
+      `nalada` through `pokyd_set_mood` — which is his two lines, the mood and
+      then `SPOCITEJ_NALADABODY_Z_NALADY` — and Ctrl+F7 and Ctrl+F8 move
+      `charakter` through the settings, which has no second field to recompute.
+      **These four are in no menu at all**, so before 7.4 the accelerator table
+      was the only part of the archive the port had read and not used.
+- [x] 7.5 **Decided: `PROFIL.IQP` is not ported**, and the decision has three
+      legs, the first of which is the platform's rather than a preference.
+
+      What the file holds is `g_posledniodpovedi` (`SLOVNIK.FU:1891`), the
+      history of answers it has already given — which
+      `VYBER_JEDNU_ODPOVED_Z_ODPOVEDI_PODLE_HISTORIE` consults at
+      `INTELIG.FU:59` and `:95` when it picks between equally good answers. So
+      it is real conversation state and not a statistic, and restoring it would
+      visibly change what IQ Pokyd says.
+
+      1. **The moment it was written does not exist here.** The only caller of
+         `ZAPIS_PROFIL_DO_SOUBORU` is `CMfcDlg::OnClose` (`mfcDlg.cpp:633`). A
+         web page has no reliable close: `beforeunload` is best-effort and a
+         mobile tab is usually killed rather than closed. A profile that is
+         saved most of the time is worse than one that is not saved at all,
+         because "what it remembers about you" would then depend on how you left.
+      2. **There is no door in the API for it.** `pokyd_export_cache` is
+         `SLOVNIK.TMP` by name (`pokyd_api.h`), so this would need two more
+         exports, a protocol pair and a second store — for a file of a few
+         hundred bytes.
+      3. **It would cost the port's strongest check.** `test/app/chat.test.mjs`
+         reproduces the golden transcript on a first visit *and* on a second,
+         and that is the claim that the browser and the 2005 binary are the same
+         program. A persisted answer history makes the second visit a different
+         conversation by design. The golden transcript was recorded from the
+         native driver, which never writes the file either — so not porting it
+         is also what keeps the two runtimes comparable.
+
+      Reading it is already wired and stays: `pokyd_api.cpp:209` calls
+      `PRECTI_PROFIL_ZE_SOUBORU` in the loading sequence, which is
+      `POKYD_PHASE_EXTERNAL`, and it returns 0 when there is no file — which is
+      every visit. If a later phase wants it, the honest shape is the one 4.4
+      already has for `SLOVNIK.TMP`: export on a `visibilitychange`, key it
+      beside the dictionary hash, and give the test a switch to ignore it.
 
 ## Phase 8 — Extras
 
@@ -2024,12 +2207,19 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
   visitor sees and `src/app/main.ts` is what `index.html` runs — phase 5.1, and
   `src/README.md` has the table and the three things worth knowing before changing any
   of them. `npm run dev` serves it, `npm run build` writes `dist/`.
+- The settings: `src/app/settings.ts` is `CNastaveni` with the window taken off —
+  his `OnInitDialog`, his `OnOK`, his name check and the two lists of controls his
+  two pages show — and `src/app/dialog.ts` draws IDD_NASTAVENI over it (phase
+  7.1). `src/app/config.ts` is `IQPOKYD.CFG`, his own file format, in
+  `localStorage` under his own file name (phase 7.3). Read the header of
+  `settings.ts` before touching any of the three: it has the four things reading
+  the C got right, `pohlavi` being 1 or 2 among them.
 - Deploying it: `.github/workflows/deploy.yml` — phase 5.3. It builds the engine, the
   rule base and the page from source on a Linux runner, gates on the golden
   conversation, and publishes `dist/` to GitHub Pages. Nothing compiled is committed,
   which is why it reproduces the whole chain rather than uploading an artefact.
-- All the tests: `npm test`, which is `node test/run.mjs` — eleven programs in phase
-  order, `--quick` for the seven that do not launch a browser. The one that says the
+- All the tests: `npm test`, which is `node test/run.mjs` — fifteen programs in phase
+  order, `--quick` for the eleven that do not launch a browser. The one that says the
   port works is `test/app/chat.test.mjs`, phase 5.2: it builds the app, drives the
   built page through the golden conversation in Chrome and compares what was on the
   screen with `test/golden/rozhovor.txt`.

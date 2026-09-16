@@ -47,6 +47,28 @@
    CMfcDlg::OnCtlColor (mfcDlg.cpp:917-922) gives CTLCOLOR_EDIT the near-black
    g_barvapozadizadavanivety and the same yellow the human's sentences are in.
 
+   **Phase 7 added the settings**, and nothing about the window above changed
+   for it.  Three things are new here and each is one of the author's:
+
+     - **IDD_NASTAVENI opens.**  ID_NASTAVENI, from the menu, from the status
+       line that carries the same command, and from F4 -- src/app/dialog.ts
+       draws it, src/app/settings.ts is his OnOK, and `openSettings` below is
+       CMfcDlg::OnNastaveni, `static BYTE ukazanonastaveni` included.
+     - **the settings are read and written.**  src/app/config.ts is his
+       IQPOKYD.CFG, in localStorage; it is read after the command line and
+       before the greeting, exactly where mfcDlg.cpp:435 reads it, and written
+       by OnOK and by nothing else.
+     - **four keys move the mood and the character**, which is the whole of
+       phase 7.4: F7, F8 and the two with Ctrl are in IDR_ZKRATKY and in no
+       menu at all, so src/app/menu.ts binds the table as well as the items.
+
+   The window reads all of it back out of the engine rather than keeping a copy:
+   `refreshCaption` is what a settings change goes through, and `applyWindow`
+   under it is NASTAV_VIDITELNOST_POZADI and NASTAV_VIDITELNOST_EFEKTNICH_
+   PROGRESSBARU.  So the two edge bars and the black background are the
+   engine's `g_nastaveni` on the screen, and not a second copy of it that could
+   drift.
+
    mountChat(document.body, urls) is still the whole of using it, and the four
    states are still published as `data-state` on the root.
 
@@ -64,9 +86,12 @@ import type { PokydSettings } from "../web/protocol.ts";
 import { DIALOGS, PALETTE, WINDOW_LAYOUT, dluToPx } from "./resources.ts";
 import { BITMAP_ASSETS } from "./assets.ts";
 import { mountMenu } from "./menu.ts";
-import { settingsCaption } from "./caption.ts";
+import { settingsCaption, CHARACTERS } from "./caption.ts";
 import { openingGreeting } from "./greeting.ts";
 import { dialogBaseUnits, emForCellHeight } from "./dlu.ts";
+import { mountSettings } from "./dialog.ts";
+import { MOODS } from "./settings.ts";
+import { CONFIG_BROKEN, loadStored, read, store } from "./config.ts";
 
 /* ----------------------------------------------------- the author's strings */
 
@@ -133,9 +158,15 @@ export interface PokydChatOptions extends PokydCachedStartOptions {
   moduleUrl: string | URL;
   /** `prikaz_nezobrazovatpozadi`, the author's own `-bezpozadi` switch
    *  (PROSTRED.FU:100, :337).  Black instead of the photograph, and the standard
-   *  3D face instead of the grey tile.  Phase 7.1 turns it into a checkbox;
-   *  until then src/app/main.ts reads it off the query string, which is the
-   *  nearest thing a page has to a command line. */
+   *  3D face instead of the grey tile.  src/app/main.ts reads it off the query
+   *  string, which is the nearest thing a page has to a command line.
+   *
+   *  Since phase 7.1 it is also a checkbox on IDD_NASTAVENI, so this only *sets*
+   *  the setting -- what the window then wears is read back out of the engine
+   *  like every other setting, which is what keeps the two from disagreeing.
+   *  ROZEBER_PRIKAZOVY_RADEK ran before PRECTI_NASTAVENI_ZE_SOUBORU for the same
+   *  reason (SLOVNIK.FU:2033: the stored value is only honoured if the command
+   *  line did not already set it). */
   noBackground?: boolean;
   /** Every state change, in the order the root element's `data-state` shows
    *  them.  For a page that wants to react to one; the DOM is the other half of
@@ -157,6 +188,10 @@ export interface PokydChatHandle {
    *  the engine's answer under it.  Resolves with the answer. */
   say(text: string): Promise<string>;
   state(): PokydChatState;
+  /** PRECTI_NASTAVENI_ZE_SOUBORU's own three return values for the stored
+   *  IQPOKYD.CFG this visit started from: 0 no file, 1 read, 2 broken
+   *  (phase 7.3, src/app/config.ts).  0 until the engine is up. */
+  configStatus(): number;
   /** Shut the engine down and take the page off.  pokyd_api.h allows the
    *  shutdown only after a load that succeeded, so a failed start terminates
    *  the worker instead -- src/web/engine.ts is what refuses the other way. */
@@ -251,13 +286,24 @@ export function mountChat(
   style.setProperty("--pokyd-label-height", labelBox.height + "px");
 
   /* The menu bar is outside the client rectangle, which is why it is outside
-     the element the background is painted on. */
+     the element the background is painted on.  Since phase 7.1 it also carries
+     the author's accelerator table: IDR_ZKRATKY names the same commands, and
+     four of them -- the mood and the character, phase 7.4 -- are in no menu at
+     all and are reachable only that way. */
   const menu = mountMenu(element, {
     commands: {
       /* JDI_NA_WWW_STRANKU, mfcDlg.cpp:1005.  His URL, his scheme. */
       ID_NAPOVEDA_INTERNET: (): void => {
         window.open(HOMEPAGE, "_blank", "noopener,noreferrer");
       },
+      /* CMfcDlg::OnNastaveni, mfcDlg.cpp:792. */
+      ID_NASTAVENI: (): void => { openSettings(); },
+      /* mfcDlg.cpp:944-972.  1 is the best mood and 0 the coldest character, so
+         "better" counts down in both and the two bounds are his. */
+      ID_ZLEPSENINALADY: (): void => { stepMood(-1); },
+      ID_ZHORSENINALADY: (): void => { stepMood(1); },
+      ID_ZLEPSENICHARAKTERU: (): void => { stepCharacter(-1); },
+      ID_ZHORSENICHARAKTERU: (): void => { stepCharacter(1); },
     },
   });
 
@@ -343,11 +389,18 @@ export function mountChat(
      them when pouzivatefekty is 1, which NASTAV_STANDARDNE sets to 0.  They are
      in the DOM because they are two of the eight controls; VLAKNO__EFEKTY, which
      is what makes them move, is not this phase's. */
+  /* Phase 7.1 filled them in: pouzivatefekty is a checkbox now, and
+     NASTAV_VIDITELNOST_EFEKTNICH_PROGRESSBARU is `applyWindow` below.  They are
+     PBS_VERTICAL | PBS_SMOOTH, so each one is a trough with a fill that climbs
+     from the bottom -- `effect()` is VLAKNO__EFEKTY's case 1. */
   const effects = ["IDC_EFEKTPROGRES1", "IDC_EFEKTPROGRES2"].map((id) => {
     const bar = document.createElement("div");
     bar.className = "pokyd-effect";
     bar.dataset["control"] = id;
     bar.hidden = true;
+    const fill = document.createElement("div");
+    fill.className = "pokyd-effect-fill";
+    bar.appendChild(fill);
     return bar;
   });
 
@@ -359,6 +412,16 @@ export function mountChat(
   /* --------------------------------------------------------------- the state */
 
   let state: PokydChatState = "loading";
+  /** g_nastaveni as the page last read it.  Null until the engine is up: there
+   *  is nothing to read before pokyd_init, which is also why phase 6.4's
+   *  greeting waits for the load. */
+  let settings: PokydSettings | null = null;
+  /** What PRECTI_NASTAVENI_ZE_SOUBORU said about the stored IQPOKYD.CFG: 0 no
+   *  file, 1 read, 2 broken (phase 7.3).  Nothing on the window shows it -- the
+   *  MessageBox and the dialog he opened on 0 and 2 were both the background
+   *  thread's, which this build does not have -- so it is on the handle, where
+   *  a page and a test can ask. */
+  let configStatus = 0;
 
   function setState(next: PokydChatState): void {
     state = next;
@@ -379,18 +442,140 @@ export function mountChat(
    *  greeting is inflected for the two pohlavi, and one round trip is enough
    *  for both. */
   async function refreshCaption(): Promise<PokydSettings | null> {
-    let settings: PokydSettings;
+    let fresh: PokydSettings;
     try {
-      settings = await pokyd.getSettings();
+      fresh = await pokyd.getSettings();
     } catch {
       return null;      /* deliberately nothing */
     }
+    settings = fresh;
     try {
-      menu.setCaption(settingsCaption(settings));
+      menu.setCaption(settingsCaption(fresh));
     } catch {
       /* charakter or nalada out of range: keep the caption we had */
     }
-    return settings;
+    applyWindow(fresh);
+    return fresh;
+  }
+
+  /** The other two things CNastaveni::OnOK does to the window
+   *  (Nastaveni.cpp:205-206), and they are two functions of the author's:
+   *  NASTAV_VIDITELNOST_EFEKTNICH_PROGRESSBARU (PROSTRED.FU:163) shows or hides
+   *  the two edge bars off pouzivatefekty, and NASTAV_VIDITELNOST_POZADI (:337)
+   *  swaps the photograph and the grey tile for plain black and the 3D face.
+   *
+   *  He called the second one only when the checkbox had actually changed --
+   *  `prekreslipozadi`, :188-197 -- because it reloads a 900x459 bitmap.  A
+   *  stylesheet does not reload anything to change a class, so this runs after
+   *  every settings read instead, which is also how the setting stays the
+   *  engine's rather than the page's. */
+  function applyWindow(current: PokydSettings): void {
+    if (current.cmdNoBackground !== 0) element.dataset["background"] = "off";
+    else delete element.dataset["background"];
+    for (const bar of effects) bar.hidden = current.useEffects === 0;
+  }
+
+  /* --------------------------------------------------------------- the effects */
+
+  let effectTimer: ReturnType<typeof setInterval> | undefined;
+
+  /** VLAKNO__EFEKTY's case 1, PROSTRED.FU:406-415: `pozice` climbs from 0 to
+   *  1000 in steps of 100 with a Sleep(20) between them, and at the top the
+   *  action clears itself and the bars go back to empty.  Eleven frames, 220
+   *  milliseconds.  mfcDlg.cpp:568 is what starts it -- one sentence, one
+   *  climb -- and there is nothing else in a BEZ_PROSTREDI build that does:
+   *  case 2, the double blink, is only ever set by NAHLAS_CHYBU (DEBUG.FU:20).
+   *
+   *  His thread ran whether or not the effect was on and checked the setting
+   *  inside the loop; a page has no thread to keep running, so it checks here
+   *  and starts nothing. */
+  function effect(): void {
+    if (settings === null || settings.useEffects === 0) return;
+    if (effectTimer !== undefined) clearInterval(effectTimer);
+    let position = 0;
+    const paint = (): void => {
+      for (const bar of effects) {
+        const fill = bar.firstElementChild as HTMLElement | null;
+        if (fill !== null) fill.style.height = (position / 10) + "%";
+      }
+    };
+    paint();
+    effectTimer = setInterval((): void => {
+      position += 100;
+      if (position > 1000) {
+        position = 0;
+        paint();
+        if (effectTimer !== undefined) clearInterval(effectTimer);
+        effectTimer = undefined;
+        return;
+      }
+      paint();
+    }, 20);
+  }
+
+  /* -------------------------------------------------------- the settings dialog */
+
+  /** `static BYTE ukazanonastaveni`, mfcDlg.cpp:793-799: one at a time. */
+  let dialog: { remove(): void } | null = null;
+
+  /** CMfcDlg::OnNastaveni.  The settings it fills the controls from are the
+   *  ones the page last read, which is what g_nastaveni was for him. */
+  function openSettings(): void {
+    if (dialog !== null || settings === null) return;
+    const open = mountSettings(element, {
+      settings,
+      onAccept: (result): void => {
+        dialog = null;
+        void (async (): Promise<void> => {
+          /* CNastaveni::OnOK, :163-168: the whole struct, and then the mood on
+             its own if the list box moved -- pokyd_set_settings copies
+             naladabody verbatim and pokyd_set_mood is what recomputes it. */
+          await pokyd.setSettings(result.settings);
+          if (result.mood !== null) await pokyd.setMood(result.mood);
+          /* :204-206, in his order. */
+          const applied = await refreshCaption();
+          /* :207 -- ZAPIS_NASTAVENI_DO_SOUBORU(g_nastaveni), and it is the
+             engine's own struct rather than the dialog's, because the mood it
+             writes has been through SPOCITEJ_NALADABODY_Z_NALADY by now.
+             Phase 7.3: the file is a localStorage entry under his own name. */
+          if (applied !== null) store(applied);
+          input.focus();
+        })().catch((): void => {});
+      },
+      onCancel: (): void => {
+        dialog = null;
+        input.focus();
+      },
+    });
+    dialog = open;
+  }
+
+  /* ------------------------------------------------------- the four shortcuts */
+
+  /** OnZlepseniNalady / OnZhorseniNalady, mfcDlg.cpp:944-958.  His bounds, and
+   *  his two lines: the mood, then naladabody recomputed from it, which is
+   *  pokyd_set_mood exactly. */
+  function stepMood(by: number): void {
+    if (settings === null) return;
+    const next = settings.mood + by;
+    if (next < 1 || next > MOODS.length) return;
+    void (async (): Promise<void> => {
+      await pokyd.setMood(next);
+      await refreshCaption();
+    })().catch((): void => {});
+  }
+
+  /** OnZlepseniCharakteru / OnZhorseniCharakteru, :960-972.  charakter has no
+   *  naladabody to recompute, so it goes through the settings. */
+  function stepCharacter(by: number): void {
+    const base = settings;
+    if (base === null) return;
+    const next = base.character + by;
+    if (next < 0 || next >= CHARACTERS.length) return;
+    void (async (): Promise<void> => {
+      await pokyd.setSettings({ ...base, character: next });
+      await refreshCaption();
+    })().catch((): void => {});
   }
 
   /** Phase 6.5.  The box scrolls now, and this is what keeps the view his: the
@@ -469,7 +654,38 @@ export function mountChat(
       const seed = startOptions.seed ?? Math.floor(Date.now() / 1000);
       const report = await startCached(pokyd, { ...startOptions, seed });
       setState("ready");
-      const settings = await refreshCaption();
+      /* ROZEBER_PRIKAZOVY_RADEK, PROSTRED.FU:100: the switch sets the setting,
+         and everything downstream reads the setting.  It cannot be done before
+         the load -- there is no g_nastaveni to read until pokyd_init has run --
+         so it is done here, and `applyWindow` in refreshCaption is what puts it
+         on the window. */
+      if (noBackground === true) {
+        const current = await pokyd.getSettings();
+        if (current.cmdNoBackground === 0) {
+          await pokyd.setSettings({ ...current, cmdNoBackground: 1 });
+        }
+      }
+      /* PRECTI_NASTAVENI_ZE_SOUBORU, mfcDlg.cpp:435-442, and in his place in
+         the sequence: after the command line and *before* the greeting, which
+         is inflected by the two pohlavi the file may have just changed.  His
+         three cases are kept but for one -- a missing or broken file set
+         g_zobrazitnastaveni, and the background thread that opened the dialog
+         on it (PROSTRED.FU:498) is not in a BEZ_PROSTREDI build.  PLAN.md 7.3
+         has the argument for not putting it back. */
+      {
+        const base = await pokyd.getSettings();
+        const stored = read(loadStored(), base);
+        configStatus = stored.status;
+        /* :438 -- a broken file is NASTAV_STANDARDNE again, which here is the
+           settings the engine already has, because `read` applies nothing
+           unless it got to the end.  naladabody is recomputed from nalada by
+           his own reader (SLOVNIK.FU:1999) and pokyd_set_settings copies both
+           verbatim, so a good file is one call and not two. */
+        if (stored.status !== CONFIG_BROKEN) {
+          await pokyd.setSettings(stored.settings);
+        }
+      }
+      const opening = await refreshCaption();
       /* NAPIS_UVODNI_UVITANI, mfcDlg.cpp:443 -- one turn on the screen that
          nobody typed anything to get.  He drew it *before* NactiSlovniky(), so
          it was on the window while the dictionary inflected; here it waits for
@@ -477,7 +693,7 @@ export function mountChat(
          the page cannot ask until the engine is up.  The number it is picked
          with is not the engine's rand() and never was -- see
          src/app/greeting.ts. */
-      if (settings !== null) turn("pokyd", openingGreeting(seed, settings));
+      if (opening !== null) turn("pokyd", openingGreeting(seed, opening));
       input.focus();
       return report;
     } catch (e) {
@@ -504,6 +720,9 @@ export function mountChat(
     }
 
     turn("human", sentence);
+    /* mfcDlg.cpp:568 -- one sentence, one climb up the two edge bars.  It is
+       the only thing in this build that ever starts one. */
+    effect();
     setState("busy");
     try {
       const answer = await pokyd.say(sentence);
@@ -536,10 +755,13 @@ export function mountChat(
     ready,
     say,
     state: (): PokydChatState => state,
+    configStatus: (): number => configStatus,
     close: async (): Promise<void> => {
       loading.remove();
       loadingSlot.remove();
       menu.remove();
+      if (dialog !== null) { dialog.remove(); dialog = null; }
+      if (effectTimer !== undefined) clearInterval(effectTimer);
       try {
         await ready;
         await pokyd.close();

@@ -403,6 +403,19 @@ body {
   background: #fff;
 }
 
+/* PBS_VERTICAL: the fill climbs from the bottom.  VLAKNO__EFEKTY (:406-415)
+   sets the position eleven times over 220 ms and src/app/chat.ts does the
+   counting; the blue is COLOR_HIGHLIGHT, the same one src/web/loading.ts fills
+   its own bar with. */
+.pokyd-effect-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  background: #316ac5;
+}
+
 .pokyd-effect[data-control="IDC_EFEKTPROGRES1"] { left: 0; }
 .pokyd-effect[data-control="IDC_EFEKTPROGRES2"] { right: 0; }
 
@@ -460,3 +473,206 @@ body {
 /* PROSTRED.FU:341 -- with no background the sub-window is a plain
    GetSysColor(COLOR_3DFACE). */
 .pokyd[data-background="off"] .pokyd-loading { background-image: none; }
+
+
+/* ================================================= the settings dialog, 7.1 */
+
+/* IDD_NASTAVENI, and the same rule as everything above: not a decision in
+   sight.  Every rectangle on it is the author's own dialog units, turned into
+   pixels by src/app/dialog.ts through the same MapDialogRect arithmetic phase
+   6.3 measures the main window with, and set as inline styles -- so there is no
+   position, no width and no height in this section at all.
+
+   What is here is the paint.  OnCtlColor (Nastaveni.cpp:306-312) hands every
+   control on this dialog g_stetecpozadipodokna, which is the IDB_POZADIMALE
+   tile the loading window already wears, with SetBkMode(TRANSPARENT) over it --
+   so the dialog is that tile, the text sits straight on it, and the two edits
+   and the two list boxes are the only controls that keep a background of their
+   own, because they are exactly the ones his `if` sends to the default handler.
+
+   The frame is ours, and phase 7.1's one deviation: a DS_MODALFRAME popup with
+   WS_CAPTION and WS_SYSMENU had a title bar, a close box and a border, all of
+   them drawn by the theme rather than by the program.  They are drawn here in
+   the same XP defaults IDR_MENU is dressed in above -- #ece9d8, #316ac5,
+   #aca899 -- and PLAN.md 7.1 has the argument for why this window gets a frame
+   and the main one, being maximized, does not. */
+
+.pokyd-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* DoModal disables the window underneath rather than dimming it, but a page
+     has no grey-out of its own and a modal that does not look modal is a trap.
+     Barely there, and it is the only pixel in this section that is not his. */
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.pokyd-dialog-frame {
+  max-width: calc(100% - 2 * var(--pokyd-margin));
+  max-height: calc(100% - 2 * var(--pokyd-margin));
+  overflow: auto;
+  color: #000;
+  background-color: #ece9d8;
+  background-image: var(--pokyd-tile);
+  background-repeat: repeat;
+  /* DS_MODALFRAME: a raised 3D edge and a drop shadow, the same two the
+     loading sub-window has. */
+  border: 1px solid #404040;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #aca899,
+    4px 4px 10px rgba(0, 0, 0, 0.6);
+}
+
+/* PROSTRED.FU:341 again -- with no background the sub-window is a plain
+   GetSysColor(COLOR_3DFACE), and so is this one. */
+.pokyd[data-background="off"] .pokyd-dialog-frame { background-image: none; }
+
+.pokyd-dialog-caption {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 3px 3px 3px 6px;
+  background: #316ac5;
+  color: #fff;
+  font: bold 12px/1.5 Tahoma, "Segoe UI", system-ui, sans-serif;
+}
+
+.pokyd-dialog-title { flex: 1 1 auto; }
+
+.pokyd-dialog-close {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 15px;
+  padding: 0;
+  color: #000;
+  background: #ece9d8;
+  border: 1px solid #0b3a8a;
+  border-radius: 2px;
+  font: 11px/1 Tahoma, "Segoe UI", system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.pokyd-dialog-close:hover { background: #f6f4ea; }
+
+/* The client area of the dialog, which is what MapDialogRect's coordinates are
+   measured inside.  Its height is set by dialog.ts and its width is the
+   frame's. */
+.pokyd-dialog-body {
+  position: relative;
+  overflow: hidden;
+}
+
+.pokyd-dialog-item {
+  position: absolute;
+  margin: 0;
+}
+
+.pokyd-dialog-item[hidden] { display: none; }
+
+/* SS_LEFT / SS_CENTER / SS_RIGHT, and SetBkMode(TRANSPARENT). */
+.pokyd-dialog-static {
+  display: block;
+  background: none;
+}
+
+.pokyd-dialog-static label { display: block; }
+
+/* BS_GROUPBOX.  A fieldset is the shape Windows draws: a sunken hairline with
+   the caption sitting in the gap at the top. */
+.pokyd-dialog-group {
+  padding: 0;
+  border: 1px solid #aca899;
+  border-top-color: #fff;
+  border-left-color: #fff;
+  background: none;
+  /* Painted before the controls it surrounds and never on top of them: it is
+     a box drawn round them, not a container. */
+  pointer-events: none;
+}
+
+/* BS_CENTER, IQPokyd.rc: both group boxes centre their caption. */
+.pokyd-dialog-group legend {
+  margin: 0 auto;
+  padding: 0 4px;
+}
+
+/* BS_AUTOCHECKBOX and BS_AUTORADIOBUTTON. */
+.pokyd-dialog-check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pokyd-dialog-check input { flex: 0 0 auto; margin: 0; }
+.pokyd-dialog-check span { flex: 1 1 auto; }
+
+/* The two controls OnCtlColor sends to the default handler: CTLCOLOR_EDIT and
+   CTLCOLOR_LISTBOX keep the system's own white. */
+.pokyd-dialog-edit,
+.pokyd-dialog-list {
+  color: #000;
+  background: #fff;
+  border: 1px solid #7f9db9;
+  border-radius: 0;
+  font: inherit;
+}
+
+.pokyd-dialog-edit { padding: 0 2px; }
+.pokyd-dialog-list { padding: 0; }
+
+.pokyd-dialog-button {
+  padding: 0;
+  color: #000;
+  background: #ece9d8;
+  border: 1px solid #707070;
+  border-radius: 2px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pokyd-dialog-button:hover:not(:disabled) { background: #f6f4ea; }
+.pokyd-dialog-button:active:not(:disabled) { background: #dcd9c8; }
+
+/* BS_DEFPUSHBUTTON: IDOK wears the heavier frame, as it does in the main
+   window. */
+.pokyd-dialog-default { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); }
+
+/* SetState(TRUE), Nastaveni.cpp:345 and :390 -- the page you are on is a button
+   held down. */
+.pokyd-dialog-held {
+  background: #dcd9c8;
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* The five controls this port draws and cannot honour, which are named in
+   src/app/dialog.ts with the reason for each.  Greyed, exactly as a menu
+   command with no handler is. */
+.pokyd-dialog-item input:disabled { opacity: 0.6; }
+.pokyd-dialog-unimplemented { color: #6b6b60; }
+
+.pokyd-dialog-item:focus-visible,
+.pokyd-dialog-item input:focus-visible,
+.pokyd-dialog-close:focus-visible {
+  outline: 2px solid #316ac5;
+  outline-offset: 1px;
+}
+
+/* The one MessageBox this dialog had (:148, :157), written into the dialog
+   instead -- a browser's alert() would block the page and say the same words.
+   Over the button row, which is where a visitor is looking when it happens. */
+.pokyd-dialog-refusal {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  padding: 6px 8px;
+  background: #ffffe1;
+  border: 1px solid #a12b2b;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.pokyd-dialog-refusal strong { display: block; color: #a12b2b; }
+.pokyd-dialog-refusal p { margin: 0.25em 0 0; }
