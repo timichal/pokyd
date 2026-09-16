@@ -9,11 +9,22 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 6 — the retro UI — **is under way: 6.1 through 6.4 are done, and the
-exhibit now wears the author's own window — his photograph, his menu, his colours
-and his bottom-anchored conversation — and greets the visitor in it before a word
-is typed.** Only 6.5 is left, and it is one question rather than a piece of work:
-what to do about a window that forgets.
+**Phase:** 6 — the retro UI — **is complete, 6.1 through 6.5. The exhibit wears
+the author's own window — his photograph, his menu, his colours and his
+bottom-anchored conversation — and greets the visitor in it before a word is
+typed.** 6.5 answered the two questions it was left holding. The chrome one
+answered itself: the page is a *maximized* window, and a maximized window has no
+title bar and no desktop, so there was nothing to draw and no XP frame is going
+in. The other is **the first and only deliberate deviation in the window**: the
+transcript scrolls. `PREFORMATUJ_TEXTY_...`:962 stopped drawing at the top inset,
+so in 2005 the beginning of a long conversation was gone; here the box scrolls
+back through the hundred sentences `g_poslednich100vet` keeps — the engine's own
+forgetting stays, his window's does not. Nothing a visitor *sees* moved:
+`scrollToEnd()` pins the newest sentence to the bottom after every turn, so the
+resting view is his to the pixel; what changed is only what a drag upwards does.
+`test/app/chat.test.mjs` is **123 checks** and still reproduces the golden
+conversation byte for byte under them. Phase 7 is next, and the "how faithful
+should the UI be?" question is closed with phase 6.
 Phase 5 is complete, 5.1 through 5.3, and
 **IQ Pokyd is live at <https://timichal.github.io/pokyd/>.** A twenty-year-old Czech
 Windows program holds a conversation in a browser, at a URL, saying byte for byte what
@@ -996,9 +1007,15 @@ Specific things that will bite. Each has a task attached in the phases below.
       plausibly archive material and it is not in the Phase 6.2 asset list, so nothing
       downstream depends on it — but if the original archive turns up, those five are the
       files to re-add, not just `GRAMATIK.IQZ`.
-- [ ] How faithful should the UI be? The original's assets are all here — 1.2 MB background
-      bitmap, custom TTF, menu bitmaps, and `IQPokyd.rc` with exact dialog layouts. Decide at
-      Phase 6 once there's something running.
+- [x] ~~How faithful should the UI be?~~ **Answered by phase 6, and the answer is
+      "his, to the pixel, with one deviation."** Everything a visitor sees is read
+      from the archive — 6.1's `IQPokyd.rc` parse, 6.2's eighteen decoded images,
+      the `PROSTRED.PR` colours and the `PROSTRED.FU` layout — and 6.5 recorded
+      the single place the web is allowed to differ: the transcript scrolls,
+      where his was clipped at the top inset. No window chrome and no XP frame,
+      because the page is a maximized window and a maximized window has none. The
+      custom TTF turned out not to be a font (6.2), so the font work is a CSS
+      stack and not an asset.
 - [ ] Do we want the debug/cheat panel (`Ctrl` shortcuts, `debugnastaveni.cpp`,
       `Debug/CHEAT.FU`)? It exposes mood points, last subject/predicate/object. Fun for a
       museum piece. Low priority.
@@ -1889,15 +1906,55 @@ All the original assets are in `original/IQ Pokyd/!Prostre/res/`.
       `src/app/` spells Czech was looking for `\uXXXX` escapes, and this
       repository writes its Czech in UTF-8, so it had been passing vacuously. It
       now looks for both, and covers `main.ts` and `assets.ts` as well.
-- [ ] 6.5 Decide how far to take it — window chrome? XP styling? (See open questions.)
+- [x] 6.5 **Done, and it decided two things — one of them the only deliberate
+      deviation in the window.**
 
-      6.3 sharpened it into one concrete question, and it is not chrome: **the
-      window forgets.** `PREFORMATUJ_TEXTY_...`:962 stops drawing the moment a
-      sentence would cross the top inset, so there is no scrollbar and the
-      beginning of a long conversation is simply gone. That is exactly what
-      happened in 2005 and it is a real loss on a web page, where scrolling back
-      is what a visitor will try first. Everything else in 6.5 is decoration; this
-      one decides whether the exhibit is a museum piece or a program.
+      **The transcript scrolls.** `PREFORMATUJ_TEXTY_...`:962 breaks out of the
+      draw loop the moment a sentence would cross the top inset, so in 2005 there
+      was no scrollbar and the beginning of a long conversation was simply gone:
+      the height of the window *was* how much history there was. That is kept
+      everywhere except the last clause. `overflow: hidden` became `overflow-y:
+      auto`, and a visitor who drags upwards now reaches the hundred sentences of
+      `g_poslednich100vet` — the engine's own forgetting, which stays, and which
+      is therefore exactly how far back the drag goes.
+
+      The argument for breaking fidelity here, since it is the first time this
+      port has: a web page whose scroll gesture does nothing does not read as
+      faithful, it reads as broken. Fidelity is what a visitor *sees*, and
+      nothing a visitor sees has moved — `scrollToEnd()` pins the newest
+      sentence to the bottom after every turn, so the resting view is his to the
+      pixel and a screenshot of this page and a screenshot of 2005 are the same
+      picture. What changed is only what a gesture he had no input device for
+      now does. `chat.css`'s header carries the reasoning, `src/README.md` lists
+      it among the things to know before touching the file, and
+      `test/app/chat.test.mjs` holds it to the claim: **123 checks**, and the
+      golden transcript still byte for byte under them.
+
+      Two mechanics were not obvious and are worth not rediscovering.
+      `justify-content: flex-end` — which is what 6.3 bottom-anchored the stack
+      with — cannot be used in a scroll container: the overflow goes past the
+      *start* edge, which no browser will scroll to. The stack is bottom-aligned
+      with `margin-block-start: auto` on the oldest turn instead, which collapses
+      to zero the moment the content is taller than the box. And
+      `scrollbar-gutter: stable`, because the author reserved fifteen pixels off
+      the wrap width (`:856`) precisely so that lines would not re-wrap — a
+      scrollbar appearing halfway through a conversation would have re-wrapped
+      every line above it. The box is also `tabIndex = 0` with a name on it,
+      because a scroll container Chrome will not focus is history reachable by
+      mouse alone.
+
+      **The chrome question is answered by having no chrome.** The page is a
+      *maximized* window — `IDR_MENU` across the top of the viewport, the client
+      rectangle filling the rest — and a maximized window has no title bar and
+      no desktop behind it. So there was nothing to draw, and no XP frame, fake
+      caption buttons or draggable window is going in: that would be invented UI
+      the archive has no source for, and it would be the piece most likely to
+      fight 9.3's mobile pass. The one thing it would have bought — resize the
+      window to get more history — is what the scroll decision above gives for
+      free.
+
+      That closes phase 6 and the "how faithful should the UI be?" question with
+      it.
 
 ## Phase 7 — Settings and state
 

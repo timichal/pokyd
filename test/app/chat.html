@@ -154,6 +154,35 @@ async function visit({ kind, sentences }) {
     const human = doc.querySelector('.pokyd-turn[data-who="human"]');
     const pokyd = doc.querySelector('.pokyd-turn[data-who="pokyd"]');
 
+    /* Phase 6.5.  Three things, and the third one moves the scroll and puts it
+       back: whether the box overflows at all (with two dozen turns in a 32em
+       iframe it had better, or nothing below is being tested), where it is
+       resting, and whether dragging to the top actually brings the oldest turn
+       into view -- which is what `justify-content: flex-end` would have made
+       impossible and `margin-block-start: auto` does not. */
+    function scrollReport() {
+      const turns = Array.from(doc.querySelectorAll(".pokyd-turn"));
+      const last = turns[turns.length - 1];
+      const overflows = box.scrollHeight > box.clientHeight + 1;
+      const rest = box.scrollHeight - box.scrollTop - box.clientHeight;
+      /* The gap between the newest sentence and the bottom of the box, which is
+         ROZESTUP: :946 subtracts it before the newest as well as between. */
+      const gapBelowNewest = Math.round(
+        boxRect.bottom - last.getBoundingClientRect().bottom);
+
+      let oldestReachable = null;
+      if (overflows) {
+        const keep = box.scrollTop;
+        box.scrollTop = 0;
+        const oldest = turns[0].getBoundingClientRect();
+        const now = box.getBoundingClientRect();
+        oldestReachable = oldest.top >= now.top - 1 && oldest.bottom <= now.bottom + 1;
+        box.scrollTop = keep;
+      }
+      return { overflows, atBottom: Math.abs(rest) <= 1, gapBelowNewest,
+        oldestReachable, turns: turns.length };
+    }
+
     /* The menu: what it offers, and what it admits it cannot do yet. */
     const menuItems = Array.from(doc.querySelectorAll(".pokyd-menu-item"));
 
@@ -180,9 +209,17 @@ async function visit({ kind, sentences }) {
         top: Math.round(boxRect.top - clientRect.top),
         bottom: Math.round(clientRect.bottom - boxRect.bottom),
       },
-      /* :962 -- nothing scrolls, in the box or on the page. */
+      /* Phase 6.5, and the one deviation in the window: :962 stopped drawing at
+         the top inset and this box scrolls to it instead.  What is measured is
+         the pair of claims that decision rests on -- the view at rest is still
+         his, and the history is actually reachable, by keyboard as well as by
+         mouse.  `scroll` is read after the conversation, so `atBottom` is the
+         state chat.ts's scrollToEnd left it in rather than an initial value. */
       boxOverflow: css(box, "overflow-y"),
-      boxScrollable: box.scrollHeight > box.clientHeight + 1,
+      boxTabIndex: box.tabIndex,
+      boxLabelled: (box.getAttribute("aria-label") || "").length > 0,
+      scroll: scrollReport(),
+      /* The page itself still does not: the window is the viewport. */
       pageScrollable:
         doc.documentElement.scrollHeight > doc.documentElement.clientHeight + 1,
       /* PREKRESLI_OBRAZOVKU (:827) loads the bitmap at the window's own size. */

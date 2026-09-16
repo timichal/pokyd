@@ -233,10 +233,29 @@ function checkWindow(run) {
   eq("  and OKRAJE+45 from the bottom, where the input line begins",
     w.box.bottom, WINDOW_LAYOUT.transcript.bottom);
 
-  /* 4. :962 -- what does not fit above the top inset is not drawn.  There is no
-        scrollbar in the box and no scrollbar on the page, which is the whole of
-        the fidelity question phase 6.5 has to answer. */
-  eq("the transcript does not scroll", w.boxOverflow, "hidden");
+  /* 4. Phase 6.5, and the only deliberate deviation in the window.  :962 stopped
+        drawing the moment a sentence would cross the top inset, so in 2005 the
+        beginning of a long conversation was gone; here the box scrolls to it.
+        The decision is written up in PLAN.md 6.5 and argued in chat.css; what is
+        checked here is that it cost nothing it was not meant to cost.
+
+        The first two are the deviation itself.  The rest are the fidelity: at
+        rest the box is at the bottom, the newest sentence is ROZESTUP above the
+        floor exactly as :946 puts it, and the window still fills the viewport
+        with nothing scrolling past its edges.  A screenshot of this page and a
+        screenshot of his are still the same picture. */
+  eq("the transcript scrolls now", w.boxOverflow, "auto");
+  eq("  and can be scrolled from the keyboard, not the mouse alone",
+    w.boxTabIndex, 0);
+  ok("  with a name on it, since a focusable region needs one", w.boxLabelled);
+  ok("two dozen turns overflow a 32em window, so there is something to reach",
+    w.scroll.overflows, JSON.stringify(w.scroll));
+  ok("  the oldest of them is reachable by dragging to the top",
+    w.scroll.oldestReachable === true, JSON.stringify(w.scroll));
+  ok("but at rest the box is at the bottom, where PREFORMATUJ_TEXTY_...:944 drew",
+    w.scroll.atBottom, JSON.stringify(w.scroll));
+  eq("  with ROZESTUP under the newest sentence (:946)", w.scroll.gapBelowNewest,
+    WINDOW_LAYOUT.spacing);
   ok("and nothing scrolled off the page either", w.pageScrollable === false);
 
   /* 5. PREKRESLI_OBRAZOVKU (:827) reloads the bitmap at okno.right x

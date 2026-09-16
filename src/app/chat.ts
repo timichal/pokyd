@@ -20,12 +20,17 @@
    Four things that took reading the engine to get right, each of them one
    declaration in src/app/chat.css:
 
-     - **the transcript grows upwards and is cut off at the top.**  :923-924 set
-       the box, :944 walks the sentences newest-first from the bottom, and :962
-       breaks out of the loop the moment one would cross the top inset.  There is
-       no scrollbar, there never was, and the height of the window *is* how much
-       history there is.  (Phase 6.5 is where that stops being a fact about 2005
-       and becomes a decision about the web.)
+     - **the transcript grows upwards, and in 2005 it was cut off at the top.**
+       :923-924 set the box, :944 walks the sentences newest-first from the
+       bottom, and :962 breaks out of the loop the moment one would cross the top
+       inset.  There was no scrollbar and the height of the window *was* how much
+       history there was.  **Phase 6.5 kept everything about that except the
+       last clause**: the box scrolls, and it is the one deliberate deviation in
+       the window.  The resting view is his to the pixel, because `scrollToEnd`
+       below pins it there after every sentence; what a visitor who drags
+       upwards now reaches is the hundred of `g_poslednich100vet` rather than
+       nothing.  `src/app/chat.css` has the reasoning and PLAN.md 6.5 has the
+       argument.
      - **the wrap is 15 px narrower than the box**, and the author did not know
        why either: "rezerva (nevim, proc musi byt, ale jinak to obcas zalomi
        zbytecne!!!)", :856.
@@ -87,6 +92,13 @@ const HEADING_RIGHT = control("IDC_NADPIS3");   /* KYBLSoft 2005 */
    a MessageBox for this and a BEZ_PROSTREDI build has neither. */
 const FAILED_TITLE = "IQ Pokyd se nespustil.";           /* "did not start" */
 const FAILED_SAY = "(IQ Pokyd neodpověděl.)";  /* "did not answer" */
+
+/* Phase 6.5, and the third -- but the only one of the three that never reaches
+   the screen.  Making the transcript scrollable made it a focusable region (see
+   `transcript.tabIndex` below), and a focusable region needs a name; nothing but
+   assistive technology ever reads this one.  The word is the author's own for
+   the thing, out of IDD_NASTAVENI's "Ukladat rozhovor do souboru". */
+const TRANSCRIPT_LABEL = "Rozhovor";
 
 /* mfcDlg.cpp:1005.  The one command in IDR_MENU that phase 6.3 can honour --
    the rest open dialogs that belong to phases 7 and 8, and src/app/menu.ts
@@ -281,6 +293,11 @@ export function mountChat(
   /* The engine answers at its own pace and the visitor is looking at the input,
      not at the list, so the answer has to announce itself. */
   transcript.setAttribute("aria-live", "polite");
+  /* Phase 6.5, and the other half of making the box scrollable: a scroll
+     container that cannot be focused cannot be scrolled with the keyboard in
+     Chrome, which would leave the history reachable by mouse alone. */
+  transcript.tabIndex = 0;
+  transcript.setAttribute("aria-label", TRANSCRIPT_LABEL);
 
   const form = document.createElement("form");
   form.className = "pokyd-form";
@@ -376,6 +393,15 @@ export function mountChat(
     return settings;
   }
 
+  /** Phase 6.5.  The box scrolls now, and this is what keeps the view his: the
+   *  newest sentence at the bottom, which is where PREFORMATUJ_TEXTY_...:944
+   *  started drawing and worked backwards from.  `scrollTop` past the maximum
+   *  is clamped by the browser, so the arithmetic does not have to be exact,
+   *  and a box that does not overflow ignores it entirely. */
+  function scrollToEnd(): void {
+    transcript.scrollTop = transcript.scrollHeight;
+  }
+
   function turn(who: "human" | "pokyd", text: string): HTMLLIElement {
     const li = document.createElement("li");
     li.className = "pokyd-turn";
@@ -402,12 +428,19 @@ export function mountChat(
 
     /* g_poslednich100vet holds a hundred sentences and RozvrzeniVet::PRIDEJ_VETU
        (IQPWAV.PR:85) shifts the oldest out; both speakers' lines go into the
-       same hundred.  Nothing scrolls -- what does not fit above the top inset is
-       simply not drawn (PROSTRED.FU:962) -- so this is the only forgetting the
-       window does. */
+       same hundred.  Since 6.5 that is the *only* forgetting the window does --
+       his second one, :962's refusal to draw above the top inset, is now a
+       scroll rather than a loss -- so the hundred is exactly how far back a
+       visitor can drag. */
     while (transcript.childElementCount > WINDOW_LAYOUT.transcriptCapacity) {
       transcript.firstElementChild!.remove();
     }
+
+    /* And the newest sentence is at the bottom of the box with the scroll at
+       the bottom too, which is what makes a scrollable box look like his.  It
+       is unconditional on purpose: :944 always drew from the newest backwards,
+       so there was never a state in which a new sentence arrived out of view. */
+    scrollToEnd();
     return li;
   }
 

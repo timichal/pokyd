@@ -14,12 +14,29 @@
    template's positions never survive to be seen.  Every `position: absolute`
    below is one of its ZMEN_POZICI_PRVKU calls, and the comment says which.
 
-   The one rule worth reading twice is the transcript's.  `justify-content:
-   flex-end` in a clipped box is the whole of PREFORMATUJ_TEXTY_...:944-985: the
-   newest sentence sits at the bottom, older ones stack upwards, and what does
-   not fit above the top inset is cut off rather than scrolled to.  That is not
-   a limitation of this stylesheet.  It is what the window did, and phase 6.5 is
-   where it is decided whether the web gets to keep it.
+   The one rule worth reading twice is the transcript's, and it is **the one
+   place in this file that is a deviation** -- phase 6.5 decided it.  A bottom-
+   anchored box whose older lines stack upwards out of the top is
+   PREFORMATUJ_TEXTY_...:944-985 exactly; what is not his is that they can be
+   scrolled back to.  :962 breaks out of the draw loop the moment a sentence
+   would cross `nahore`, so in 2005 the top of a long conversation was simply
+   gone and the height of the window was how much history there was.  Here the
+   box scrolls.  The resting view is unchanged -- the newest sentence is at the
+   bottom and chat.ts pins it there -- so nothing a screenshot would show has
+   moved; what changed is that a visitor who drags upwards gets the hundred of
+   g_poslednich100vet instead of nothing.  The argument is in PLAN.md 6.5, and
+   the short of it is that a web page whose scroll gesture does nothing reads as
+   broken rather than as faithful.
+
+   Two smaller decisions come with it, both ours.  `margin-block-start: auto` on
+   the oldest turn rather than `justify-content: flex-end` on the box, because
+   flex-end in a scroll container puts the overflow past the start edge where no
+   browser will let you reach it; the auto margin collapses to zero the moment
+   the content is taller than the box, which is the same resting layout and a
+   reachable one.  And `scrollbar-gutter: stable`, because the author reserved
+   fifteen pixels off the wrap width (:856) precisely so that lines would not
+   re-wrap, and a scrollbar appearing halfway through a conversation would
+   re-wrap every line above it.
 
    Ours, not ported.  ASCII only, like the rest of the non-engine code. */
 
@@ -237,11 +254,18 @@ body {
 
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   gap: var(--pokyd-spacing);
-  /* :962 -- what will not fit above `nahore` is not drawn.  No scrollbar, and
-     there never was one. */
-  overflow: hidden;
+
+  /* Ours, and the whole of phase 6.5: his box clipped at `nahore` (:962), this
+     one scrolls to it.  The header has the argument.  chat.ts puts the scroll
+     back at the bottom after every sentence, so the view at rest is his. */
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  /* COLOR_3DFACE on g_barvapozadizadavanivety -- the two colours the window
+     already wears, so the one control that is not his still looks like 2005. */
+  scrollbar-color: #ece9d8 var(--pokyd-input-bg, #101010);
 
   font-size: var(--pokyd-turn-size);
   line-height: var(--pokyd-turn-line);
@@ -260,6 +284,11 @@ body {
    speakers apart is which brush the static is painted with. */
 .pokyd-turn[data-who="human"] { color: var(--pokyd-human-text, #ffff57); }
 .pokyd-turn[data-who="pokyd"] { color: var(--pokyd-pokyd-text, #57ff57); }
+
+/* What `justify-content: flex-end` used to do, done in a way that survives the
+   overflow: an auto margin above the oldest turn presses the stack to the
+   bottom of the box while it fits, and resolves to zero once it does not. */
+.pokyd-turn:first-child { margin-block-start: auto; }
 
 .pokyd-text { white-space: pre-wrap; }
 

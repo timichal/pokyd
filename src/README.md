@@ -143,7 +143,7 @@ two of them generated.
 |---|---|
 | `chat.ts` | `mountChat(parent, options)` — the author's main window: his photograph, his menu, his three headings, and the conversation growing upwards out of the bottom. Four states published on the root element as `data-state`: `loading`, `ready`, `busy`, `failed`. A caller of phase 4 and nothing else: `PokydClient` for the worker, `startCached` for the eighteen megabytes, `mountLoading` for the fifteen seconds. |
 | `main.ts` | What `index.html` runs, and the only file here that needs Vite: where the worker chunk ended up (`?worker&url`), where the engine was emitted, and what the query string asked for. |
-| `chat.css` | Phase 6.3, and **nothing in it is a decision**: every measurement and every colour is a custom property `chat.ts` sets from `resources.ts`, so a colour that moves in `PROSTRED.PR` moves on the page. |
+| `chat.css` | Phase 6.3, and **one rule in it is a decision** — every measurement and every colour is a custom property `chat.ts` sets from `resources.ts`, so a colour that moves in `PROSTRED.PR` moves on the page, and the exception is the transcript's `overflow-y`, which phase 6.5 turned from his `hidden` into `auto`. The file's header argues it. |
 | `menu.ts` | Phase 6.3. `IDR_MENU` drawn — two popups, the accelerator text, the seven gutter bitmaps, and the right-justified caption. Anything with no handler yet is `MF_GRAYED` rather than silent. |
 | `caption.ts` | Phase 6.3, and one of the two files here that spell Czech by hand: `ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI` builds the status line with `strcat` out of two switches, so there is no resource to read its fourteen words from. `node test/app/caption.test.ts` finds every one of them in `PROSTRED.FU` as CP1250 bytes. |
 | `greeting.ts` | Phase 6.4, and the other one: `NAPIS_UVODNI_UVITANI`'s ten greetings, three of them inflected for the two `pohlavi`, plus the `rand()%10` that picks between them. `node test/app/greeting.test.ts` parses his switch back out of `PROSTRED.FU` and compares it part for part. |
@@ -178,7 +178,8 @@ go and find, and all of which are written down in that file's header:
   hundred `STATIC` children created at runtime by
   `PREFORMATUJ_TEXTY_CLOVEKA_A_POCITACE_NA_OBRAZOVCE` (`PROSTRED.FU:904`),
   bottom-anchored and growing upwards, with no scrollbar — what does not fit is
-  not drawn. The eight controls that *are* in the template get repositioned by
+  not drawn (`:962`), and **the port keeps all of that except the last clause**;
+  see phase 6.5 below. The eight controls that *are* in the template get repositioned by
   `PREKRESLI_PRVKY_V_OKNE_PRI_ZMENE_VELIKOSTI` (`PROSTRED.FU:1022`) the first
   time the window is sized, so the template gives the inventory and the initial
   size and `PROSTRED.FU` gives the layout.
@@ -205,6 +206,22 @@ Three things in it are worth knowing before changing any of them.
   `greeting.ts` is one draw off a mirror of `src/shim/nahoda.cpp` with the same
   seed, which is both the faithful answer and the one that leaves
   `test/golden/rozhovor.txt` byte for byte where it was.
+- **The transcript scrolls, and that is the one thing in the window that is not
+  his.** Phase 6.5. `:962` breaks out of the draw loop the moment a sentence
+  would cross the top inset, so in 2005 the beginning of a long conversation was
+  simply gone and the height of the window was how much history there was. Here
+  the box is a scroll container, and what a visitor who drags upwards reaches is
+  the hundred of `g_poslednich100vet` — the engine's own forgetting, which is
+  kept. Nothing about the resting view moved: `scrollToEnd()` in `chat.ts` pins
+  the newest sentence to the bottom after every turn, and
+  `test/app/chat.test.mjs` measures that it is `ROZESTUP` above the floor exactly
+  as `:946` puts it. Two mechanics are worth knowing before touching the rule:
+  the stack is bottom-aligned with `margin-block-start: auto` on the oldest turn
+  rather than `justify-content: flex-end`, because flex-end puts a scroll
+  container's overflow past the start edge where no browser will let you reach
+  it; and `scrollbar-gutter: stable` is there because the author reserved fifteen
+  pixels off the wrap width (`:856`) precisely so lines would not re-wrap, and a
+  scrollbar appearing mid-conversation would re-wrap every line above it.
 - **`workerUrl` and `moduleUrl` are required, with no defaults.** A default would
   have to be spelled `new URL("../web/worker.ts", import.meta.url)`, and Vite
   rewrites exactly that expression at build time into an emitted asset — so the
