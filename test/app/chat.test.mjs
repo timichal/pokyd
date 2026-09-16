@@ -35,6 +35,15 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { ROOT, runPage } from "../browser.mjs";
+/* Phase 6.3.  Two data modules, and only data: PALETTE and WINDOW_LAYOUT are
+   what test/app/resources.test.ts reads back out of the engine source, and
+   MENUS is the author's own menu -- so comparing the page with them closes the
+   loop from PROSTRED.PR to what a visitor sees.  Nothing here drives the
+   engine or knows anything of the protocol; that is still the rule. */
+import {
+  DIALOGS, MENUS, PALETTE, WINDOW_LAYOUT,
+} from "../../src/app/resources.ts";
+import { MENU_BITMAPS, settingsCaption } from "../../src/app/caption.ts";
 
 const MODULE_PATH = join(ROOT, "build", "wasm", "pokyd.mjs");
 const VITE_BIN = join(ROOT, "node_modules", "vite", "bin", "vite.js");
@@ -160,6 +169,104 @@ function checkVisit(run, golden, cold) {
   eq("the engine freed everything it allocated", run.unfreed, 0);
 }
 
+/* --------------------------------------------------- the window, phase 6.3 */
+
+/** A PALETTE entry as getComputedStyle hands it back. */
+function rgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return "rgb(" + ((n >> 16) & 0xff) + ", " + ((n >> 8) & 0xff) + ", "
+    + (n & 0xff) + ")";
+}
+
+function checkWindow(run) {
+  const w = run.window;
+  heading(run.kind + " visit -- the author's window");
+
+  /* 1. his three headings, which are in IDD_HLAVNI_OKNO and nowhere else. */
+  const main = DIALOGS["IDD_HLAVNI_OKNO"];
+  const control = (id) => main.controls.find((c) => c.id === id).text;
+  eq("IDC_NADPIS1 is on the screen", w.headings.left, control("IDC_NADPIS1"));
+  eq("IDC_NADPIS2 is on the screen", w.headings.title, control("IDC_NADPIS2"));
+  eq("IDC_NADPIS3 is on the screen", w.headings.right, control("IDC_NADPIS3"));
+
+  /* 2. PROSTRED.PR's COLORREFs, byte-reversed once in resources.ts and not
+        again anywhere: what you said is yellow, what IQ Pokyd said is green,
+        and a reader who took them for #RRGGBB would have them the other way
+        round. */
+  eq("what you said is g_barvatextucloveka", w.colours.human,
+    rgb(PALETTE.humanText));
+  eq("what IQ Pokyd said is g_barvatextupocitace", w.colours.pokyd,
+    rgb(PALETTE.pokydText));
+  eq("the side headings are g_barvahlavickovychtextu", w.colours.heading,
+    rgb(PALETTE.headingText));
+  eq("the title in the middle is g_barvanapisuIQPokyd", w.colours.title,
+    rgb(PALETTE.titleText));
+  eq("the line you type into is g_barvapozadizadavanivety", w.colours.input,
+    rgb(PALETTE.inputBackground));
+  eq("  with the human's own colour on it (mfcDlg.cpp:920)", w.colours.inputText,
+    rgb(PALETTE.humanText));
+
+  /* 3. PROSTRED.FU:923-924, measured off the page rather than declared. */
+  eq("the transcript box sits OKRAJE+10 from the left", w.box.left,
+    WINDOW_LAYOUT.transcript.left);
+  eq("  and from the right", w.box.right, WINDOW_LAYOUT.transcript.right);
+  eq("  OKRAJE+20 from the top", w.box.top, WINDOW_LAYOUT.transcript.top);
+  eq("  and OKRAJE+45 from the bottom, where the input line begins",
+    w.box.bottom, WINDOW_LAYOUT.transcript.bottom);
+
+  /* 4. :962 -- what does not fit above the top inset is not drawn.  There is no
+        scrollbar in the box and no scrollbar on the page, which is the whole of
+        the fidelity question phase 6.5 has to answer. */
+  eq("the transcript does not scroll", w.boxOverflow, "hidden");
+  ok("and nothing scrolled off the page either", w.pageScrollable === false);
+
+  /* 5. PREKRESLI_OBRAZOVKU (:827) reloads the bitmap at okno.right x
+        okno.bottom, so it is stretched and its aspect ratio is not kept. */
+  ok("the author's photograph is behind the window",
+    w.background.image.includes("pozadi-iqpokyd"), w.background.image);
+  eq("stretched to the window, not tiled and not cropped", w.background.size,
+    "100% 100%");
+  eq("and not repeated", w.background.repeat, "no-repeat");
+
+  /* 6. ours, and deliberately not on the screen. */
+  eq("the > and < are in the markup and not in the window", w.markerDisplay,
+    "none");
+
+  /* 7. IDR_MENU: two popups, the right-justified caption, and the bitmaps
+        mfcDlg.cpp hangs on seven of the items. */
+  const popups = MENUS["IDR_MENU"].items.filter((i) => i.kind === "popup");
+  const menuItems = popups.reduce(
+    (n, p) => n + p.items.filter((i) => i.kind === "item").length, 0);
+  const separators = popups.reduce(
+    (n, p) => n + p.items.filter((i) => i.kind === "separator").length, 0);
+  eq("every top-level item of IDR_MENU is on the bar", w.menu.titles.length,
+    MENUS["IDR_MENU"].items.length);
+  eq("and every item in the popups", w.menu.items, menuItems);
+  eq("with his separators, top and bottom ones included", w.menu.separators,
+    separators);
+  eq("seven items carry a bitmap", w.menu.bitmaps,
+    Object.keys(MENU_BITMAPS).length);
+  eq("and seven carry accelerator text", w.menu.accelerators.length, menuItems);
+  /* Everything else in this menu opens a dialog phase 7 or 8 has still to
+     build, so it is drawn MF_GRAYED rather than doing nothing quietly. */
+  /* eq() here is Object.is, so the list is compared as a string. */
+  eq("the one command 6.3 can honour is the author's web page",
+    w.menu.enabled.join(","), "ID_NAPOVEDA_INTERNET");
+
+  /* 8. ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI, which is the point of the whole
+        right-hand side of the bar -- and it is *live*: the same 23 sentences
+        that move nalada from 3 to 1 move the word in the menu with it. */
+  const caption = (mood) => settingsCaption({
+    ...run.settings, humanName: "", computerName: "", mood,
+  });
+  eq("the menu said who was talking to whom before a word was typed",
+    run.captionBefore, caption(MOOD));
+  eq("and it moved with the mood as the conversation went", w.caption,
+    caption(MOOD_AFTER));
+  ok("which is a different line from the one it started with",
+    run.captionBefore !== w.caption);
+}
+
 /* -------------------------------------------------------------- the driver */
 
 async function main() {
@@ -214,7 +321,9 @@ async function main() {
     data.cold.markers.join(""), "<>");
 
   checkVisit(data.cold, golden, true);
+  checkWindow(data.cold);
   checkVisit(data.warm, golden, false);
+  checkWindow(data.warm);
 
   heading("the two visits together");
   ok("both used the same cache key: " + data.cold.report.key,

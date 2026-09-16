@@ -116,6 +116,92 @@ async function visit({ kind, sentences }) {
   const handle = win.pokyd;
   const report = await handle.ready;
   const settings = await handle.client.getSettings();
+  /* ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI, before a word is typed.  The
+     same line is read again at the end, and the two are not expected to
+     match: the mood in it moves as the conversation goes. */
+  const captionBefore = doc.querySelector(".pokyd-menu-state").textContent;
+
+  /* ------------------------------------------------------- the window, 6.3 */
+
+  /* What phase 6.3 drew, read back off the page the same way everything else
+     here is: out of the DOM and out of getComputedStyle, never out of the
+     module that put it there.  node compares it with PALETTE and WINDOW_LAYOUT,
+     which are read from the engine's own source by test/app/resources.test.ts,
+     so the loop is closed at both ends.
+
+     Taken after the conversation rather than before it, because two of the
+     answers only exist once there are turns on the screen -- and because the
+     caption is expected to have *moved* by then: nalada drifts, and the menu
+     bar is where a visitor sees it. */
+  function windowReport() {
+    const css = (el, prop) => el === null ? null
+      : win.getComputedStyle(el).getPropertyValue(prop);
+    const text = (sel) => {
+      const el = doc.querySelector(sel);
+      return el === null ? null : el.textContent;
+    };
+
+    const client = doc.querySelector(".pokyd-client");
+    const box = doc.querySelector(".pokyd-transcript");
+    const clientRect = client.getBoundingClientRect();
+    const boxRect = box.getBoundingClientRect();
+    const human = doc.querySelector('.pokyd-turn[data-who="human"]');
+    const pokyd = doc.querySelector('.pokyd-turn[data-who="pokyd"]');
+
+    /* The menu: what it offers, and what it admits it cannot do yet. */
+    const menuItems = Array.from(doc.querySelectorAll(".pokyd-menu-item"));
+
+    return {
+      caption: text(".pokyd-menu-state"),
+      headings: {
+        left: text(".pokyd-heading-left"),
+        title: text(".pokyd-title"),
+        right: text(".pokyd-heading-right"),
+      },
+      colours: {
+        human: css(human, "color"),
+        pokyd: css(pokyd, "color"),
+        heading: css(doc.querySelector(".pokyd-heading-left"), "color"),
+        title: css(doc.querySelector(".pokyd-title"), "color"),
+        input: css(input, "background-color"),
+        inputText: css(input, "color"),
+      },
+      /* PROSTRED.FU:923-924, measured rather than declared: the four insets of
+         the transcript box from the client rectangle, in pixels. */
+      box: {
+        left: Math.round(boxRect.left - clientRect.left),
+        right: Math.round(clientRect.right - boxRect.right),
+        top: Math.round(boxRect.top - clientRect.top),
+        bottom: Math.round(clientRect.bottom - boxRect.bottom),
+      },
+      /* :962 -- nothing scrolls, in the box or on the page. */
+      boxOverflow: css(box, "overflow-y"),
+      boxScrollable: box.scrollHeight > box.clientHeight + 1,
+      pageScrollable:
+        doc.documentElement.scrollHeight > doc.documentElement.clientHeight + 1,
+      /* PREKRESLI_OBRAZOVKU (:827) loads the bitmap at the window's own size. */
+      background: {
+        image: css(client, "background-image"),
+        size: css(client, "background-size"),
+        repeat: css(client, "background-repeat"),
+      },
+      /* Ours, and never on the screen: IQ Pokyd told the speakers apart by
+         colour alone. */
+      markerDisplay: css(doc.querySelector(".pokyd-marker"), "display"),
+      menu: {
+        titles: Array.from(doc.querySelectorAll(".pokyd-menu-title"))
+          .map((b) => b.textContent),
+        items: menuItems.length,
+        separators: doc.querySelectorAll(".pokyd-menu-separator").length,
+        bitmaps: doc.querySelectorAll(".pokyd-menu-bitmap img").length,
+        enabled: menuItems.filter((b) => !b.disabled)
+          .map((b) => b.dataset.command).sort(),
+        accelerators: menuItems
+          .map((b) => b.querySelector(".pokyd-menu-accelerator").textContent)
+          .filter((a) => a.length > 0),
+      },
+    };
+  }
 
   /* ------------------------------------------------------ the conversation */
 
@@ -144,6 +230,10 @@ async function visit({ kind, sentences }) {
     transcript += (turn.who === "human" ? "> " : "< ") + turn.text + "\r\n";
   }
 
+  /* Read while the iframe is still on the page -- stage.replaceChildren()
+     below takes the document with it. */
+  const window63 = windowReport();
+
   /* And again at the end, which is the same number only if the mood never
      moved.  Phase 7.2 is where that becomes something a visitor can see. */
   const moodAfter = (await handle.client.getSettings()).mood;
@@ -153,6 +243,7 @@ async function visit({ kind, sentences }) {
 
   return {
     kind, loadMs, sentenceCount, unfreed, busySeen, moodAfter,
+    captionBefore, window: window63,
     firstState, loadingShown, loadingGone, inputLive, focused,
     turns: turns.length,
     markers: Array.from(new Set(turns.map((t) => t.marker))).sort(),

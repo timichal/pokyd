@@ -15,7 +15,9 @@
    The query string is a developer's door, not a feature: ?seed= pins the
    conversation to one rand() sequence, which is how a transcript is reproduced
    (test/golden/README.md), and ?cache=no or ?cache=rebuild get at the fifteen
-   seconds phase 4.4 makes disappear.  Phase 7 is where settings become a dialog.
+   seconds phase 4.4 makes disappear.  One of them is the author's own, spelled
+   the way he spelled it: ?bezpozadi is the switch ROZEBER_PRIKAZOVY_RADEK read
+   in 2005.  Phase 7 is where settings become a dialog.
 
    Written by us, not ported.  English identifiers and ASCII only, like the rest
    of the non-engine code.
@@ -64,6 +66,12 @@ export function optionsFromQuery(search: string): PokydQueryOptions {
   const cache = params.get("cache");
   if (cache === "no") { options.ignoreStored = true; options.doNotSave = true; }
   if (cache === "rebuild") options.ignoreStored = true;
+
+  /* ROZEBER_PRIKAZOVY_RADEK (PROSTRED.FU:83-106) read "-bezpozadi" off the
+     command line and turned the photograph and the tile off in favour of plain
+     black; a page's command line is its query string, so it keeps his spelling.
+     Phase 7.1 is where prikaz_nezobrazovatpozadi becomes a checkbox. */
+  if (params.has("bezpozadi")) options.noBackground = true;
 
   return options;
 }

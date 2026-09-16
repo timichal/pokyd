@@ -248,8 +248,14 @@ heading("IDD_NACITANI, which phase 4.3 already drew");
 
 /* ------------------------------------------------- 5. what the page already uses */
 
-heading("the three strings src/app/chat.ts copied by hand at phase 5.1");
+heading("the strings src/app/chat.ts used to copy by hand");
 {
+  /* Phase 5.1 wrote the window title, the input label and the button into
+     chat.ts as three literals with the .rc line numbers beside them, and this
+     section checked that the copies had not drifted.  Phase 6.3 deleted the
+     copies: chat.ts reads DIALOGS["IDD_HLAVNI_OKNO"] and takes the text off the
+     controls it names, so the drift this was guarding against cannot happen any
+     more.  What is worth checking now is that nobody puts a copy back. */
   const chat = readFileSync(join(ROOT, "src", "app", "chat.ts"), "utf8");
   const main = DIALOGS["IDD_HLAVNI_OKNO"];
   const escape = (s: string): string => Array.from(s).map((ch) => {
@@ -263,8 +269,30 @@ heading("the three strings src/app/chat.ts copied by hand at phase 5.1");
     ["the button", main.controls.find((c) => c.id === "IDC_NOVAVETA")!.text!],
   ];
   for (const [what, text] of wanted) {
-    ok("chat.ts has " + what + " exactly as IQPokyd.rc has it",
-      chat.includes("\"" + escape(text) + "\""), JSON.stringify(escape(text)));
+    ok("chat.ts carries no copy of " + what,
+      !chat.includes("\"" + escape(text) + "\""), JSON.stringify(escape(text)));
+  }
+  ok("it reads IDD_HLAVNI_OKNO out of this module instead",
+    chat.includes("DIALOGS[\"IDD_HLAVNI_OKNO\"]"));
+
+  /* The same rule in its sharper form, and the one phase 6.3 has to keep: of
+     everything phase 6 wrote, only src/app/caption.ts spells Czech, because the
+     author's status line is strcat and not a resource.  Everything else reads
+     its words from a generated module.  A \uXXXX escape in code is how a
+     hand-written one would show up; the two failure lines chat.ts does own are
+     named rather than exempted by shape. */
+  const ours: [string, string[]][] = [
+    ["src/app/chat.ts", ["FAILED_TITLE", "FAILED_SAY"]],
+    ["src/app/menu.ts", []],
+    ["src/app/dlu.ts", []],
+  ];
+  for (const [file, exempt] of ours) {
+    const text = readFileSync(join(ROOT, ...file.split("/")), "utf8");
+    const lines = text.split(/\r?\n/)
+      .filter((line) => /\\u0[0-9a-f]{3}/.test(line))
+      .filter((line) => !line.trimStart().startsWith("*"))
+      .filter((line) => !exempt.some((name) => line.includes(name)));
+    eq(file + " spells no Czech of its own", lines, []);
   }
 }
 

@@ -9,8 +9,9 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 6 — the retro UI — **is under way: 6.1 and 6.2 are done, and the author's
-resource script and all eighteen of his pictures are now modules the page can read.**
+**Phase:** 6 — the retro UI — **is under way: 6.1, 6.2 and 6.3 are done, and the
+exhibit now wears the author's own window — his photograph, his menu, his colours
+and his bottom-anchored conversation.**
 Phase 5 is complete, 5.1 through 5.3, and
 **IQ Pokyd is live at <https://timichal.github.io/pokyd/>.** A twenty-year-old Czech
 Windows program holds a conversation in a browser, at a URL, saying byte for byte what
@@ -446,11 +447,95 @@ a size the author never drew, so `IDI_TVAR16` means the 16×16 and only that. An
 `.rc`'s Windows spelling against the real directory, which is what lets the Linux
 runner build this at all.
 
-**Next action:** 6.3 — rebuild the main window. Everything it needs is now a module:
-`resources.ts` for the inventory, the strings and the eight controls of
-`IDD_HLAVNI_OKNO`, `WINDOW_LAYOUT` and `PALETTE` for where they go and what colour
-they are, `assets.ts` for the pictures. The open question 6.5 asks — how far to take
-the fidelity — can now be answered against something running.
+**6.3 is done, and IQ Pokyd looks like IQ Pokyd.** `src/app/chat.ts` is the
+author's main window now rather than a chat page: the photograph stretched behind
+it, IDR_MENU across the top with the live caption on its right, his three
+headings, his two text colours, and the conversation growing upwards out of the
+bottom of the screen. Three modules are new — `src/app/menu.ts` draws the menu,
+`src/app/caption.ts` is the two things about that menu which are not in the
+resource script, and `src/app/dlu.ts` is the measuring. `test/app/chat.test.mjs`
+grew from 48 checks to **104** and still reproduces `test/golden/rozhovor.txt`
+byte for byte, cold and warm; `node test/app/caption.test.ts` puts **25** more on
+the status line, in node, in a fifth of a second.
+
+**The window's own numbers are measured, not guessed, and that is what 6.1 left
+undone.** `dluToPx` has always needed base units the `.rc` does not contain, and
+a LOGFONT's `lfHeight` is a *cell* height when it is positive — `PROSTRED.FU:918`
+writes `20` for the conversation and `:951` then counts the whole layout in it.
+So `dlu.ts` measures the face the visitor actually got, with a canvas, the way
+MapDialogRect measures the face the machine actually had: 52 letters over 26 plus
+one, halved. On this machine Trebuchet MS gives base units of 7 x 19 and a cell
+ratio of 1.161, so the author's 20-pixel line is a **17.24 px** font — and a
+visitor with no Trebuchet MS still gets a 20-pixel line, which is the point of
+measuring rather than hard-coding.
+
+**Everything else is a custom property `chat.ts` sets from `resources.ts`**, so
+`chat.css` contains almost no numbers of its own and the ones it does each carry
+an engine line. PALETTE drives the colours from the page rather than from the
+stylesheet, which closes the loop: `test/app/resources.test.ts` reads those
+COLORREFs back out of `PROSTRED.PR` and byte-reverses them again, and
+`chat.test.mjs` now compares them with `getComputedStyle` on a real turn. A
+colour that moved in the engine would move on the page and fail in two places.
+
+**Two CSS declarations turned out to be whole behaviours.** A clipped box with
+`justify-content: flex-end` *is* `PREFORMATUJ_TEXTY_...`:944-985 — newest at the
+bottom, older ones stacking up, and what will not fit above the top inset simply
+not drawn (`:962`). There is no scrollbar, there never was, and the test now
+asserts that nothing scrolls in the box or on the page. And `background-size:
+100% 100%` on a 900x459 photograph is `PREKRESLI_OBRAZOVKU` (`:827`) reloading
+the bitmap at `okno.right x okno.bottom`: the aspect ratio is not kept, and
+`cover` would have been the wrong answer quietly. The one place a bitmap *tiles*
+is the loading window, because `IDD_NACITANI` is a sub-window and
+`Nacitani.cpp:77` paints it with `g_stetecpozadipodokna` — `IDB_POZADIMALE`
+through `CreatePatternBrush`. Phase 4.3's loading dialog was built to be
+restyled by six custom properties and it was; it now sits in the middle of the
+window on the author's grey noise.
+
+**The caption is live, and the test proves it with the mood drift 5.2 already
+measured.** `settingsCaption` is `ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI`
+(`PROSTRED.FU:249`) and runs after every answer, so the same 23 sentences that
+take `nalada` from 3 to 1 take the menu bar from `muž x muž, průměrný: normální`
+to `muž x muž, průměrný: výborná` — checked at both ends, and checked to be
+different. `caption.test.ts` parses the two switches out of `PROSTRED.FU` case by
+case and holds all fourteen words against them **in the author's order**, as runs
+of CP1250 bytes, and does the same to the seven `SetMenuItemBitmaps` pairings in
+`mfcDlg.cpp`. Only `caption.ts` spells any Czech at all, and
+`resources.test.ts` now fails if another phase-6 module starts to.
+
+**It corrected a comment this port had been repeating since 3.1: `pohlavi` 1 is
+male, not female.** `pokyd_settings.human_gender` said "0 male, 1 female" and the
+engine disagrees in three places — `PROSTRED.FU:255` and `:263` print `muž` on
+`== 1`, `:302` gives the masculine `přišel` on `== 1`, and `SLOVNIK.FU:2091`
+writes `== 1 ? "muz" : "zena"` into the debug dump. `NASTAV_STANDARDNE`'s default
+is 1, with `muži` in the margin. No code ever read the comment — 5.2's own check
+asserts the default is 1 and calls it "the default" — but 7.1 is a settings
+dialog with two gender controls in it and would have got them backwards. Fixed in
+`pokyd_api.h` and `protocol.ts`, with the evidence in `caption.ts`.
+
+**A menu item with nothing behind it is greyed, not silent.** Everything IDR_MENU
+reaches belongs to phases 7 and 8, so `mountMenu` takes a map from the author's
+symbolic ids to handlers and draws anything missing MF_GRAYED; a phase that lands
+adds a key. The one command 6.3 can honour is `ID_NAPOVEDA_INTERNET`, which is a
+URL (`mfcDlg.cpp:1005`), and the test asserts that it is the only enabled one —
+so the day 7.1 lands, that line is what says so.
+
+Two smaller things fell out. `prikaz_nezobrazovatpozadi` is now `?bezpozadi` on
+the query string, spelled the way `ROZEBER_PRIKAZOVY_RADEK` spells it, and the
+CSS is built around it as the 6.2 note asked: no photograph, no tile, a white
+edit with black text (`mfcDlg.cpp:919`, `PROSTRED.FU:343`). And `chat.ts` stopped
+carrying hand-copied strings altogether — the title, the label and the button are
+read off `IDD_HLAVNI_OKNO`, which is what 6.1 built the module for.
+
+**What 6.3 deliberately did not settle is 6.5's question**, and it is sharper now
+that there is something running: the window forgets. There is no scrollbar
+because there never was one, so a long conversation's beginning is gone. Faithful,
+and a real loss on the web.
+
+**Next action:** 6.4 — the welcome line. `NAPIS_UVODNI_UVITANI`
+(`PROSTRED.FU:298-317`) picks one of ten greetings and inflects three of them for
+both genders, and it calls `srand(time(NULL))` itself at `:307` — which is the
+second of the two reseeds 5.1 already had to reproduce by hand, so the two need
+reading together.
 
 ---
 
@@ -556,13 +641,25 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   was wrong with. `node tools/extract-assets.mjs --check` is the byte comparison, and
   it is for this machine, not for CI. Run the extractor rather than editing
   `src/app/assets.ts` or anything under `src/app/assets/`.
+- **And one asks whether the status line is the author's words.**
+  `node test/app/caption.test.ts` — phase 6.3, no browser, no engine, a fifth of a
+  second. `src/app/caption.ts` is the one module phase 6 wrote that spells Czech by
+  hand, because `ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI` builds its fourteen words
+  with `strcat` and there is no resource to read them from; this parses both
+  switches back out of `PROSTRED.FU` and holds the arrays against them case by
+  case, as CP1250 bytes. It does the same to the seven `SetMenuItemBitmaps`
+  pairings in `mfcDlg.cpp`. `test/app/resources.test.ts` is where the other half
+  lives: it fails if any *other* module under `src/app/` starts spelling Czech.
 - **And one asks whether the page works**, which since 5.2 is the question that
   matters: `node test/app/chat.test.mjs` builds the app with Vite, drives the built
   `index.html` through the golden conversation in Chrome by typing into it, and
-  compares what was on the screen with `test/golden/rozhovor.txt`. **`npm test` runs
-  all eleven**, in phase order, in a little over two minutes; `node test/run.mjs
-  --quick` keeps the seven that do not launch a browser. `npm run typecheck` covers
-  every `.ts` in `src/` and `test/` at once.
+  compares what was on the screen with `test/golden/rozhovor.txt`. Since 6.3 it also
+  reads the window back: the colours against PALETTE, the transcript box against
+  `WINDOW_LAYOUT`, the menu against `MENUS`, and the live caption at both ends of the
+  conversation — which is how the mood drift becomes something a test can see.
+  **`npm test` runs all twelve**, in phase order, in a little over two minutes;
+  `node test/run.mjs --quick` keeps the eight that do not launch a browser.
+  `npm run typecheck` covers every `.ts` in `src/` and `test/` at once.
 
 ---
 
@@ -1718,34 +1815,47 @@ All the original assets are in `original/IQ Pokyd/!Prostre/res/`.
       icons their transparency. The one miscased path is folded by
       `resolveInArchive()`, which resolves the `.rc`'s Windows spelling against
       the real directory — the reason the Linux runner can build this at all.
-- [ ] 6.3 Rebuild the main window: background, menu bar, the sentence/answer panes,
-      the live "name × name, character: mood" menu caption (`ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI`).
-      Read `WINDOW_LAYOUT` and `PALETTE` in `src/app/resources.ts` before starting:
-      the eight controls of `IDD_HLAVNI_OKNO` get re-anchored by
-      `PREKRESLI_PRVKY_V_OKNE_PRI_ZMENE_VELIKOSTI` (`PROSTRED.FU:1022`) and the
-      conversation is not one of them.
+- [x] 6.3 **Done** — `src/app/chat.ts` is the author's main window: the stretched
+      photograph, IDR_MENU with the live `name × name, character: mood` caption,
+      his three headings, his two text colours and the conversation growing
+      upwards out of the bottom of the screen. Three modules are new —
+      `src/app/menu.ts` draws IDR_MENU, `src/app/caption.ts` is
+      `ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI` plus the seven
+      `SetMenuItemBitmaps` pairings, `src/app/dlu.ts` measures a font the way
+      MapDialogRect does. `test/app/chat.test.mjs` grew to **104 checks** and
+      still reproduces the golden transcript byte for byte; `node
+      test/app/caption.test.ts` puts **25** more on the status line in node.
 
-      **Three things 6.2 found while reading the same file, each of them a CSS
-      declaration.** The main background is *stretched*, not tiled and not
-      cropped: `PREKRESLI_OBRAZOVKU` (`PROSTRED.FU:827`) reloads
-      `IDB_POZADIHLAVNIHOOKNA` at `okno.right × okno.bottom` on every resize, so
-      it is `background-size: 100% 100%` on a 900×459 image and the aspect ratio
-      is not preserved. `IDB_POZADIMALE` is the opposite — `CreatePatternBrush`
-      at `:348`, so the 100×100 grey noise tile *repeats* behind the sub-window.
-      And `prikaz_nezobrazovatpozadi` (`:337`) turns both off in favour of plain
-      black, which is phase 7.1's checkbox and worth building the CSS around.
+      **Nothing in `chat.css` is a decision.** Every measurement is a custom
+      property `chat.ts` sets from `resources.ts`, PALETTE included, so a colour
+      that moves in `PROSTRED.PR` moves on the page — and the page test compares
+      `getComputedStyle` with PALETTE, which the 6.1 test reads back out of the
+      engine. Two declarations turned out to be whole behaviours: a clipped box
+      with `justify-content: flex-end` *is* `PREFORMATUJ_TEXTY_...`:944-985, and
+      `background-size: 100% 100%` *is* `PREKRESLI_OBRAZOVKU` reloading the
+      bitmap at the window's size. The one bitmap that tiles is the loading
+      window's, because `IDD_NACITANI` is a sub-window (`Nacitani.cpp:77`).
 
-      **The fonts are Windows fonts, all four of them**, and nothing in the
-      archive ships one. `Trebuchet MS` at -18/500 for the two side headings and
-      at 20 for every line of the conversation (`PROSTRED.FU:913`), `Garamond` at
-      -22/800 for the middle title (`mfcDlg.cpp:376`), `Times New Roman` and
-      `Courier New` in the about box (`:700`, `:723`), and `System`/`Tahoma` in
-      the dialog templates. So this is a `font-family` stack with fallbacks, and
-      the one thing to get right is that a visitor without Trebuchet MS still
-      gets a metrically similar face.
+      **It corrected `pohlavi`:** 1 is male, not female, against three witnesses
+      in the engine — `pokyd_api.h` and `protocol.ts` had said the opposite since
+      3.1 and 7.1 would have inherited it.
+
+      Menu commands that belong to later phases are drawn MF_GRAYED rather than
+      doing nothing quietly; `ID_NAPOVEDA_INTERNET` is the one 6.3 can honour,
+      and the test asserts it is the only enabled one. `?bezpozadi` is
+      `prikaz_nezobrazovatpozadi`, spelled as `ROZEBER_PRIKAZOVY_RADEK` spells
+      it.
 - [ ] 6.4 Rebuild the welcome line — `NAPIS_UVODNI_UVITANI` picks one of 10 greetings,
       gender-inflected.
 - [ ] 6.5 Decide how far to take it — window chrome? XP styling? (See open questions.)
+
+      6.3 sharpened it into one concrete question, and it is not chrome: **the
+      window forgets.** `PREFORMATUJ_TEXTY_...`:962 stops drawing the moment a
+      sentence would cross the top inset, so there is no scrollbar and the
+      beginning of a long conversation is simply gone. That is exactly what
+      happened in 2005 and it is a real loss on a web page, where scrolling back
+      is what a visitor will try first. Everything else in 6.5 is decoration; this
+      one decides whether the exhibit is a museum piece or a program.
 
 ## Phase 7 — Settings and state
 

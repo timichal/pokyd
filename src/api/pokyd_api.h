@@ -62,7 +62,7 @@ extern "C" {
    author's own name for each field is the comment beside it, so the struct and
    class Nastaveni can still be read against each other line by line. */
 typedef struct pokyd_settings {
-  unsigned char human_gender;          /* pohlavicloveka: 0 male, 1 female */
+  unsigned char human_gender;          /* pohlavicloveka: 1 male, 0 female */
   unsigned char computer_gender;       /* pohlavipocitace */
   char human_name[101];                /* jmenocloveka */
   char computer_name[101];             /* jmenopocitace */

@@ -1,42 +1,109 @@
-/* IQ Pokyd - src/app/chat.ts - phase 5.1 of PLAN.md: the conversation, as a page.
+/* IQ Pokyd - src/app/chat.ts - the author's main window, holding a conversation.
 
-   The plainest thing that can hold a conversation with the engine: a transcript
-   and a line to type into.  Everything underneath it was built in phase 4 and is
-   used here unchanged -- src/web/client.ts for the worker, src/web/cache.ts for
-   the eighteen megabytes that make a second visit instant, src/web/loading.ts
-   for the fifteen seconds of the first one.  What is left for this file is the
-   part none of them would do: append two lines to a list, and keep the visitor
-   from typing while the engine is busy.
+   Phase 6.3 of PLAN.md.  Phase 5.1 put the plainest possible chat page here and
+   said phase 6 would replace it rather than wrap it; this is that replacement.
+   What the engine does is unchanged -- src/web/client.ts, src/web/cache.ts and
+   src/web/loading.ts are used exactly as phases 4 and 5 left them -- and what
+   changed is everything a visitor sees.
 
-   It is deliberately not the exhibit.  Phase 6 rebuilds the author's window --
-   the background, the menu, the panes, the welcome line -- and when it does it
-   replaces the markup below rather than wraps it.  Two things here are already
-   his, because they cost nothing to get right: the label beside the input and
-   the word on the button are IQPokyd.rc:110-115, IDD_HLAVNI_OKNO.
+   **The layout is not invented, and it is not in IQPokyd.rc either.**  The
+   template gives the inventory and nothing else: IDD_HLAVNI_OKNO has eight
+   controls and the conversation is not one of them.  The conversation is a
+   hundred STATIC children created at runtime by
+   PREFORMATUJ_TEXTY_CLOVEKA_A_POCITACE_NA_OBRAZOVCE (PROSTRED.FU:904), and the
+   eight that *are* in the template are re-anchored the first time the window is
+   sized by PREKRESLI_PRVKY_V_OKNE_PRI_ZMENE_VELIKOSTI (:1022).  So the numbers
+   below come from those two functions, through WINDOW_LAYOUT and PALETTE in
+   src/app/resources.ts, and every one of them is a named constant there rather
+   than a literal here.
 
-   mountChat(document.body, urls) is the whole of using it, and it mirrors
-   mountLoading: build it, attach it, hand back a handle that can take it off
-   again.  The two urls are not optional and deliberately so -- see the note on
-   them below.
+   Four things that took reading the engine to get right, each of them one
+   declaration in src/app/chat.css:
+
+     - **the transcript grows upwards and is cut off at the top.**  :923-924 set
+       the box, :944 walks the sentences newest-first from the bottom, and :962
+       breaks out of the loop the moment one would cross the top inset.  There is
+       no scrollbar, there never was, and the height of the window *is* how much
+       history there is.  (Phase 6.5 is where that stops being a fact about 2005
+       and becomes a decision about the web.)
+     - **the wrap is 15 px narrower than the box**, and the author did not know
+       why either: "rezerva (nevim, proc musi byt, ale jinak to obcas zalomi
+       zbytecne!!!)", :856.
+     - **the background is stretched, not tiled**: PREKRESLI_OBRAZOVKU (:827)
+       reloads IDB_POZADIHLAVNIHOOKNA at okno.right x okno.bottom on every
+       resize, so a 900x459 photograph takes whatever shape the window is.
+       IDB_POZADIMALE is the opposite -- CreatePatternBrush at :348 -- and tiles
+       behind the sub-window, which here is the loading dialog.
+     - **the colours are COLORREFs**, 0x00BBGGRR, and PALETTE has already turned
+       them round: what you say is yellow, what IQ Pokyd says is green.
+       VRAT_BARVU_TEXTU (:108) is what picks between them, off `puvodcevety`.
+
+   The line you type into is the one control that keeps a background of its own:
+   CMfcDlg::OnCtlColor (mfcDlg.cpp:917-922) gives CTLCOLOR_EDIT the near-black
+   g_barvapozadizadavanivety and the same yellow the human's sentences are in.
+
+   mountChat(document.body, urls) is still the whole of using it, and the four
+   states are still published as `data-state` on the root.
 
    Written by us, not ported.  English identifiers and ASCII only, like the rest
-   of the non-engine code -- every Czech letter the visitor sees is a \uXXXX
-   escape, with the author's own spelling in the comment beside it.
+   of the non-engine code -- every Czech letter the visitor sees is read from
+   src/app/resources.ts, which is generated from the author's own CP1250 bytes.
 */
 
 import { PokydClient } from "../web/client.ts";
 import { mountLoading } from "../web/loading.ts";
 import { startCached } from "../web/cache.ts";
 import type { PokydCacheReport, PokydCachedStartOptions } from "../web/cache.ts";
+import type { PokydSettings } from "../web/protocol.ts";
 
-/* IDD_HLAVNI_OKNO, IQPokyd.rc:106-115.  His words, not ours. */
-const TITLE = "IQ Pokyd v0.15";
-const INPUT_LABEL = "Tv\u00e1 v\u011bta";     /* "Tva veta" */
-const SEND_LABEL = "\u0158ekni";              /* "Rekni" */
+import { DIALOGS, PALETTE, WINDOW_LAYOUT, dluToPx } from "./resources.ts";
+import { BITMAP_ASSETS } from "./assets.ts";
+import { mountMenu } from "./menu.ts";
+import { settingsCaption } from "./caption.ts";
+import { dialogBaseUnits, emForCellHeight } from "./dlu.ts";
 
-/* Ours, and only until phase 6 gives the window its own way of saying so. */
+/* ----------------------------------------------------- the author's strings */
+
+/* IDD_HLAVNI_OKNO, read rather than copied.  Phase 5.1 had these three as
+   literals with the .rc line numbers beside them; 6.1 made the file a module,
+   so the literals are gone and a caption that moved in the archive moves here. */
+const MAIN = DIALOGS["IDD_HLAVNI_OKNO"];
+
+function control(id: string) {
+  const found = MAIN.controls.find((c) => c.id === id);
+  if (found === undefined) throw new Error(id + " is not in IDD_HLAVNI_OKNO");
+  return found;
+}
+
+const INPUT = control("IDC_VETA");
+const SEND = control("IDC_NOVAVETA");
+const LABEL = control("IDC_NAPISTVAVETA");
+const HEADING_LEFT = control("IDC_NADPIS1");    /* Ales Janda */
+const HEADING_TITLE = control("IDC_NADPIS2");   /* the title in the middle */
+const HEADING_RIGHT = control("IDC_NADPIS3");   /* KYBLSoft 2005 */
+
+/* Ours, and the only two strings on the page that are not the author's: he had
+   a MessageBox for this and a BEZ_PROSTREDI build has neither. */
 const FAILED_TITLE = "IQ Pokyd se nespustil.";           /* "did not start" */
-const FAILED_SAY = "(IQ Pokyd neodpov\u011bd\u011bl.)";  /* "did not answer" */
+const FAILED_SAY = "(IQ Pokyd neodpověděl.)";  /* "did not answer" */
+
+/* mfcDlg.cpp:1005.  The one command in IDR_MENU that phase 6.3 can honour --
+   the rest open dialogs that belong to phases 7 and 8, and src/app/menu.ts
+   greys out anything with no handler.  His spelling, his scheme. */
+const HOMEPAGE = "http://iqpokyd.kyblsoft.cz";
+
+/* The fonts, and the whole of the font work in this phase: iqpokyd.ttf turned
+   out to be a .FOT stub pointing at Microsoft's Arial CE Bold Italic, which is
+   not in the archive, and every face the program actually asks for is a Windows
+   face (phase 6.2).  So these are stacks, and src/app/dlu.ts measures whichever
+   one the visitor really got -- which is the point: the author's lfHeight of 20
+   is a *cell* height, so a fallback face lands on his 20 pixels too. */
+const SANS = "\"Trebuchet MS\", \"Lucida Grande\", \"Lucida Sans Unicode\", "
+  + "\"DejaVu Sans\", Verdana, sans-serif";
+const SERIF = "Garamond, \"EB Garamond\", \"Palatino Linotype\", Palatino, "
+  + "\"Book Antiqua\", Georgia, serif";
+
+/* ------------------------------------------------------------- the options */
 
 export interface PokydChatOptions extends PokydCachedStartOptions {
   /** Where src/web/worker.ts and build/wasm/pokyd.mjs are served from.
@@ -47,10 +114,16 @@ export interface PokydChatOptions extends PokydCachedStartOptions {
    *  asset -- so the bundle would carry a second, unbundled copy of the worker
    *  and of the 137 KB Emscripten glue whether or not anything ever loaded
    *  them.  Where the two files landed is a property of the build, so the
-   *  caller that knows says it: src/app/main.ts for the exhibit, and the page
-   *  itself for a test served by test/browser.mjs. */
+   *  caller that knows where says so: src/app/main.ts for the exhibit, and the
+   *  page itself for a test served by test/browser.mjs. */
   workerUrl: string | URL;
   moduleUrl: string | URL;
+  /** `prikaz_nezobrazovatpozadi`, the author's own `-bezpozadi` switch
+   *  (PROSTRED.FU:100, :337).  Black instead of the photograph, and the standard
+   *  3D face instead of the grey tile.  Phase 7.1 turns it into a checkbox;
+   *  until then src/app/main.ts reads it off the query string, which is the
+   *  nearest thing a page has to a command line. */
+  noBackground?: boolean;
   /** Every state change, in the order the root element's `data-state` shows
    *  them.  For a page that wants to react to one; the DOM is the other half of
    *  this and says the same thing. */
@@ -77,21 +150,130 @@ export interface PokydChatHandle {
   close(): Promise<void>;
 }
 
+/* ------------------------------------------------------------ the mounting */
+
 export function mountChat(
   parent: Element,
   options: PokydChatOptions,
 ): PokydChatHandle {
-  const { workerUrl, moduleUrl, onState, ...startOptions } = options;
+  const { workerUrl, moduleUrl, onState, noBackground, ...startOptions } = options;
 
-  /* ----------------------------------------------------------------- the DOM */
+  /* --------------------------------------------------------- the dimensions */
+
+  /* MapDialogRect, with the base units measured off the face the visitor got
+     rather than the one the author had.  Only three of the template's numbers
+     survive the resize handler: the input's left edge, the gap it keeps on its
+     right, and the heights of the three controls on the bottom row -- the rest
+     is re-anchored in pixels against the client rectangle. */
+  const base = dialogBaseUnits(SANS, MAIN.font!.size);
+  const px = (rect: { x: number; y: number; cx: number; cy: number }) =>
+    dluToPx(rect, base);
+
+  const inputBox = px(INPUT.rect);
+  const sendBox = px(SEND.rect);
+  const labelBox = px(LABEL.rect);
+  /* PREKRESLI_PRVKY_V_OKNE_PRI_ZMENE_VELIKOSTI:1065 widens the edit by exactly
+     the change in window width, so what stays constant is the gap on its right
+     -- the template's own 324 - (46 + 215) = 63 dialog units. */
+  const inputGap = px({
+    x: 0, y: 0, cx: MAIN.rect.cx - (INPUT.rect.x + INPUT.rect.cx), cy: 0,
+  }).width;
+
+  const { margin, spacing, transcript: box } = WINDOW_LAYOUT;
+
+  /* --------------------------------------------------------------- the DOM */
 
   const element = document.createElement("div");
   element.className = "pokyd";
   element.dataset["state"] = "loading";
+  if (noBackground === true) element.dataset["background"] = "off";
 
-  const heading = document.createElement("h1");
-  heading.className = "pokyd-title";
-  heading.textContent = TITLE;
+  /* Everything the stylesheet needs that only this file can know: two URLs the
+     bundler fingerprinted, and five measurements. */
+  const style = element.style;
+  style.setProperty("--pokyd-sans", SANS);
+  style.setProperty("--pokyd-serif", SERIF);
+  style.setProperty("--pokyd-photo",
+    "url(" + BITMAP_ASSETS["IDB_POZADIHLAVNIHOOKNA"].url + ")");
+  style.setProperty("--pokyd-tile",
+    "url(" + BITMAP_ASSETS["IDB_POZADIMALE"].url + ")");
+  /* PROSTRED.PR:12-17, already turned round from 0x00BBGGRR by resources.ts.
+     They are set from the module rather than written into the stylesheet so
+     that there is still exactly one place they live: test/app/resources.test.ts
+     reads PALETTE back out of the engine source, so a colour that moves in
+     PROSTRED.PR moves on the page and is noticed by a test. */
+  style.setProperty("--pokyd-window-bg", PALETTE.windowBackground);
+  style.setProperty("--pokyd-window-text", PALETTE.windowText);
+  style.setProperty("--pokyd-human-text", PALETTE.humanText);
+  style.setProperty("--pokyd-pokyd-text", PALETTE.pokydText);
+  style.setProperty("--pokyd-heading-text", PALETTE.headingText);
+  style.setProperty("--pokyd-title-text", PALETTE.titleText);
+  style.setProperty("--pokyd-input-bg", PALETTE.inputBackground);
+  style.setProperty("--pokyd-margin", margin + "px");
+  style.setProperty("--pokyd-spacing", spacing + "px");
+  style.setProperty("--pokyd-box-side", box.left + "px");
+  style.setProperty("--pokyd-box-top", box.top + "px");
+  style.setProperty("--pokyd-box-bottom", box.bottom + "px");
+  /* lfHeight = 20 at PROSTRED.FU:918 is a cell height, and :951 then counts the
+     layout in it: vyskaznaku is GetTextExtentPoint32("a").cy, one line. */
+  style.setProperty("--pokyd-turn-size",
+    emForCellHeight(SANS, WINDOW_LAYOUT.transcriptFont.lfHeight).toFixed(2) + "px");
+  style.setProperty("--pokyd-turn-line",
+    WINDOW_LAYOUT.transcriptFont.lfHeight + "px");
+  /* mfcDlg.cpp:370-383: negative lfHeights, so these two are em sizes as they
+     stand and need no measuring. */
+  style.setProperty("--pokyd-heading-size",
+    -WINDOW_LAYOUT.headingFont.lfHeight + "px");
+  style.setProperty("--pokyd-heading-weight",
+    String(WINDOW_LAYOUT.headingFont.weight));
+  style.setProperty("--pokyd-title-size",
+    -WINDOW_LAYOUT.titleFont.lfHeight + "px");
+  style.setProperty("--pokyd-title-weight",
+    String(WINDOW_LAYOUT.titleFont.weight));
+  style.setProperty("--pokyd-input-left", inputBox.x + "px");
+  style.setProperty("--pokyd-input-gap", inputGap + "px");
+  style.setProperty("--pokyd-input-height", inputBox.height + "px");
+  style.setProperty("--pokyd-send-width", sendBox.width + "px");
+  style.setProperty("--pokyd-send-height", sendBox.height + "px");
+  style.setProperty("--pokyd-label-height", labelBox.height + "px");
+
+  /* The menu bar is outside the client rectangle, which is why it is outside
+     the element the background is painted on. */
+  const menu = mountMenu(element, {
+    commands: {
+      /* JDI_NA_WWW_STRANKU, mfcDlg.cpp:1005.  His URL, his scheme. */
+      ID_NAPOVEDA_INTERNET: (): void => {
+        window.open(HOMEPAGE, "_blank", "noopener,noreferrer");
+      },
+    },
+  });
+
+  /* GetClientRect: everything below the menu, and what PREKRESLI_OBRAZOVKU
+     stretches the photograph across. */
+  const client = document.createElement("div");
+  client.className = "pokyd-client";
+
+  const headings = document.createElement("div");
+  headings.className = "pokyd-headings";
+
+  const makeHeading = (
+    id: string, text: string, className: string,
+  ): HTMLElement => {
+    const span = document.createElement("span");
+    span.className = className;
+    span.dataset["control"] = id;
+    span.textContent = text;
+    return span;
+  };
+  headings.append(
+    makeHeading("IDC_NADPIS1", HEADING_LEFT.text!, "pokyd-heading-left"),
+    makeHeading("IDC_NADPIS3", HEADING_RIGHT.text!, "pokyd-heading-right"),
+    /* Last of the three, and in its own box: the author centres it inside
+       [0, right - OKRAJE] rather than inside the window (:1073), so it sits
+       half the margin to the left of true centre.  A box that stops short of
+       the right margin and centres its text is that arithmetic exactly. */
+    makeHeading("IDC_NADPIS2", HEADING_TITLE.text!, "pokyd-title"),
+  );
 
   const transcript = document.createElement("ol");
   transcript.className = "pokyd-transcript";
@@ -105,7 +287,7 @@ export function mountChat(
   const label = document.createElement("label");
   label.className = "pokyd-label";
   label.htmlFor = "pokyd-veta";
-  label.textContent = INPUT_LABEL;
+  label.textContent = LABEL.text!;
 
   /* IDC_VETA is an ES_AUTOHSCROLL edit with no length of its own, and
      pokyd_say copies into a buffer the API sizes -- so there is no cap to put
@@ -117,10 +299,13 @@ export function mountChat(
   input.autocomplete = "off";
   input.disabled = true;
 
+  /* mfcDlg.cpp:421 hangs IDI_TVAR on this button with CButton::SetIcon, but the
+     template is a DEFPUSHBUTTON with text and no BS_ICON, so what a person saw
+     in 2005 is the word.  That is what is drawn here. */
   const send = document.createElement("button");
   send.className = "pokyd-send";
   send.type = "submit";
-  send.textContent = SEND_LABEL;
+  send.textContent = SEND.text!;
   send.disabled = true;
 
   const failure = document.createElement("p");
@@ -128,13 +313,29 @@ export function mountChat(
   failure.hidden = true;
 
   /* Where IDD_NACITANI goes while it is on the screen.  mountLoading appends to
-     whatever it is handed, so the only way to put it above the input rather
-     than below it is to hand it a place of its own. */
+     whatever it is handed, and the author's loading dialog is a sub-window --
+     Nacitani.cpp:77 returns g_stetecpozadipodokna, the IDB_POZADIMALE tile --
+     so this is the slot that wears it. */
   const loadingSlot = document.createElement("div");
   loadingSlot.className = "pokyd-loading-slot";
 
+  /* IDC_EFEKTPROGRES1 and IDC_EFEKTPROGRES2: two 6-pixel vertical bars down the
+     window's edges, positioned at :1053-1059.  The template leaves out
+     WS_VISIBLE and NASTAV_VIDITELNOST_EFEKTNICH_PROGRESSBARU (:163) only shows
+     them when pouzivatefekty is 1, which NASTAV_STANDARDNE sets to 0.  They are
+     in the DOM because they are two of the eight controls; VLAKNO__EFEKTY, which
+     is what makes them move, is not this phase's. */
+  const effects = ["IDC_EFEKTPROGRES1", "IDC_EFEKTPROGRES2"].map((id) => {
+    const bar = document.createElement("div");
+    bar.className = "pokyd-effect";
+    bar.dataset["control"] = id;
+    bar.hidden = true;
+    return bar;
+  });
+
   form.append(label, input, send);
-  element.append(heading, loadingSlot, transcript, form, failure);
+  client.append(...effects, headings, transcript, form, loadingSlot, failure);
+  element.appendChild(client);
   parent.appendChild(element);
 
   /* --------------------------------------------------------------- the state */
@@ -150,15 +351,34 @@ export function mountChat(
     if (onState) onState(next);
   }
 
+  /** ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI, which the author called after every
+   *  sentence because nalada moves on its own: it is recomputed from naladabody
+   *  after each answer (INTELIG.FU:532), so a civil conversation visibly talks
+   *  IQ Pokyd into a better mood.  A settings read that fails leaves the caption
+   *  where it was; it is a status line, not the conversation. */
+  async function refreshCaption(): Promise<void> {
+    try {
+      const settings: PokydSettings = await pokyd.getSettings();
+      menu.setCaption(settingsCaption(settings));
+    } catch {
+      /* deliberately nothing */
+    }
+  }
+
   function turn(who: "human" | "pokyd", text: string): HTMLLIElement {
     const li = document.createElement("li");
     li.className = "pokyd-turn";
     li.dataset["who"] = who;
 
+    /* Not the author's, and not on the screen either.  IQ Pokyd told the two
+       apart by colour alone -- VRAT_BARVU_TEXTU (PROSTRED.FU:108) reads
+       `puvodcevety` and hands back yellow or green -- but colour is not a
+       transcript: test/golden/rozhovor.txt is written with these two
+       characters, and so is the conversation IQPOKYD's own KYDY.TXT keeps.  So
+       they are in the markup, out of the accessibility tree, and hidden by the
+       stylesheet, which leaves the window looking like his. */
     const marker = document.createElement("span");
     marker.className = "pokyd-marker";
-    /* The two characters test/golden/rozhovor.txt is written with, so that what
-       is on the screen and what is in the golden file read as one thing. */
     marker.textContent = who === "human" ? ">" : "<";
     marker.setAttribute("aria-hidden", "true");
 
@@ -168,9 +388,15 @@ export function mountChat(
 
     li.append(marker, body);
     transcript.appendChild(li);
-    /* The transcript scrolls, the page does not: scrollIntoView would drag the
-       input off the screen on a phone. */
-    transcript.scrollTop = transcript.scrollHeight;
+
+    /* g_poslednich100vet holds a hundred sentences and RozvrzeniVet::PRIDEJ_VETU
+       (IQPWAV.PR:85) shifts the oldest out; both speakers' lines go into the
+       same hundred.  Nothing scrolls -- what does not fit above the top inset is
+       simply not drawn (PROSTRED.FU:962) -- so this is the only forgetting the
+       window does. */
+    while (transcript.childElementCount > WINDOW_LAYOUT.transcriptCapacity) {
+      transcript.firstElementChild!.remove();
+    }
     return li;
   }
 
@@ -182,13 +408,13 @@ export function mountChat(
 
   /* -------------------------------------------------------------- the engine */
 
-  const client = new PokydClient({ workerUrl, moduleUrl });
+  const pokyd = new PokydClient({ workerUrl, moduleUrl });
 
   /* mountLoading listens to the engine's console; finish() stops it, because the
      engine goes on printing all through the conversation (VSTUP.FU:801-809).
      In a finally, not after: a load that throws should take its loading window
      with it rather than leave a bar stopped at 41% on the screen. */
-  const loading = mountLoading(loadingSlot, client);
+  const loading = mountLoading(loadingSlot, pokyd);
 
   const ready = (async (): Promise<PokydCacheReport> => {
     try {
@@ -198,8 +424,9 @@ export function mountChat(
          a warm start, and the cold path's own reseed (SLOVNIK.FU:1732) never
          happens on one. */
       const seed = startOptions.seed ?? Math.floor(Date.now() / 1000);
-      const report = await startCached(client, { ...startOptions, seed });
+      const report = await startCached(pokyd, { ...startOptions, seed });
       setState("ready");
+      await refreshCaption();
       input.focus();
       return report;
     } catch (e) {
@@ -228,9 +455,10 @@ export function mountChat(
     turn("human", sentence);
     setState("busy");
     try {
-      const answer = await client.say(sentence);
+      const answer = await pokyd.say(sentence);
       turn("pokyd", answer);
       setState("ready");
+      await refreshCaption();
       input.focus();
       return answer;
     } catch (e) {
@@ -253,21 +481,22 @@ export function mountChat(
 
   return {
     element,
-    client,
+    client: pokyd,
     ready,
     say,
     state: (): PokydChatState => state,
     close: async (): Promise<void> => {
       loading.remove();
       loadingSlot.remove();
+      menu.remove();
       try {
         await ready;
-        await client.close();
+        await pokyd.close();
       } catch {
         /* A load that never finished has nothing to tear down -- pokyd_api.h,
            and src/web/engine.ts refuses the call rather than let the engine
            abort on it. */
-        client.terminate();
+        pokyd.terminate();
       }
       element.remove();
     },

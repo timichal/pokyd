@@ -1,30 +1,27 @@
-/* IQ Pokyd - src/app/chat.css - phase 5.1 of PLAN.md.
+/* IQ Pokyd - src/app/chat.css - the main window, phase 6.3 of PLAN.md.
 
-   The plainest possible chat page, styled only enough to be usable: a column
-   that fits a phone, a transcript that scrolls while the input stays put, and
-   two colours. Nothing here is the exhibit -- phase 6 has the background
-   bitmap, the menu, iqpokyd.ttf and the author's own layout, and it replaces
-   this file rather than extends it.
+   Almost nothing here is a decision.  Every measurement is a custom property
+   src/app/chat.ts sets from src/app/resources.ts -- the author's OKRAJE and
+   ROZESTUP, his transcript box, his COLORREFs with the bytes already reversed,
+   his lfHeights measured against the face the visitor actually has -- and the
+   rules below are the shapes those numbers make.  What is written out as a
+   literal in this file is a pixel the engine itself writes as a literal, and
+   each one carries its line number.
 
-   The one thing worth keeping when it does: the transcript is what scrolls, not
-   the page. A page-level scroll takes the input off the screen on a phone every
-   time the keyboard opens.
+   The layout is absolute because the author's is: PREKRESLI_PRVKY_V_OKNE_PRI_
+   ZMENE_VELIKOSTI (PROSTRED.FU:1022) re-anchors all eight template controls
+   against the client rectangle the first time the window is sized, so the
+   template's positions never survive to be seen.  Every `position: absolute`
+   below is one of its ZMEN_POZICI_PRVKU calls, and the comment says which.
 
-   src/web/loading.ts brings its own stylesheet and is styled through six custom
-   properties; the .pokyd-loading rules at the foot are this page setting three
-   of them, which is the whole of what a caller is meant to do to it.
+   The one rule worth reading twice is the transcript's.  `justify-content:
+   flex-end` in a clipped box is the whole of PREFORMATUJ_TEXTY_...:944-985: the
+   newest sentence sits at the bottom, older ones stack upwards, and what does
+   not fit above the top inset is cut off rather than scrolled to.  That is not
+   a limitation of this stylesheet.  It is what the window did, and phase 6.5 is
+   where it is decided whether the web gets to keep it.
 
-   Ours, not ported. ASCII only, like the rest of the non-engine code. */
-
-:root {
-  --pokyd-bg: #f4f4f2;
-  --pokyd-panel: #ffffff;
-  --pokyd-ink: #1a1a1a;
-  --pokyd-dim: #6b6b6b;
-  --pokyd-rule: #d8d8d4;
-  --pokyd-human: #316ac5;   /* the loading bar's blue, so the page has one */
-  --pokyd-error: #a12b2b;
-}
+   Ours, not ported.  ASCII only, like the rest of the non-engine code. */
 
 * { box-sizing: border-box; }
 
@@ -34,143 +31,403 @@ html, body {
 }
 
 body {
-  background: var(--pokyd-bg);
-  color: var(--pokyd-ink);
-  font: 16px/1.45 "Trebuchet MS", system-ui, sans-serif;  /* IQPokyd.rc:108 */
+  /* CreateSolidBrush(0x000000), PROSTRED.FU:339 -- the window under the
+     photograph, and what a visitor sees for the instant before it loads. */
+  background: #000;
+  color: #e0e0e0;
+  font: 16px/1.4 "Trebuchet MS", system-ui, sans-serif;
 }
 
-#app {
-  height: 100%;
-  display: flex;
-  justify-content: center;
-}
+#app { height: 100%; }
 
 .pokyd {
-  width: 100%;
-  max-width: 44rem;
   height: 100%;
-  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
 }
 
-.pokyd-title {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--pokyd-dim);
+/* ================================================================ the menu */
+
+/* IDR_MENU is drawn above the client rectangle, which is what GetClientRect
+   means by excluding it -- so it is a sibling of .pokyd-client and not a child.
+   The colours are the XP defaults the program would have worn in 2005:
+   COLOR_3DFACE #ece9d8, COLOR_HIGHLIGHT #316ac5, which is the same blue
+   src/web/loading.ts already fills its bar with. */
+.pokyd-menubar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  background: #ece9d8;
+  border-bottom: 1px solid #aca899;
+  color: #000;
+  font: 11px/1.4 Tahoma, "Segoe UI", system-ui, sans-serif;
+  user-select: none;
 }
 
-/* ------------------------------------------------------------- the transcript */
+.pokyd-menu-holder { position: relative; }
 
-.pokyd-transcript {
+.pokyd-menu-title {
+  display: block;
+  height: 100%;
+  padding: 4px 8px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: default;
+}
+
+.pokyd-menu-title:hover:not(:disabled),
+.pokyd-menu-title[aria-expanded="true"] {
+  background: #316ac5;
+  color: #fff;
+}
+
+.pokyd-menu-title:disabled { color: #808080; }
+
+/* MFT_RIGHTJUSTIFY, IQPokyd.rc:150 -- the live
+   "name x name, character: mood" caption.  It opens the settings dialog, the
+   same as Nastaveni... does, so until phase 7.1 it is a status line that
+   happens to be a menu item. */
+.pokyd-menu-state {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.pokyd-menu-popup {
+  position: absolute;
+  z-index: 2;
+  top: 100%;
+  left: 0;
+  /* A menu is as wide as its widest line: nothing in it wraps, which is
+     what the min-width was standing in for. */
+  width: max-content;
+  min-width: 12em;
+  padding: 2px;
+  background: #fff;
+  border: 1px solid #aca899;
+  box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.4);
+}
+
+.pokyd-menu-separator {
+  height: 0;
+  margin: 2px 0 2px 26px;
+  border: 0;
+  border-top: 1px solid #d5d2ca;
+}
+
+.pokyd-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 3px 12px 3px 4px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: default;
+}
+
+.pokyd-menu-item:hover:not(:disabled) { background: #316ac5; color: #fff; }
+.pokyd-menu-item:disabled { color: #808080; }
+
+/* The gutter SetMenuItemBitmaps draws into (mfcDlg.cpp:388-401).  Fourteen
+   pixels because every one of those seven bitmaps is 14x14. */
+.pokyd-menu-bitmap {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+}
+
+.pokyd-menu-item:disabled .pokyd-menu-bitmap { opacity: 0.4; }
+
+.pokyd-menu-label { flex: 1 1 auto; white-space: nowrap; }
+
+/* The text after the tab in the .rc: "F4", "Alt+F1", "Shift+F1". */
+.pokyd-menu-accelerator {
+  flex: 0 0 auto;
+  padding-left: 1.5em;
+  color: #666;
+}
+
+.pokyd-menu-item:hover:not(:disabled) .pokyd-menu-accelerator { color: #dbe6f7; }
+.pokyd-menu-item:disabled .pokyd-menu-accelerator { color: #a0a0a0; }
+
+/* ============================================================== the window */
+
+/* GetClientRect.  PREKRESLI_OBRAZOVKU (PROSTRED.FU:827) reloads
+   IDB_POZADIHLAVNIHOOKNA at okno.right x okno.bottom on every resize, so the
+   900x459 photograph is stretched to the window and its aspect ratio is not
+   kept -- `100% 100%`, and deliberately not `cover`. */
+.pokyd-client {
+  position: relative;
   flex: 1 1 auto;
-  min-height: 0;                 /* without it the flex item refuses to shrink */
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  background-color: var(--pokyd-window-bg, #000);
+  background-image: var(--pokyd-photo);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  color: var(--pokyd-window-text, #e0e0e0);
+  font-family: var(--pokyd-sans);
+}
+
+/* prikaz_nezobrazovatpozadi, PROSTRED.FU:337-341: no photograph, no tile,
+   plain black and the standard 3D face.  Phase 7.1's checkbox. */
+.pokyd[data-background="off"] .pokyd-client { background-image: none; }
+
+/* ------------------------------------------------------------ the headings */
+
+.pokyd-headings {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pokyd-heading-left,
+.pokyd-heading-right,
+.pokyd-title {
+  position: absolute;
+  white-space: nowrap;
+}
+
+/* :1071 and :1077 -- both at OKRAJE-3, one against each edge. */
+.pokyd-heading-left,
+.pokyd-heading-right {
+  top: calc(var(--pokyd-margin) - 3px);
+  font-family: var(--pokyd-sans);
+  font-size: var(--pokyd-heading-size);
+  font-weight: var(--pokyd-heading-weight);
+  color: var(--pokyd-heading-text, #90ffff);
+}
+
+.pokyd-heading-left { left: var(--pokyd-margin); }
+.pokyd-heading-right { right: var(--pokyd-margin); }
+
+/* :1074 -- (vel.right - OKRAJE - width) / 2, which is half a margin left of
+   true centre.  A box that stops one margin short of the right edge and centres
+   its text inside itself is that same arithmetic, without needing the width. */
+.pokyd-title {
+  left: 0;
+  right: var(--pokyd-margin);
+  top: calc(var(--pokyd-margin) - 5px);
+  text-align: center;
+  font-family: var(--pokyd-serif);
+  font-size: var(--pokyd-title-size);
+  font-weight: var(--pokyd-title-weight);
+  color: var(--pokyd-title-text, #fff);
+}
+
+/* ---------------------------------------------------------- the conversation */
+
+/* PROSTRED.FU:923-924.  vlevo = OKRAJE+10, vpravo = right-OKRAJE-10,
+   nahore = OKRAJE+20, dole = bottom-OKRAJE-45 -- all four in WINDOW_LAYOUT. */
+.pokyd-transcript {
+  position: absolute;
+  left: var(--pokyd-box-side);
+  right: var(--pokyd-box-side);
+  top: var(--pokyd-box-top);
+  bottom: var(--pokyd-box-bottom);
   margin: 0;
-  padding: 0.75rem;
+  /* :946 subtracts ROZESTUP before the newest sentence as well as between
+     them, so the gap under the last line is there too. */
+  padding: 0 0 var(--pokyd-spacing);
   list-style: none;
-  background: var(--pokyd-panel);
-  border: 1px solid var(--pokyd-rule);
-  border-radius: 3px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--pokyd-spacing);
+  /* :962 -- what will not fit above `nahore` is not drawn.  No scrollbar, and
+     there never was one. */
+  overflow: hidden;
+
+  font-size: var(--pokyd-turn-size);
+  line-height: var(--pokyd-turn-line);
 }
 
 .pokyd-turn {
-  display: flex;
-  gap: 0.5rem;
-  padding: 0.2rem 0;
+  flex: 0 0 auto;
+  /* VRAT_ZALOMENY_TEXT_PRO_VYKRESLENI_NA_OBRAZOVKU:856, and the author's own
+     note on it: "rezerva (nevim, proc musi byt, ale jinak to obcas zalomi
+     zbytecne!!!)".  The static is the full width of the box; the text inside it
+     is wrapped fifteen pixels short of that. */
+  padding-right: 15px;
 }
 
-.pokyd-marker {
-  flex: 0 0 auto;
-  width: 1ch;
-  color: var(--pokyd-dim);
-  font-family: ui-monospace, "Consolas", monospace;
-}
+/* VRAT_BARVU_TEXTU, PROSTRED.FU:108-119: the only thing that tells the two
+   speakers apart is which brush the static is painted with. */
+.pokyd-turn[data-who="human"] { color: var(--pokyd-human-text, #ffff57); }
+.pokyd-turn[data-who="pokyd"] { color: var(--pokyd-pokyd-text, #57ff57); }
 
 .pokyd-text { white-space: pre-wrap; }
 
-.pokyd-turn[data-who="human"] .pokyd-text { color: var(--pokyd-human); }
+/* Ours, for the transcript readback and for KYDY.TXT's sake, and never on the
+   screen -- IQ Pokyd marked nothing, it only coloured. */
+.pokyd-marker { display: none; }
 
-/* ------------------------------------------------------------------ the input */
+/* ------------------------------------------------------------- the bottom row */
 
 .pokyd-form {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
+/* :1068 -- OKRAJE+10 from the left, OKRAJE up from the bottom.  Two pixels
+   lower than the edit beside it, which is the author's, not a rounding. */
 .pokyd-label {
-  flex: 0 0 auto;
-  color: var(--pokyd-dim);
+  position: absolute;
+  pointer-events: auto;
+  left: var(--pokyd-box-side);
+  bottom: var(--pokyd-margin);
+  height: var(--pokyd-label-height);
+  color: var(--pokyd-window-text, #e0e0e0);
+  font-size: 13px;
+  line-height: var(--pokyd-label-height);
 }
 
+/* :1064-1066.  The edit keeps the template's left edge and is widened by
+   exactly the change in window width, so what is constant on its right is a
+   gap: 324 - (46 + 215) = 63 dialog units. */
 .pokyd-input {
-  flex: 1 1 auto;
+  position: absolute;
+  pointer-events: auto;
+  left: var(--pokyd-input-left);
+  right: var(--pokyd-input-gap);
+  bottom: calc(var(--pokyd-margin) + 2px);
   min-width: 0;
-  padding: 0.45rem 0.55rem;
-  font: inherit;
-  color: inherit;
-  background: var(--pokyd-panel);
-  border: 1px solid var(--pokyd-rule);
-  border-radius: 3px;
+  height: var(--pokyd-input-height);
+  padding: 0 3px;
+  /* mfcDlg.cpp:917-922: CTLCOLOR_EDIT is the one control that keeps a
+     background of its own -- g_barvapozadizadavanivety, with the human's own
+     yellow on it. */
+  color: var(--pokyd-human-text, #ffff57);
+  background: var(--pokyd-input-bg, #090011);
+  border: 1px solid #7f7f7f;
+  border-radius: 0;
+  font-family: var(--pokyd-sans);
+  font-size: 13px;
 }
+
+/* PROSTRED.FU:343 -- with no background the edit brush is white, and
+   mfcDlg.cpp:919 puts black text on it. */
+.pokyd[data-background="off"] .pokyd-input {
+  color: #000;
+  background: #fff;
+}
+
+.pokyd-input::placeholder { color: #6a6a5a; }
+
+/* :1061 -- OKRAJE+10 in from the right, and the same two pixels up as the
+   edit.  Its size is the template's, 43 x 12 dialog units. */
+.pokyd-send {
+  position: absolute;
+  pointer-events: auto;
+  right: var(--pokyd-box-side);
+  bottom: calc(var(--pokyd-margin) + 2px);
+  width: var(--pokyd-send-width);
+  height: var(--pokyd-send-height);
+  padding: 0;
+  color: #000;
+  background: #ece9d8;
+  border: 1px solid #707070;
+  border-radius: 2px;
+  font-family: Tahoma, "Segoe UI", system-ui, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* BS_DEFPUSHBUTTON: the default button wears a heavier frame. */
+.pokyd-send { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); }
+.pokyd-send:hover:not(:disabled) { background: #f6f4ea; }
+.pokyd-send:active:not(:disabled) { background: #dcd9c8; }
 
 .pokyd-input:focus-visible,
 .pokyd-send:focus-visible {
-  outline: 2px solid var(--pokyd-human);
+  outline: 2px solid #316ac5;
   outline-offset: 1px;
-}
-
-.pokyd-send {
-  flex: 0 0 auto;
-  padding: 0.45rem 1rem;
-  font: inherit;
-  color: var(--pokyd-panel);
-  background: var(--pokyd-human);
-  border: 1px solid transparent;
-  border-radius: 3px;
-  cursor: pointer;
 }
 
 .pokyd-input:disabled,
 .pokyd-send:disabled {
-  opacity: 0.55;
+  opacity: 0.6;
   cursor: default;
 }
 
 /* The engine takes a few milliseconds to answer and the input is disabled while
    it does; this is the only feedback that says so. */
-.pokyd[data-state="busy"] .pokyd-transcript { cursor: progress; }
+.pokyd[data-state="busy"] .pokyd-client { cursor: progress; }
+
+/* ---------------------------------------------------------------- the edges */
+
+/* IDC_EFEKTPROGRES1 and IDC_EFEKTPROGRES2, :1053-1059: six pixels wide, the
+   full height of the client area, one against each edge.  Hidden unless
+   pouzivatefekty is 1 (:163), which is not the default -- and VLAKNO__EFEKTY,
+   which is what makes them move, is not this phase's. */
+.pokyd-effect {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: #fff;
+}
+
+.pokyd-effect[data-control="IDC_EFEKTPROGRES1"] { left: 0; }
+.pokyd-effect[data-control="IDC_EFEKTPROGRES2"] { right: 0; }
+
+/* -------------------------------------------------------------- the failure */
 
 .pokyd-failure {
-  flex: 0 0 auto;
+  position: absolute;
+  left: var(--pokyd-box-side);
+  right: var(--pokyd-box-side);
+  top: 40%;
   margin: 0;
-  color: var(--pokyd-error);
+  padding: 0.6em 0.8em;
+  color: #ffdede;
+  background: rgba(90, 0, 0, 0.85);
+  border: 1px solid #a12b2b;
+  font-size: 14px;
 }
 
-/* ------------------------------------------------------- the loading window */
+/* --------------------------------------------------- the loading sub-window */
 
-/* src/web/loading.ts draws IDD_NACITANI into .pokyd-loading-slot and takes
-   itself off the page when the load ends; the slot goes with it. It sits in the
-   same column as everything else, so it mostly needs telling how wide it is
-   allowed to be.
-
-   Two class names deep on purpose. loading.ts installs its own stylesheet into
-   the head when it mounts, which is after this file's <link>, so a single-class
-   rule here would lose the cascade to its own --pokyd-loading-width: 20em. */
-.pokyd-loading-slot { flex: 0 0 auto; }
+/* IDD_NACITANI is a sub-window, and Nacitani.cpp:77 paints it with
+   g_stetecpozadipodokna -- the IDB_POZADIMALE brush, which is a 100x100 grey
+   noise tile and *repeats* (PROSTRED.FU:348).  That is the one place in this
+   window where a bitmap tiles rather than stretches.
+   src/web/loading.ts brings its own stylesheet and installs it into the head
+   after this file's <link>, so these rules are two classes deep on purpose --
+   a single-class rule would lose the cascade to its own defaults. */
+.pokyd-loading-slot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100% - 2 * var(--pokyd-margin));
+}
 
 .pokyd .pokyd-loading {
-  --pokyd-loading-width: 100%;
-  --pokyd-loading-ink: var(--pokyd-ink);
-  --pokyd-loading-border: var(--pokyd-rule);
-  padding: 0.75rem;
-  background: var(--pokyd-panel);
-  border: 1px solid var(--pokyd-rule);
-  border-radius: 3px;
+  --pokyd-loading-width: 22em;
+  --pokyd-loading-ink: #000;
+  --pokyd-loading-track: #fff;
+  --pokyd-loading-fill: #316ac5;
+  --pokyd-loading-border: #7f9db9;
+  max-width: 100%;
+  padding: 12px 14px;
+  background-color: #ece9d8;
+  background-image: var(--pokyd-tile);
+  background-repeat: repeat;
+  /* CreateWindowEx with a caption and a thick frame: a raised 3D edge is what
+     a sub-window had in 2005, and two borders is the cheapest honest one. */
+  border: 1px solid #404040;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #aca899,
+    3px 3px 6px rgba(0, 0, 0, 0.55);
+  font-family: Tahoma, "Segoe UI", system-ui, sans-serif;
 }
+
+/* PROSTRED.FU:341 -- with no background the sub-window is a plain
+   GetSysColor(COLOR_3DFACE). */
+.pokyd[data-background="off"] .pokyd-loading { background-image: none; }
