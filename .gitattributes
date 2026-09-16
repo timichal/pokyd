@@ -15,6 +15,13 @@
 original/**       text eol=crlf
 src/engine/**     text eol=crlf
 
+# Phase 6.1.  src/app/resources.ts is generated from original/!Prostre/IQPokyd.rc
+# by tools/extract-rc.mjs, and test/app/resources.test.ts compares the file on disk
+# with a fresh parse byte for byte -- so its checkout has to be CRLF everywhere,
+# including on the Linux runner that builds the deploy.  Nothing else under src/app/
+# is compared that way and nothing else here needs pinning.
+src/app/resources.ts   text eol=crlf
+
 # Binary payloads: never touched, never diffed as text.
 #
 # These override the `original/** text eol=crlf` rule above -- later rules win -- and

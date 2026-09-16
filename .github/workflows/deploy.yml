@@ -98,12 +98,17 @@ jobs:
 
       - run: npm run typecheck
 
-      # The gate. node test/run.mjs --quick is the five tests that need no
+      # The gate. node test/run.mjs --quick is the six tests that need no
       # browser, and among them is test/wasm/smoke.mjs: the 23 sentences of
       # test/golden/rozhovor.in through this build, compared byte for byte with
       # what the MinGW build printed in 2026. The four browser tests, phase 5.2's
       # included, run on a machine with Chrome; this one does not gamble on the
       # runner having one.
+      #
+      # Since 6.1 it also re-parses original/!Prostre/IQPokyd.rc and compares
+      # the result with the committed src/app/resources.ts byte for byte, which
+      # is the second thing here that depends on .gitattributes checking out
+      # CRLF on Linux -- that file is pinned for exactly this reason.
       - name: Does it still say the same things?
         run: npm test -- --quick
 

@@ -143,6 +143,35 @@ visitor rather than a test ever runs. Three files, one of them a stylesheet.
 | `chat.ts` | `mountChat(parent, options)` — a transcript, a line to type into, and four states published on the root element as `data-state`: `loading`, `ready`, `busy`, `failed`. A caller of phase 4 and nothing else: `PokydClient` for the worker, `startCached` for the eighteen megabytes, `mountLoading` for the fifteen seconds. |
 | `main.ts` | What `index.html` runs, and the only file here that needs Vite: where the worker chunk ended up (`?worker&url`), where the engine was emitted, and what the query string asked for. |
 | `chat.css` | Plain, and only as far as usable. Phase 6 replaces it rather than extends it. |
+| `resources.ts` | Phase 6.1, and **generated**: `original/IQ Pokyd/!Prostre/IQPokyd.rc` parsed by `tools/extract-rc.mjs`. Six dialogs, the menu, the accelerator table, the version block and the eighteen image files, with the author's strings, ids and geometry. Plus the two things the .rc does not contain — `PALETTE` and `WINDOW_LAYOUT` — which come out of `PROSTRED.PR` and `PROSTRED.FU`. |
+
+**`resources.ts` is committed even though it is generated**, unlike everything
+under `build/`: it is what `npm run typecheck` and the browser consume, a change
+to the parse should show up as a diff, and `.github/workflows/deploy.yml` does
+not have to know the extractor exists. `node tools/extract-rc.mjs` rewrites it,
+`--check` says whether it is stale, `--dump` prints the parse readably, and
+`node test/app/resources.test.ts` re-runs the parse in memory and fails if the
+committed file has drifted — so "generated" cannot quietly become "hand-edited".
+
+Three things the resource script does **not** say, all of which phase 6.1 had to
+go and find, and all of which are written down in that file's header:
+
+- **The main window's layout is not in `IQPokyd.rc`.** `IDD_HLAVNI_OKNO` has
+  eight controls and none of them is the conversation. The transcript is a
+  hundred `STATIC` children created at runtime by
+  `PREFORMATUJ_TEXTY_CLOVEKA_A_POCITACE_NA_OBRAZOVCE` (`PROSTRED.FU:904`),
+  bottom-anchored and growing upwards, with no scrollbar — what does not fit is
+  not drawn. The eight controls that *are* in the template get repositioned by
+  `PREKRESLI_PRVKY_V_OKNE_PRI_ZMENE_VELIKOSTI` (`PROSTRED.FU:1022`) the first
+  time the window is sized, so the template gives the inventory and the initial
+  size and `PROSTRED.FU` gives the layout.
+- **The colours are `COLORREF`s, which are `0x00BBGGRR`.** `g_barvatextucloveka`
+  is written `0x0057FFFF` and is **yellow**; read as `#RRGGBB` it would be sky
+  blue. All six are converted once in `PALETTE` and checked against
+  `prostred.pr` by the test.
+- **Dialog units are not pixels**, and the base units are a property of the
+  font on the machine drawing the dialog rather than anything in the script.
+  `dluToPx(rect, base)` takes them as an argument for that reason.
 
 Three things in it are worth knowing before changing any of them.
 

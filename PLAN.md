@@ -9,9 +9,11 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 5 — the vertical slice — **is complete, 5.1 through 5.3, and IQ Pokyd is
-live at <https://timichal.github.io/pokyd/>.** A twenty-year-old Czech Windows program
-holds a conversation in a browser, at a URL, saying byte for byte what it said in 2005.
+**Phase:** 6 — the retro UI — **is under way: 6.1 is done and the author's resource
+script is now a module the page can read.** Phase 5 is complete, 5.1 through 5.3, and
+**IQ Pokyd is live at <https://timichal.github.io/pokyd/>.** A twenty-year-old Czech
+Windows program holds a conversation in a browser, at a URL, saying byte for byte what
+it said in 2005.
 Phase 4 is complete, 4.1 through 4.4; phase 3 is complete, 3.1 through 3.4, gate passed
 and numbers in; phases 1 and 2 are complete, 1.1–1.6 and 2.1–2.5.
 **The engine runs, answers in Czech, and the conversation is on disk.**
@@ -313,9 +315,9 @@ and the `Řekni` on the button, three phases before 6.1 reads that file properly
 civil sentences at 1, the best of the five (`INTELIG.FU:532`). That is phase 7.2's
 subject, now pinned by a test so that a change to it is noticed by something.
 
-`npm test` also means something now: `test/run.mjs` runs all **nine** tests in this
-repository in order — `--quick` keeps the five that do not launch a browser — and all
-nine pass in a little over two minutes.
+`npm test` also means something now: `test/run.mjs` runs all **ten** tests in this
+repository in order — `--quick` keeps the six that do not launch a browser — and all
+ten pass in a little over two minutes.
 
 **5.3 is done, and phase 5 with it. IQ Pokyd is at
 <https://timichal.github.io/pokyd/>.** `.github/workflows/deploy.yml` builds the whole
@@ -335,11 +337,62 @@ at `:180` that returns garbage from a run that succeeded. One is exempted by a c
 flag, the other by not reading a status that never meant anything; in both cases the
 rule-base equivalence check is what says so safely — see 5.3.
 
-**Next action:** phase 6 — the retro UI, starting with 6.1, reading `IQPokyd.rc`
-properly. It is already paying for itself three phases early: the window title, the
-`Tvá věta` beside the input and the `Řekni` on the button are on the live page,
-and 4.3 drew `IDD_NACITANI` out of it. The open question 6.5 asks — how far to take
-the fidelity — can now be answered against something running.
+**6.1 is done, and the headline is what the resource script turned out not to say.**
+`node tools/extract-rc.mjs` parses `IQPokyd.rc` — with `src/web/cp1250.ts`, because
+a second codec in the pipeline is the thing phase 4.1 exists to prevent — and writes
+`src/app/resources.ts`: **6 dialogs, 75 controls, the menu, 14 accelerators, 11
+bitmaps, 3 icons** and the version block, with the author's strings, his symbolic ids
+and his geometry in the dialog units he wrote them in. `node test/app/resources.test.ts`
+puts **82 checks** on it, and the sharpest is the cheapest: **129 of the module's
+strings are looked for in the original as runs of CP1250 bytes** and all 129 are
+there, so a caption that drifted by one letter or a diacritic lost between the
+codepage and a `\uXXXX` escape could not survive this file. The other nine carry an
+escape — `\n`, `""`, and the seven menu items that print a shortcut after a tab — and
+are checked by hand. Nothing was dropped either: the controls are counted again
+straight off the file by a rule the test states itself.
+
+**The main window's layout is not in `IQPokyd.rc`, and 6.3 has to read `PROSTRED.FU`
+instead.** `IDD_HLAVNI_OKNO` has eight controls — the input, the button, three
+headings, the label and two invisible edge progress bars — and **none of them is the
+conversation**. The transcript is a hundred `STATIC` children created at runtime by
+`PREFORMATUJ_TEXTY_CLOVEKA_A_POCITACE_NA_OBRAZOVCE` (`PROSTRED.FU:904`), laid out in
+pixels against `OKRAJE` (15) and `ROZESTUP` (10), **bottom-anchored and growing
+upwards, with no scrollbar** — what does not fit above the top inset is simply not
+drawn (`:962`), so the window's height *is* how much history there is. And the eight
+controls that are in the template do not stay where it puts them:
+`PREKRESLI_PRVKY_V_OKNE_PRI_ZMENE_VELIKOSTI` (`:1022`) re-anchors all of them the
+first time the window is sized. The template gives the inventory and the initial
+size; `PROSTRED.FU` gives the layout. Both are now in `WINDOW_LAYOUT`, and the test
+reads the constants back out of the engine source rather than trusting them.
+
+**The colours are `COLORREF`s and a reader who takes them for `#RRGGBB` gets them
+backwards.** `PROSTRED.PR:12-17` is `0x00BBGGRR`: `g_barvatextucloveka` is written
+`0x0057FFFF` and is **yellow** (`#ffff57`), not sky blue; the computer answers in
+green `#57ff57`, the two side headings are `#90ffff`, the middle title is white, the
+rest of the window is `#e0e0e0` on black, and the line you type into is `#090011`.
+`PALETTE` converts them once and the test reverses the bytes again from the engine
+source, so the two cannot drift apart.
+
+Four smaller things fell out, each of which saves a later phase a search.
+**Numeric ids are not unique** — fifteen numbers are shared by more than one symbol,
+`IDC_EFEKTPROGRES1` and `IDC_UPLNATOLERANCEPRAVOPISU` are both 1062 — so nothing in
+the module is keyed by number. **One image path is in the wrong case**
+(`res\POZMALE.BMP` against `res/pozmale.bmp` on disk), which a 2005 Windows
+filesystem forgave and a web server will not: 6.2 has to fold it. **Four commands
+are reachable only by accelerator** and appear in no menu — F7/F8 for the mood,
+Ctrl+F7/Ctrl+F8 for the character — which is phase 7.4's whole list. And **the
+about box's own text is not in the .rc either**: the thank-you list and the version
+essay are string literals in `mfcDlg.cpp` (`:705-716` and `:823-845`), the latter
+written in the `<b>/<u>/<c>/<h>` tag language `NAPIS_FORMATOVANY_TEXT_NAPOVEDY`
+(`PROSTRED.FU:1116`) renders into `IDD_TEXT`'s RICHEDIT — 8.2 and 8.3's source.
+
+**Next action:** 6.2 — extract and transcode the assets. The list is now in
+`BITMAPS` and `ICONS` rather than in a directory listing, the one miscased path is
+known, and `pozadi-iqpokyd.bmp` is 1.2 MB of 24-bit BMP that wants to be a WebP.
+6.3 then has everything it needs: `resources.ts` for the inventory and the strings,
+`WINDOW_LAYOUT` and `PALETTE` for where they go and what colour they are. The open
+question 6.5 asks — how far to take the fidelity — can now be answered against
+something running.
 
 ---
 
@@ -429,12 +482,19 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   worker, the throttle and the loading window in Chrome. Anything under `src/web/` is
   UTF-8, ASCII-only in content, and CRLF like everything else, and it typechecks
   clean under `tsc --strict` — as does everything in `src/app/`.
+- **One asks whether the resource script is still what we say it is.**
+  `node test/app/resources.test.ts` — phase 6.1, no browser, no engine, a tenth of a
+  second. It re-runs `tools/extract-rc.mjs` in memory and fails if the committed
+  `src/app/resources.ts` has drifted from it, so run the extractor rather than
+  editing that file. It also reads `PALETTE` and `WINDOW_LAYOUT` back out of
+  `src/engine/prostred/`, which makes it the one test that notices if the engine's
+  colours or margins move.
 - **And one asks whether the page works**, which since 5.2 is the question that
   matters: `node test/app/chat.test.mjs` builds the app with Vite, drives the built
   `index.html` through the golden conversation in Chrome by typing into it, and
   compares what was on the screen with `test/golden/rozhovor.txt`. **`npm test` runs
-  all nine**, in phase order, in a little over two minutes; `node test/run.mjs
-  --quick` keeps the five that do not launch a browser. `npm run typecheck` covers
+  all ten**, in phase order, in a little over two minutes; `node test/run.mjs
+  --quick` keeps the six that do not launch a browser. `npm run typecheck` covers
   every `.ts` in `src/` and `test/` at once.
 
 ---
@@ -1483,9 +1543,9 @@ is not a refinement and the cache is not an optimization.
       sentences at 1, the best of the five (`INTELIG.FU:532`) — 7.2's subject, now
       pinned by a test.
 
-      `npm test` runs `test/run.mjs`, which is all **nine** tests in this repository in
-      order; `--quick` keeps the five that do not launch a browser. All nine pass, in a
-      little over two minutes.
+      `npm test` runs `test/run.mjs`, which is every test in this repository in phase
+      order — **nine** of them when 5.2 landed, ten since 6.1; `--quick` keeps the ones
+      that do not launch a browser. They all pass, in a little over two minutes.
 - [x] 5.3 **Deploy it somewhere as a checkpoint, even ugly. Done — it is live at
       <https://timichal.github.io/pokyd/>.** `.github/workflows/deploy.yml` builds it
       and publishes it on every push to `main`. It is a project page in a
@@ -1561,11 +1621,30 @@ is not a refinement and the cache is not an optimization.
 
 All the original assets are in `original/IQ Pokyd/!Prostre/res/`.
 
-- [ ] 6.1 Read `IQPokyd.rc` — it's an exact spec for the dialogs, menus, and strings.
+- [x] 6.1 **Done** — `tools/extract-rc.mjs` parses `IQPokyd.rc` (through `cp1250.ts`,
+      not a second codec) into `src/app/resources.ts`: 6 dialogs, 75 controls, the
+      menu, 14 accelerators, 11 bitmaps, 3 icons and the version block, generated and
+      committed, with `--check` and a drift test. `test/app/resources.test.ts` puts
+      **82 checks** on it, 129 of them by finding the module's strings in the archive
+      as runs of CP1250 bytes.
+
+      It is an exact spec for the *dialogs, menus and strings*, and for the main
+      window it is **not a spec for the layout** — see the Status section. Three
+      things it does not say, all now in `resources.ts`: the transcript is a hundred
+      runtime `STATIC`s laid out by `PROSTRED.FU` (`WINDOW_LAYOUT`), the colours are
+      byte-reversed `COLORREF`s in `PROSTRED.PR` (`PALETTE`), and dialog units need
+      base units the script does not contain (`dluToPx`).
 - [ ] 6.2 Extract and transcode: `pozadi-iqpokyd.bmp` and friends → PNG/WebP,
-      `iqpokyd.ttf` → WOFF2, `IQPokyd.ico` → favicon.
+      `iqpokyd.ttf` → WOFF2, `IQPokyd.ico` → favicon. The list is `BITMAPS` and
+      `ICONS` in `src/app/resources.ts`; note `IDB_POZADIMALE` names `res\POZMALE.BMP`
+      and the file on disk is `res/pozmale.bmp`, which only a Windows filesystem
+      forgives.
 - [ ] 6.3 Rebuild the main window: background, menu bar, the sentence/answer panes,
       the live "name × name, character: mood" menu caption (`ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI`).
+      Read `WINDOW_LAYOUT` and `PALETTE` in `src/app/resources.ts` before starting:
+      the eight controls of `IDD_HLAVNI_OKNO` get re-anchored by
+      `PREKRESLI_PRVKY_V_OKNE_PRI_ZMENE_VELIKOSTI` (`PROSTRED.FU:1022`) and the
+      conversation is not one of them.
 - [ ] 6.4 Rebuild the welcome line — `NAPIS_UVODNI_UVITANI` picks one of 10 greetings,
       gender-inflected.
 - [ ] 6.5 Decide how far to take it — window chrome? XP styling? (See open questions.)
@@ -1642,11 +1721,18 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
   rule base and the page from source on a Linux runner, gates on the golden
   conversation, and publishes `dist/` to GitHub Pages. Nothing compiled is committed,
   which is why it reproduces the whole chain rather than uploading an artefact.
-- All the tests: `npm test`, which is `node test/run.mjs` — nine programs in phase
-  order, `--quick` for the five that do not launch a browser. The one that says the
+- All the tests: `npm test`, which is `node test/run.mjs` — ten programs in phase
+  order, `--quick` for the six that do not launch a browser. The one that says the
   port works is `test/app/chat.test.mjs`, phase 5.2: it builds the app, drives the
   built page through the golden conversation in Chrome and compares what was on the
   screen with `test/golden/rozhovor.txt`.
+- The author's resource script, read: `node tools/extract-rc.mjs` parses
+  `original/IQ Pokyd/!Prostre/IQPokyd.rc` into `src/app/resources.ts` — phase 6.1.
+  `--check` says whether that file is stale, `--dump` prints the parse readably, and
+  `node test/app/resources.test.ts` is what stops the generated file being edited by
+  hand. It is the place to look for any string, id or dialog rectangle of the
+  original, and its header records the three things the script does *not* contain:
+  the main window's runtime layout, the palette, and the dialog base units.
 - Running a page in a browser: `test/browser.mjs` serves the repo over loopback, launches
   headless Chrome or Edge at it, and takes the results back on `POST /result`. It
   strips the types out of `.ts` on the way through, so a browser imports `src/web/*.ts`
