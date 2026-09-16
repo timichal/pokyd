@@ -9,9 +9,9 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 5 — the vertical slice — **is at 5.2, and 5.2 is the milestone: IQ Pokyd
-holds a conversation in a browser.** 5.3, the deploy, is written and waiting on a push:
-GitHub Pages, built from source by CI, with the golden conversation as the gate.
+**Phase:** 5 — the vertical slice — **is complete, 5.1 through 5.3, and IQ Pokyd is
+live at <https://timichal.github.io/pokyd/>.** A twenty-year-old Czech Windows program
+holds a conversation in a browser, at a URL, saying byte for byte what it said in 2005.
 Phase 4 is complete, 4.1 through 4.4; phase 3 is complete, 3.1 through 3.4, gate passed
 and numbers in; phases 1 and 2 are complete, 1.1–1.6 and 2.1–2.5.
 **The engine runs, answers in Czech, and the conversation is on disk.**
@@ -317,16 +317,16 @@ subject, now pinned by a test so that a change to it is noticed by something.
 repository in order — `--quick` keeps the five that do not launch a browser — and all
 nine pass in a little over two minutes.
 
-**5.3 is written and has never run.** Michal chose GitHub Pages, so
-`.github/workflows/deploy.yml` builds the whole chain from source on a Linux runner —
-rule compiler, rule base, Emscripten, Vite — and publishes `dist/` to
-`timichal.github.io/pokyd/`. **The golden conversation is the gate**: `npm test --
---quick` runs before the upload, `test/wasm/smoke.mjs` is in it, and a Linux build that
-stopped saying what the 2005 binary said would refuse to deploy. Hazard 11 is what
-makes that fair on a second toolchain.
+**5.3 is done, and phase 5 with it. IQ Pokyd is at
+<https://timichal.github.io/pokyd/>.** `.github/workflows/deploy.yml` builds the whole
+chain from source on a Linux runner — rule compiler, rule base, Emscripten, Vite — and
+publishes `dist/` on every push to `main`. **The golden conversation is the gate**:
+`npm test -- --quick` runs before the upload, `test/wasm/smoke.mjs` is in it, and a
+Linux build that stopped saying what the 2005 binary said would refuse to deploy.
+Hazard 11 is what makes that fair on a second toolchain.
 
-Its first three runs have already earned it, and two of the three found things that
-had been true since 2005. The first found that `build/` is gitignored, so the
+It took four runs to get there, and two of the three failures found things that had
+been true since 2005. The first found that `build/` is gitignored, so the
 byte-exactness proof had nothing to compare against — `gen-src.py` runs before
 `transcode.py --check` now. The second and third are both in the author's own
 `GRAMATIK.C`, and neither could have surfaced on MinGW: a **one-byte global overflow**
@@ -335,11 +335,11 @@ at `:180` that returns garbage from a run that succeeded. One is exempted by a c
 flag, the other by not reading a status that never meant anything; in both cases the
 rule-base equivalence check is what says so safely — see 5.3.
 
-**Next action: Michal.** Commit and push this working tree, then Settings → Pages →
-Source → *GitHub Actions*. The first run is the first time any of this has been built
-anywhere but a Windows laptop, so expect to read a log. After that, phase 6 — the retro
-UI, and `IQPokyd.rc` is already paying for itself: the window title, the `Tvá věta`
-beside the input and the `Řekni` on the button are on the page already.
+**Next action:** phase 6 — the retro UI, starting with 6.1, reading `IQPokyd.rc`
+properly. It is already paying for itself three phases early: the window title, the
+`Tvá věta` beside the input and the `Řekni` on the button are on the live page,
+and 4.3 drew `IDD_NACITANI` out of it. The open question 6.5 asks — how far to take
+the fidelity — can now be answered against something running.
 
 ---
 
@@ -1486,11 +1486,10 @@ is not a refinement and the cache is not an optimization.
       `npm test` runs `test/run.mjs`, which is all **nine** tests in this repository in
       order; `--quick` keeps the five that do not launch a browser. All nine pass, in a
       little over two minutes.
-- [ ] 5.3 **Deploy it somewhere as a checkpoint, even ugly. Michal chose GitHub Pages,
-      and `.github/workflows/deploy.yml` is written — but it has not run yet, and it
-      cannot until he commits, pushes, and turns Pages on.** The URL it lands at is
-      `timichal.github.io/pokyd/`, a project page in a subdirectory, which `base: "./"`
-      already handles.
+- [x] 5.3 **Deploy it somewhere as a checkpoint, even ugly. Done — it is live at
+      <https://timichal.github.io/pokyd/>.** `.github/workflows/deploy.yml` builds it
+      and publishes it on every push to `main`. It is a project page in a
+      subdirectory, which `base: "./"` handles with no rebuild.
 
       The workflow builds **the whole chain from source on a Linux runner**, because
       nothing compiled is in this repository: `gen-src.py` and `transcode.py --check`
@@ -1513,7 +1512,7 @@ is not a refinement and the cache is not an optimization.
       stay on a machine with Chrome; the workflow does not gamble on the runner having
       one.
 
-      **The first run found a real bug, and it is the author's.** `GRAMATIK.C:206`
+      **The second run found a real bug, and it is the author's.** `GRAMATIK.C:206`
       does `strcpy(prostoridslov, "<14 spaces>")` into a `char[14]` — fourteen
       characters and the terminator he forgot to count — so the NUL lands one byte
       past a global. MinGW never noticed in twenty years; Ubuntu's gcc enables
@@ -1541,11 +1540,17 @@ is not a refinement and the cache is not an optimization.
       without it a compiler that died before writing would leave the previous run's
       `IQPOKYD.IQP` in place and everything downstream would verify yesterday's rules.
 
-      **Three things left for a human**, and all three are Michal's: commit and push
-      this working tree; Settings → Pages → Source → *GitHub Actions* (the deploy step
-      has nothing to publish to until then, and the repo has to be public or the
-      account has to have Pages on private repos); and then watch the first run, which
-      is the first time any of this has been built anywhere but a Windows laptop.
+      **It deployed on the fourth run: <https://timichal.github.io/pokyd/>.** The
+      exhibit is public, built from source by CI, and the golden conversation gated
+      it. That is the checkpoint 5.3 asked for.
+
+      One thing came out of that run and it is housekeeping: the `@v4`/`@v3` actions
+      target Node 20, which GitHub deprecated in September 2025 and now force-runs on
+      24. All five are bumped to the majors that declare `node24` — checkout `@v7`,
+      setup-node `@v7`, cache `@v6`, upload-pages-artifact `@v5` (which pulls
+      upload-artifact `@v7`, the other half of the warning) and deploy-pages `@v5`.
+      Every input and output this workflow uses survives the jump; they were read out
+      of each action's own `action.yml` at that tag rather than assumed.
 
       Worth remembering before any *second* deploy: the first visit costs fifteen
       seconds of CPU in the visitor's tab and 18 MB of their IndexedDB, and a stale

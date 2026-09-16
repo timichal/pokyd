@@ -313,8 +313,9 @@ npm test             # every test in the repository -- test/run.mjs
   neither.
 
 `base` is `"./"`, so the built page runs from a subdirectory as happily as from
-the root of a domain. Phase 5.3 needs that: GitHub Pages serves this as a project
-page at `timichal.github.io/pokyd/`, and `.github/workflows/deploy.yml` builds the
+the root of a domain. Phase 5.3 needs that, and it is live on it:
+<https://timichal.github.io/pokyd/> is a GitHub Pages project page in a
+subdirectory. `.github/workflows/deploy.yml` builds the
 whole chain from source on a Linux runner — rule compiler, rule base, Emscripten,
 Vite — because nothing compiled is committed here. `npm test -- --quick` runs before
 the upload, so a build that stopped reproducing `test/golden/rozhovor.txt` does not
