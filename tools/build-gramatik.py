@@ -348,8 +348,27 @@ def compile_rules(out: Path, verbose: bool) -> int:
 
     # It opens both files by bare name, so it has to be run in its own directory.
     # `--out` may point anywhere, including off this drive, so no relative_to here.
+    #
+    # And its exit status is not read, because there is nothing in it to read.
+    # GRAMATIK.C:180 is `void main(void)` with no return in it, so on the way out
+    # the status is whatever happened to be in the return register: MinGW handed
+    # back 0 for twenty years and Linux/gcc hands back garbage, on the very run
+    # that printed `Soubor uspesne preveden.`  It is wrong in the other direction
+    # too -- all 21 of his error paths call exit(0).
+    #
+    # What judges the run instead is the file it was supposed to write.  Deleting
+    # it first is the load-bearing half of that: without it a compiler that died
+    # before writing would leave the previous run's IQPOKYD.IQP in place, and
+    # everything below would happily verify yesterday's rules.
     print(f"running {exe.name} in {short(out)}")
-    return run([exe], verbose, cwd=out)
+    (out / OUTPUT).unlink(missing_ok=True)
+    status = run([exe], verbose, cwd=out)
+    if not (out / OUTPUT).is_file():
+        print(f"error: {exe.name} wrote no {OUTPUT}.  It exited {status}, which on a"
+              f" void main() means nothing either way -- read what it printed.",
+              file=sys.stderr)
+        return 1
+    return 0
 
 
 def main() -> int:

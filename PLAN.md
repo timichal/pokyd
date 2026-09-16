@@ -325,13 +325,15 @@ rule compiler, rule base, Emscripten, Vite — and publishes `dist/` to
 stopped saying what the 2005 binary said would refuse to deploy. Hazard 11 is what
 makes that fair on a second toolchain.
 
-Its first two runs have already earned it. One found that `build/` is gitignored and
-so the byte-exactness proof had nothing to compare against — `gen-src.py` runs before
-`transcode.py --check` now. The other found a **twenty-year-old off-by-one in the
-author's own `GRAMATIK.C`**: `strcpy` of fourteen characters into a `char[14]`, which
-MinGW has been letting through since 2005 and which Ubuntu's default
-`_FORTIFY_SOURCE` aborts on. It is exempted by a flag rather than a patch, and the
-rule-base equivalence check is what says the exemption is safe — see 5.3.
+Its first three runs have already earned it, and two of the three found things that
+had been true since 2005. The first found that `build/` is gitignored, so the
+byte-exactness proof had nothing to compare against — `gen-src.py` runs before
+`transcode.py --check` now. The second and third are both in the author's own
+`GRAMATIK.C`, and neither could have surfaced on MinGW: a **one-byte global overflow**
+at `:206` that Ubuntu's default `_FORTIFY_SOURCE` aborts on, and a **`void main(void)`**
+at `:180` that returns garbage from a run that succeeded. One is exempted by a compile
+flag, the other by not reading a status that never meant anything; in both cases the
+rule-base equivalence check is what says so safely — see 5.3.
 
 **Next action: Michal.** Commit and push this working tree, then Settings → Pages →
 Source → *GitHub Actions*. The first run is the first time any of this has been built
@@ -1526,6 +1528,18 @@ is not a refinement and the cache is not an optimization.
       equivalence check runs on every build and compares the rules against the
       shipped `IQPOKYD.IQP` byte for byte, so a byte that landed somewhere that
       mattered would fail the build rather than ship.
+
+      **And a second one, in the same file, which cost a run of its own.**
+      `GRAMATIK.C:180` is `void main(void)` with no `return` anywhere in it, so the
+      exit status is whatever was left in the return register. MinGW handed back 0 for
+      twenty years; Linux/gcc handed back garbage on the very run that printed
+      *Soubor uspesne preveden.* — the rule base had been built correctly and the
+      build failed anyway. It is wrong in the other direction too: all 21 of his error
+      paths call `exit(0)`. So `build-gramatik.py` no longer reads that status.
+      **What judges the run is the file it was supposed to write**, and the output is
+      deleted before the compiler runs — which is the load-bearing half, because
+      without it a compiler that died before writing would leave the previous run's
+      `IQPOKYD.IQP` in place and everything downstream would verify yesterday's rules.
 
       **Three things left for a human**, and all three are Michal's: commit and push
       this working tree; Settings → Pages → Source → *GitHub Actions* (the deploy step
