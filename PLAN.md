@@ -325,6 +325,14 @@ rule compiler, rule base, Emscripten, Vite — and publishes `dist/` to
 stopped saying what the 2005 binary said would refuse to deploy. Hazard 11 is what
 makes that fair on a second toolchain.
 
+Its first two runs have already earned it. One found that `build/` is gitignored and
+so the byte-exactness proof had nothing to compare against — `gen-src.py` runs before
+`transcode.py --check` now. The other found a **twenty-year-old off-by-one in the
+author's own `GRAMATIK.C`**: `strcpy` of fourteen characters into a `char[14]`, which
+MinGW has been letting through since 2005 and which Ubuntu's default
+`_FORTIFY_SOURCE` aborts on. It is exempted by a flag rather than a patch, and the
+rule-base equivalence check is what says the exemption is safe — see 5.3.
+
 **Next action: Michal.** Commit and push this working tree, then Settings → Pages →
 Source → *GitHub Actions*. The first run is the first time any of this has been built
 anywhere but a Windows laptop, so expect to read a log. After that, phase 6 — the retro
@@ -1502,6 +1510,22 @@ is not a refinement and the cache is not an optimization.
       depend on the C library underneath it. The four browser tests, 5.2's included,
       stay on a machine with Chrome; the workflow does not gamble on the runner having
       one.
+
+      **The first run found a real bug, and it is the author's.** `GRAMATIK.C:206`
+      does `strcpy(prostoridslov, "<14 spaces>")` into a `char[14]` — fourteen
+      characters and the terminator he forgot to count — so the NUL lands one byte
+      past a global. MinGW never noticed in twenty years; Ubuntu's gcc enables
+      `_FORTIFY_SOURCE` by default and `__strcpy_chk` aborted the run before a single
+      rule was compiled. `tools/build-gramatik.py` now passes `-U_FORTIFY_SOURCE` on
+      **`CFLAGS` only**, so the exemption covers the archive's translation unit and
+      nothing of ours. Turned off rather than patched, because *no patch, no working
+      copy* is this script's whole claim and 2.4's evidence rests on it — and the
+      overflow is benign in effect for a reason the file itself gives:
+      `prostoridslov` is only ever indexed (`:289`, `:293`), never read as a string,
+      so nothing wants that terminator. That is not taken on trust either: the
+      equivalence check runs on every build and compares the rules against the
+      shipped `IQPOKYD.IQP` byte for byte, so a byte that landed somewhere that
+      mattered would fail the build rather than ship.
 
       **Three things left for a human**, and all three are Michal's: commit and push
       this working tree; Settings → Pages → Source → *GitHub Actions* (the deploy step

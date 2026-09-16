@@ -123,6 +123,26 @@ CXX = "g++"
 CFLAGS = [
     "-std=gnu89",
     "-fsigned-char", "-fwrapv", "-fno-strict-aliasing", "-O1",
+    # GRAMATIK.C:206 overflows a global by one byte, and this is the flag that
+    # lets it.  `char prostoridslov[14]` gets `strcpy(prostoridslov,"<14 spaces>")`
+    # -- fourteen characters and the terminator the author forgot to count, so
+    # the NUL lands on the byte after the array.  MinGW never noticed; Ubuntu's
+    # gcc enables _FORTIFY_SOURCE by default, and __strcpy_chk aborts the run
+    # with *** buffer overflow detected *** before a single rule is compiled.
+    #
+    # Turned off rather than patched, because `no patch, no working copy` is the
+    # whole claim of this script and phase 2.4's evidence rests on it.  The
+    # overflow is benign in effect and the file itself says why: prostoridslov
+    # is only ever indexed (`:289`, `:293`), never read as a string, so nothing
+    # wants that terminator, and the byte lands on `znak` or its padding -- a
+    # scratch character reassigned before every use.  We do not have to take
+    # that on trust either: the equivalence check below compares the rules this
+    # produces against the shipped IQPOKYD.IQP byte for byte, so a byte that
+    # landed somewhere that mattered would fail the build rather than ship.
+    #
+    # CFLAGS only.  Nothing of ours is exempted -- CXXFLAGS compiles
+    # src/shim/nahoda.cpp and keeps every check it has.
+    "-U_FORTIFY_SOURCE",
     "-Wall",
     "-I", str(SHIM), "-include", str(SHIM / "nahoda.h"),
 ]
