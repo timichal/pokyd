@@ -46,11 +46,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # .gitattributes pins original/ and src/engine/ to CRLF on every platform,
-      # because transcode.py --check compares files on disk byte for byte. This
-      # says so out loud rather than discovering it three steps later.
-      - name: The archive checked out with its own line endings
+      # The byte-exactness proof, run before anything is compiled. gen-src.py
+      # rebuilds build/src/, the CP1250 mirror of original/, because build/ is
+      # generated and gitignored and so does not arrive with the checkout;
+      # --check then asserts that src/engine/ round-trips to exactly those bytes.
+      # It is also what says .gitattributes did its job: it pins original/ and
+      # src/engine/ to CRLF on every platform, and this compares files on disk.
+      # Two files are expected to differ -- PATCHES.md has both.
+      - name: The archive checked out with its own bytes
         run: |
+          python3 tools/gen-src.py
           python3 tools/transcode.py --check
 
       - uses: actions/setup-node@v4

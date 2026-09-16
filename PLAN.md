@@ -1483,12 +1483,16 @@ is not a refinement and the cache is not an optimization.
       already handles.
 
       The workflow builds **the whole chain from source on a Linux runner**, because
-      nothing compiled is in this repository: `transcode.py --check`, then
-      `tools/build.py --wasm` — which compiles the author's own rule compiler out of
+      nothing compiled is in this repository: `gen-src.py` and `transcode.py --check`
+      first — `build/` is gitignored, so the CP1250 mirror the byte-exactness proof
+      compares against has to be rebuilt before it can be asserted — then
+      `tools/build.py --wasm`, which compiles the author's own rule compiler out of
       `original/`, rebuilds the rule base, checks it against the shipped `IQPOKYD.IQP`
-      and only then runs Emscripten — then `npm ci`, `npm run typecheck`, the tests,
+      and only then runs Emscripten; then `npm ci`, `npm run typecheck`, the tests,
       and `npm run build`. Emscripten 6.0.9 is installed but **not activated**, exactly
-      as on this machine, and `find_emcc()` picks it up from `$EMSDK`.
+      as on this machine, and `find_emcc()` picks it up from `$EMSDK` — which is set
+      by a step and not in the workflow's `env:`, because the `runner` context does
+      not exist up there.
 
       **The golden conversation is the deploy gate**, not a formality: `npm test --
       --quick` runs the five tests that need no browser, and `test/wasm/smoke.mjs` is
