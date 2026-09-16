@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<!-- IQ Pokyd - test/web/progress.html - phase 4.3 of PLAN.md, in a real browser.
+
+     The browser half of test/web/progress.test.mjs.  test/browser.mjs serves
+     this page, strips the types out of the .ts files it imports on the way
+     through, and waits for the POST at the bottom.  Nothing here decides
+     whether the run passed: it reports, and node judges.
+
+     test/web/progress.test.ts already holds the tracker to a real cold load,
+     but it does it in node, in one process, with the engine's console handed
+     over as a function call.  Two things only exist once there is a worker and
+     a page, and they are what this is for.
+
+       1. THE THROTTLE.  src/web/worker.ts sends at most one output message per
+          60 ms, because a cold load writes 397,897 of them.  Three of the four
+          step markers land in the middle of a run of percentages, so a throttle
+          that treated them like any other segment would drop them and the
+          caption would never change.  The worker exempts anything that is not a
+          bare percentage; this is what says the exemption works, over a real
+          postMessage boundary.
+       2. THE VIEW.  src/web/loading.ts draws IDD_NACITANI: a caption, a bordered
+          bar and a right-aligned percentage with a decimal comma.  The page
+          reads its own DOM back at every change, so what node judges is what
+          was on the screen.
+
+     Written by us, not ported.  English identifiers and ASCII only, like the
+     rest of the non-engine code, and no dependencies: it is loaded from a
+     static file server.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IQ Pokyd - loading progress test</title>
+</head>
+<body>
+<div id="screen"></div>
+<pre id="log">running...</pre>
+<script type="module">
+import { PokydClient } from "/src/web/client.ts";
+import { mountLoading } from "/src/web/loading.ts";
+import {
+  POKYD_COLD_NOTICE,
+  POKYD_STEP_CAPTIONS,
+  POKYD_STEP_BASE_DICTIONARY,
+  POKYD_STEP_INFLECTING,
+  POKYD_STEP_SORTING,
+  POKYD_STEP_WRITING,
+  POKYD_STEP_VOCABULARY,
+  POKYD_STEP_INTELLIGENCE,
+  POKYD_STEP_DONE,
+} from "/src/web/progress.ts";
+
+const SEED = 20050415;
+const MOOD = 3;
+
+const URLS = {
+  workerUrl: "/src/web/worker.ts",
+  moduleUrl: "/build/wasm/pokyd.mjs",
+};
+
+/* The four markers as the engine writes them: CP852 read as CP1250.  Spelled
+   out here rather than imported, so this page is an independent statement of
+   what has to survive the throttle. */
+const SEG_INFLECTING = "Sklo\u013auji...";
+const SEG_SORTING = "T\u00fd\u02c7d\u02c7m...";
+const SEG_WRITING = "Zapisuji...";
+const SEG_COLD_DONE = "Hotovo. Prevedeno ";
+
+const screenEl = document.getElementById("screen");
+const logEl = document.getElementById("log");
+const lines = [];
+function log(text) {
+  lines.push(text);
+  logEl.textContent = lines.join("\n");
+}
+
+/* What the loading window actually had on it, read back out of the DOM rather
+   than taken from the state that was supposed to have produced it. */
+function readScreen(view) {
+  const root = view.element;
+  return {
+    caption: root.querySelector(".pokyd-loading-caption").textContent,
+    percent: root.querySelector(".pokyd-loading-percent").textContent,
+    width: root.querySelector(".pokyd-loading-fill").style.width,
+    indeterminate: root.classList.contains("is-indeterminate"),
+    noticeShown: !root.querySelector(".pokyd-loading-notice").hidden,
+    ariaNow: root.getAttribute("aria-valuenow"),
+    ariaText: root.getAttribute("aria-valuetext"),
+  };
+}
+
+/* --------------------------------------------------------------------- a visit */
+
+async function visit({ kind, cache }) {
+  const client = new PokydClient(URLS);
+
+  /* Every output event the worker let through, before the tracker sees it.  A
+     marker missing from here is a marker the throttle ate. */
+  const rawSegments = [];
+  const markers = [];
+  client.onOutput = (text) => {
+    rawSegments.push(text);
+    if (text === SEG_INFLECTING || text === SEG_SORTING || text === SEG_WRITING
+        || text.startsWith(SEG_COLD_DONE)) {
+      markers.push(text);
+    }
+  };
+
+  const loading = mountLoading(screenEl, client);
+
+  /* One screen reading per state change, and the whole screen every time the
+     caption moves -- which is the thing a person would notice. */
+  const steps = [];
+  const captions = [];
+  const screens = [];
+  const percents = [];
+  let monotonic = true;
+  let last = -1;
+  let indeterminateDuringWrite = false;
+  let noticeDuringCold = false;
+
+  loading.tracker.onChange = (state) => {
+    loading.view.update(state);
+    const shot = readScreen(loading.view);
+    if (steps.length === 0 || steps[steps.length - 1] !== state.step) {
+      steps.push(state.step);
+      captions.push(shot.caption);
+      screens.push({ step: state.step, ...shot });
+    }
+    if (state.percent < last) monotonic = false;
+    last = state.percent;
+    percents.push(state.percent);
+    if (state.step === POKYD_STEP_WRITING && shot.indeterminate) {
+      indeterminateDuringWrite = true;
+    }
+    if (state.cold === true && !state.done && shot.noticeShown) {
+      noticeDuringCold = true;
+    }
+  };
+
+  /* Is the page alive while the bar moves?  4.2 measured this against the load;
+     here it is only a sanity check that the loading window could have been
+     painted at all. */
+  let frames = 0;
+  let running = true;
+  const tick = () => { frames++; if (running) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+
+  const t0 = performance.now();
+  await client.start({
+    mood: MOOD, seed: SEED,
+    cache: cache === null ? undefined : cache,
+    transferCache: false,
+  });
+  const loadMs = performance.now() - t0;
+  loading.finish();
+  running = false;
+
+  const finalScreen = readScreen(loading.view);
+  const inDom = screenEl.contains(loading.view.element);
+  loading.remove();
+  const afterRemove = screenEl.contains(loading.view.element);
+
+  const exported = cache === null ? await client.exportCache() : null;
+  const unfreed = await client.close();
+
+  return {
+    kind, loadMs, frames, unfreed, monotonic,
+    segments: rawSegments.length,
+    markers,
+    steps,
+    captions,
+    screens,
+    percentSamples: percents.filter((_, i) => i % 25 === 0).slice(0, 40),
+    distinctPositions: new Set(percents.map((p) => p.toFixed(1))).size,
+    finalScreen,
+    indeterminateDuringWrite,
+    noticeDuringCold,
+    inDom,
+    afterRemove,
+    cache: exported,
+  };
+}
+
+/* --------------------------------------------------------------------- driver */
+
+async function main() {
+  const out = {
+    where: navigator.userAgent,
+    isolated: self.crossOriginIsolated === true,
+    /* So node can check the page and the module agree on what they are. */
+    captions: Array.from(POKYD_STEP_CAPTIONS),
+    coldNotice: POKYD_COLD_NOTICE,
+    stepIds: {
+      base: POKYD_STEP_BASE_DICTIONARY,
+      inflecting: POKYD_STEP_INFLECTING,
+      sorting: POKYD_STEP_SORTING,
+      writing: POKYD_STEP_WRITING,
+      vocabulary: POKYD_STEP_VOCABULARY,
+      intelligence: POKYD_STEP_INTELLIGENCE,
+      done: POKYD_STEP_DONE,
+    },
+  };
+
+  log("cold    first visit, the dictionary is inflected...");
+  const cold = await visit({ kind: "cold", cache: null });
+  log("cold    " + (cold.loadMs / 1000).toFixed(2) + " s, " + cold.segments
+    + " output events, " + cold.markers.length + " markers");
+  const blob = cold.cache;
+  out.cold = { ...cold, cache: undefined, cacheLength: blob ? blob.length : 0 };
+
+  log("warm    second visit, from the exported cache...");
+  const warm = await visit({ kind: "warm", cache: blob });
+  log("warm    " + (warm.loadMs / 1000).toFixed(2) + " s, " + warm.segments
+    + " output events");
+  out.warm = { ...warm, cache: undefined, cacheLength: 0 };
+
+  /* Nothing of the loading window should be left behind. */
+  out.screenEmpty = screenEl.children.length === 0;
+  out.styleKept = document.getElementById("pokyd-loading-style") !== null;
+  return out;
+}
+
+let result;
+try {
+  result = await main();
+} catch (e) {
+  result = { error: (e && e.stack) ? e.stack : String(e) };
+  log("FAILED: " + result.error);
+}
+await fetch("/result", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(result),
+});
+</script>
+</body>
+</html>

@@ -87,6 +87,9 @@ consume them unchanged.
 | `engine.ts` | `PokydEngine`, the wasm module driven from JavaScript: the malloc/copy/free dance, the 220-byte settings struct, and the codec applied at every crossing. Transport-free on purpose — no `self`, no DOM — which is what lets node test it without a Worker. It also enforces the ordering rules `pokyd_api.h` only states. |
 | `worker.ts` | The engine on its own thread. A strict FIFO queue, the throttled output relay, and errors turned into rejected replies. Thin: everything else is in the two files above. |
 | `client.ts` | `PokydClient`, the page's half — one awaitable method per request, plus `start()`, which is the ordering rules expressed once so no caller has to remember them. |
+| `cache.ts` | Phase 4.4: the 18 MB `SLOVNIK.TMP` kept in IndexedDB between visits, keyed by a hash of the dictionary the engine is actually holding. `startCached()` is `start()` with the lookup and the save inserted at the two places `pokyd_api.h` allows them. A storage failure is never a load failure — it costs fifteen seconds and a line in the report. |
+| `progress.ts` | Phase 4.3: `PokydLoadingTracker`, the state machine that turns the engine's console into a loading bar — nine steps, the author's own captions, and weights from the measured cost of each. No DOM and no worker, so node tests all of it. |
+| `loading.ts` | The loading window itself: `IDD_NACITANI` as an element, and `mountLoading(parent, client)`, which is a caption, a bar and a percentage attached to a client in one call. |
 
 The worker is the point of phase 4.2, not a refinement of it. 3.4 measured
 `pokyd_load_dictionaries()` at 15.3 s in Chrome, as **one synchronous call**: on the
@@ -95,15 +98,21 @@ quarter of a minute. Measured through the worker, the longest the main thread wa
 kept waiting across the whole of that load is **12 ms**, and 902 animation frames
 were drawn during it.
 
-One consequence worth knowing before phase 4.3 draws a progress bar: **`pokyd_progress()`
-is dead through the step that takes the time.** The assignment that would move it
-through the inflection loop is `SLOVNIK.FU:3318`, behind `#if IQPOKYDWINMFC == 1`, so
-a `BEZ_PROSTREDI` build never compiles it. The author reported that step to the console
-instead — `printf("\r%.1Lf%%", ...)` every tenth word — and Emscripten hands those
-characters to a JS callback *synchronously, from inside the call that has not returned*.
-So the progress signal is the engine's own output, decoded from CP1250 and relayed as
-`output` events; the cold load produced 207 usable percentages. `PROGRESS` at the foot
-of `protocol.ts` has the argument and the measurements.
+**`pokyd_progress()` is dead through the step that takes the time.** The assignment that
+would move it through the inflection loop is `SLOVNIK.FU:3318`, behind
+`#if IQPOKYDWINMFC == 1`, so a `BEZ_PROSTREDI` build never compiles it. The author
+reported that step to the console instead, and Emscripten hands those characters to a JS
+callback *synchronously, from inside the call that has not returned*. So the progress
+signal is the engine's own output, decoded from CP1250 and relayed as `output` events.
+`PROGRESS` at the foot of `protocol.ts` has the argument and the measurements.
+
+Phase 4.3 then read that output properly and corrected two things everything above had
+been assuming. **The fourteen-second step is the sort, not the inflection loop** —
+`ROZSKLONUJ_PODLE_SPRAVNEHO_VZORU` takes 1.0 s and `SETRID_SLOVA_V_DATABAZI` 12.4 s, and
+the sort prints a percentage of its own at `SLOVNIK.FU:2322`, 392,699 of them, very
+nearly linear in time. And **the engine's captions are CP852, not CP1250**: they go out
+through `NAPIS_TEXT_V_LATIN_2`, so `Skloňuji...` arrives as `Skloĺuji...`. `progress.ts`
+matches them as the bytes they are and displays the author's own window text instead.
 
 The table is a **bijection on all 256 byte values**, including the five CP1250 leaves
 undefined, so decode loses nothing and encode invents nothing. That is what lets

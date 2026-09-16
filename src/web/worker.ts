@@ -48,24 +48,30 @@ let engine: PokydEngine | null = null;
 
 /* -------------------------------------------------------------- the output */
 
-/* At most one output message per this many milliseconds.  The engine emits a
-   segment every tenth word through the inflection loop -- about 1,100 of them
-   over a cold load, plus everything vstup.fu:801-809 prints on every sentence --
-   and a progress bar that moves more often than the screen refreshes is only
-   postMessage traffic.  Whatever was dropped is sent once the request that was
-   running finishes, so the last thing the engine said is never lost. */
+/* At most one output message per this many milliseconds.  A cold load emits
+   397,897 segments -- 392,699 of them from the sort alone -- and a progress bar
+   that moves more often than the screen refreshes is only postMessage traffic.
+   Whatever was dropped is sent once the request that was running finishes, so
+   the last thing the engine said is never lost. */
 const THROTTLE_MS = 60;
+
+/* A progress segment and nothing else: "47.3%", " 12% ", "100% ".  Those are
+   the 397,000, and they are the only thing the throttle may drop, because the
+   next one is 60 ms behind and says almost the same thing.
+
+   Everything else is a line src/web/progress.ts needs whole.  Eight of them
+   arrive over a whole cold load -- "Sklonuji...", "Tridim...", "Zapisuji...",
+   "Hotovo. Prevedeno 11207 slov." and the four the DOS harness signs off with --
+   and each marks a step boundary, so one dropped by the throttle is a caption
+   lost for good rather than a frame skipped.  Three of the four would have been:
+   each lands in the middle of a percentage run.  Hence this. */
+const PERCENT_ONLY = /^\s*\d+(?:\.\d+)?%\s*$/;
 
 let lastOutputAt = 0;
 let held: string | null = null;
 
-function sendOutput(text: string): void {
-  const now = Date.now();
-  if (now - lastOutputAt < THROTTLE_MS) {
-    held = text;
-    return;
-  }
-  lastOutputAt = now;
+function postOutput(text: string): void {
+  lastOutputAt = Date.now();
   held = null;
   /* Read the counters at the same instant as the text: during a load this runs
      on this thread from inside pokyd_load_dictionaries(), so they are as current
@@ -76,15 +82,23 @@ function sendOutput(text: string): void {
   });
 }
 
+function sendOutput(text: string): void {
+  if (!PERCENT_ONLY.test(text)) {
+    /* Anything held is an older percentage this line has already superseded;
+       flushing it later would deliver it after the marker it came before. */
+    postOutput(text);
+    return;
+  }
+  if (Date.now() - lastOutputAt < THROTTLE_MS) {
+    held = text;
+    return;
+  }
+  postOutput(text);
+}
+
 function flushOutput(): void {
   if (held === null) return;
-  const text = held;
-  held = null;
-  lastOutputAt = Date.now();
-  const state = engine === null ? { phase: 0, percent: 0 } : engine.progress();
-  ctx.postMessage({
-    kind: "output", text, phase: state.phase, percent: state.percent,
-  });
+  postOutput(held);
 }
 
 /* ------------------------------------------------------------ the dispatch */

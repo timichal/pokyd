@@ -171,30 +171,42 @@ export type PokydReply =
 /* ------------------------------------------------------------------- PROGRESS */
 
 /* Why "output" carries the loading progress and pokyd_progress() does not.
-   Measured at 4.2, and it decides what phase 4.3 can build.
+   Measured at 4.2 and then measured properly at 4.3, which corrected it.
 
    pokyd_progress() reads g_procentanacitani.  The assignment that would move it
-   through the fourteen-second inflection loop is SLOVNIK.FU:3318, and it sits
-   inside `#if IQPOKYDWINMFC == 1` -- so it is not compiled into a BEZ_PROSTREDI
-   build at all.  Sampled every 250 ms through a real cold load, the counter
-   reads 0.0 for the whole of POKYD_PHASE_INFLECTING and then 100.0 at the
-   sub-step boundaries, and never once a value in between.  It does move during
-   the shorter steps either side; it has no gradient at all through the only one
-   long enough to need a progress bar.
+   through POKYD_PHASE_INFLECTING is SLOVNIK.FU:3318, and it sits inside
+   `#if IQPOKYDWINMFC == 1` -- so it is not compiled into a BEZ_PROSTREDI build
+   at all.  Sampled every 250 ms through a real cold load, the counter reads 0.0
+   for the whole of that phase and then 100.0 at the sub-step boundaries, and
+   never once a value in between.  It does move during the shorter steps either
+   side; it has no gradient at all through the only one long enough to need a
+   progress bar.
 
    The author did not leave that step unreported, though -- he reported it to the
    console instead.  The `#else` branch two lines further down is
 
        printf("\r%.1Lf%%", poziceslova*100/g_pocetslovvzakladnidatabazi)
 
-   every tenth word, followed by "\rTridim...\n" and "\rZapisuji...\n", all in
-   CP1250.  Emscripten hands those characters to a JS callback as they are
-   written, synchronously, from inside the call that has not returned -- so the
-   worker can read them, and does, while the load is still running.  2.7 million
-   characters over a cold load, which measured as no slower than discarding them.
+   every tenth word, followed by "\rTridim...\n" and "\rZapisuji...\n".
+   Emscripten hands those characters to a JS callback as they are written,
+   synchronously, from inside the call that has not returned -- so the worker can
+   read them, and does, while the load is still running.
+
+   Two corrections from 4.3, both of which changed what got built.
+
+   The fourteen seconds are not that loop.  Unthrottled, a cold load writes
+   397,897 segments; the inflection loop accounts for 1,121 of them over 1.0 s,
+   and SETRID_SLOVA_V_DATABAZI -- the sort that follows it -- writes 392,699 over
+   12.4 s.  The sort has a percentage of its own, SLOVNIK.FU:2322, and it is very
+   nearly linear in time.  So the step that needed a bar always had one.
+
+   And these lines are not CP1250.  The two with diacritics go through
+   NAPIS_TEXT_V_LATIN_2 (VSTUP.FU:1230), which converts to CP852 first -- they
+   arrive as mojibake and src/web/progress.ts matches them as such.  See MARKERS
+   there; nothing displays them.
 
    Hence the shape here: `output` carries the engine's own words, decoded by
    src/web/cp1250.ts, one segment per carriage return, with `phase` and `percent`
-   riding along for the steps where the counter is alive.  Parsing "47.3%" out of
-   the text is phase 4.3's job, and it is a regular expression rather than a
-   research project. */
+   riding along for the steps where the counter is alive.  src/web/worker.ts
+   throttles the percentages and only the percentages: the eight lines that are
+   not one mark the step boundaries, and a dropped one is a caption lost. */

@@ -110,11 +110,17 @@ typedef struct pokyd_settings {
    comment used to predict.  There is no 0..100 three times over: sampled a few
    hundred times across a real cold load, g_procentanacitani takes the values 0
    and 100 during POKYD_PHASE_INFLECTING and nothing in between.  The assignment
-   that would give the fourteen-second inflection loop a gradient is
-   SLOVNIK.FU:3318, behind the same guard.  What the author put in the #else
-   branch instead is a printf of the percentage, so the progress signal in this
-   build is the engine's console output and not this counter -- see PROGRESS in
-   src/web/protocol.ts. */
+   that would give the inflection loop a gradient is SLOVNIK.FU:3318, behind the
+   same guard.  What the author put in the #else branch instead is a printf of
+   the percentage, so the progress signal in this build is the engine's console
+   output and not this counter -- see PROGRESS in src/web/protocol.ts.
+
+   Phase 4.3 then measured the phase itself, and the note below about "the 4.5 s
+   one" understates where the time goes.  Of the 14 s a cold load takes here,
+   POKYD_PHASE_INFLECTING is 13.7 of them, and they divide as 1.0 s inflecting
+   (ROZSKLONUJ_PODLE_SPRAVNEHO_VZORU, 11,207 words), 12.4 s sorting
+   (SETRID_SLOVA_V_DATABAZI) and 0.24 s writing the 18 MB cache.  The sort is the
+   long step, and it prints a percentage of its own at SLOVNIK.FU:2322. */
 #define POKYD_PHASE_IDLE            0   /* not loading */
 #define POKYD_PHASE_BASE_DICTIONARY 1   /* "Nacitam zakladni slovnik..." SLOVNIK.IQP */
 #define POKYD_PHASE_VOCABULARY      2   /* "Nacitam slovni zasobu..."    SLOVNIK.TMP */

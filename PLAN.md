@@ -9,7 +9,7 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 4 — the JS boundary — **is under way: 4.1, 4.2 and 4.4 are done.** Phase 3 is
+**Phase:** 4 — the JS boundary — **is complete, 4.1 through 4.4.** Phase 3 is
 complete, 3.1 through 3.4; the gate is passed and the numbers are in. Phases 1 and 2 are
 complete, 1.1–1.6 and 2.1–2.5.
 **The engine runs, answers in Czech, and the conversation is on disk.**
@@ -212,8 +212,51 @@ same things, with the reason in the returned report rather than in an exception.
 those branches in node, against a recording client and a store that fails on demand;
 `node test/web/cache.test.mjs` puts **40** on the real thing in Chrome.
 
-**Next action:** 4.3 — the loading UI, which 4.2 already de-risked down to a regular
-expression, and the last thing between here and the 5.1 slice.
+**4.3 is done, and it corrected something this plan had been repeating since phase 3.**
+`src/web/progress.ts` is the state machine that turns the engine's console into a
+loading bar and `src/web/loading.ts` draws it; between them they are the whole of the
+loading window, and `mountLoading(document.body, client)` is the whole of using one.
+
+**The fourteen-second step is not the inflection loop.** Sampled unthrottled across a
+real cold load — 397,897 segments — `ROZSKLONUJ_PODLE_SPRAVNEHO_VZORU` runs for **1.0 s**
+and writes 1,121 of them. The twelve and a half seconds belong to
+`SETRID_SLOVA_V_DATABAZI`, the sort that follows, and **the sort prints a percentage of
+its own** — `SLOVNIK.FU:2322`, 392,699 segments, rising 0.0 → 100.0 within a point and a
+half of a straight line in time, with 82 backward steps of at most 0.1 in the lot. So the
+one step that needed a progress bar had one all along, on a channel nobody had read yet.
+The whole cold load, measured: 20 ms base dictionary, 1,221 ms inflecting, 12,457 ms
+sorting, 241 ms writing, 174 ms reading it back, 6 ms intelligence. A warm load is 182 ms.
+
+**The engine's captions are CP852, and 4.1's codec is right to leave them alone.**
+`Skloňuji...` reaches JavaScript as `Skloĺuji...` because `NAPIS_TEXT_V_LATIN_2`
+(`VSTUP.FU:1230`) converts to the DOS codepage on the way out — hazard 6's "Latin 2",
+met again. `progress.ts` therefore *recognises* those four lines as the bytes they are
+and never shows one. What it shows is the author's own text: the five `SetWindowText`
+captions from `PROSTRED.FU`, the three from `SLOVNIK.FU`, and `IQPokyd.rc:124`'s
+"Spouštím IQ Pokyd..." before the first step has begun.
+
+**`IQPokyd.rc` paid off three phases early.** `IDD_NACITANI` (`:122-132`) is an exact
+spec — caption, smooth bordered bar, right-aligned percentage — and
+`VLAKNO__PROCENTA_PROGRESU` (`PROSTRED.FU:509-548`) says it is formatted with one decimal
+and a **decimal comma**. That is what `loading.ts` draws, and the one thing it deliberately
+does not copy is the author's 0–50/50–100 split between inflecting and sorting: against
+this engine that bar reaches half way in one second. The weights are the measured ones.
+
+**One change to `src/web/worker.ts`, and it was load-bearing.** The 60 ms throttle was
+right for 397,897 percentages and wrong for the eight lines that are not percentages:
+three of the four step markers land mid-run and were being dropped, which would have left
+the caption on "Načítám základní slovník..." for the whole fifteen seconds. Bare
+percentages are throttled now and nothing else is. In Chrome a cold load delivers **233
+output events for those 397,897 segments, with all four markers among them.**
+
+`node test/web/progress.test.ts` puts **92 checks** on it in node — a synthetic stream,
+then real cold and warm loads — and is where the console output is written down: exactly
+eight non-percentage lines per cold load and the markers' exact bytes.
+`node test/web/progress.test.mjs` puts **47** on the real thing in Chrome, reading the
+loading window back out of the DOM at every change.
+
+**Next action:** 5.1 — the Vite project and the plainest possible chat page. Everything
+5.2 needs now exists: the codec, the worker, the cache and the loading window.
 
 ---
 
@@ -277,18 +320,22 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   — `python3 tools/bench-native.py` and `node test/wasm/bench.mjs [--browser]` — diff the
   same transcript on every run, so they are slower ways of asking the same question and
   never a faster way of avoiding it.
-- **Five more ask about the JS boundary**, and they are not substitutes for the two
+- **Seven more ask about the JS boundary**, and they are not substitutes for the two
   above — run them after touching `src/web/`. `node test/web/cp1250.test.ts` says whether
   the codec still converts CP1250 both ways without losing anything, and never loads the
   engine. `node test/web/engine.test.ts` drives the golden conversation through the codec
-  and the wasm module in node (`--no-cold` skips the fourteen-second cold load).
+  and the wasm module in node (`--no-cold` skips the fifteen-second cold load).
   `node test/web/worker.test.mjs` does the same in headless Chrome, through the worker
   and the message protocol, and is the one that measures whether the main thread stayed
   alive. `node test/web/cache.test.ts` checks the cache key and every branch of
   `startCached` in node, with no engine and no browser, and `node test/web/cache.test.mjs`
   runs the real IndexedDB round trip in Chrome — two visits, and the 18 MB blob hashed
-  against the native `SLOVNIK.TMP`. Anything under `src/web/` is UTF-8, ASCII-only in
-  content, and CRLF like everything else, and it typechecks clean under `tsc --strict`.
+  against the native `SLOVNIK.TMP`. `node test/web/progress.test.ts` holds the loading
+  tracker to a real cold load in node and is where the engine's console output is
+  written down (`--no-cold` again), and `node test/web/progress.test.mjs` runs the
+  worker, the throttle and the loading window in Chrome. Anything under `src/web/` is
+  UTF-8, ASCII-only in content, and CRLF like everything else, and it typechecks clean
+  under `tsc --strict`.
 
 ---
 
@@ -1197,21 +1244,60 @@ is not a refinement and the cache is not an optimization.
       `stripTypeScriptTypes`, so Chrome imports `src/web/*.ts` unbundled, at the same
       specifiers node uses. Still no `package.json`. The bench reproduces 3.4's numbers
       exactly after the move (15,330 ms cold, 28.3 MB wasm, 17.4 MB MEMFS, 48.7 MB tab).
-- [ ] 4.3 Wire up loading progress to real UI feedback. **4.2 answered the hard part and
-      changed the question.** `g_procentanacitani` is not the source: `SLOVNIK.FU:3318`,
-      the assignment that would move it through the fourteen-second inflection loop, is
-      behind `#if IQPOKYDWINMFC == 1`, so a `BEZ_PROSTREDI` build never compiles it.
-      Sampled 200-odd times across a cold load the counter reads 0 and 100 and nothing in
-      between — 3.1's predicted "0–100 three times over" does not happen either.
+- [x] 4.3 **Wire up loading progress to real UI feedback. Done**, and measuring the
+      stream first moved the ground twice. Two files: `src/web/progress.ts`
+      (`PokydLoadingTracker`, the state machine — no DOM, no worker) and
+      `src/web/loading.ts` (`PokydLoadingView` and `mountLoading()`, the loading window
+      on a page). One change to `src/web/worker.ts`, and it is load-bearing: see below.
 
-      The source is the engine's own console output, which the author wrote for exactly
-      this purpose in the `#else` branch two lines below: `printf("\r%.1Lf%%", ...)` every
-      tenth word, then `"\rTřídím...\n"` and `"\rZapisuji...\n"`, all CP1250. Emscripten
-      hands those characters to a JS callback *synchronously from inside the blocked
-      call*, so `src/web/worker.ts` already relays them as throttled `output` events with
-      `phase` and `percent` beside them; a cold load produces 207 segments matching
-      `/^\d+\.\d%$/`. What is left for 4.3 is the parse and the UI — and deciding what to
-      show during the two short steps either side, where the counter does work.
+      **The long step is not the inflection loop.** Everything written here and in
+      `pokyd_api.h` up to now called it "the fourteen-second inflection loop". Sampled
+      unthrottled across a real cold load — 397,897 segments — the inflection loop is
+      **1.0 s and 1,121 of them**. The twelve and a half seconds are
+      `SETRID_SLOVA_V_DATABAZI`, the sort that follows it, and **the sort prints a
+      percentage of its own**: `SLOVNIK.FU:2322`, 392,699 of them, rising 0.0 → 100.0
+      within a point and a half of a straight line in time. The step that needed a
+      progress bar had one all along, on a channel nobody had read. Measured: base
+      dictionary 20 ms, inflecting 1,221 ms, sorting 12,457 ms, writing 241 ms, the
+      re-read and the 18 MB cache 174 ms, intelligence 6 ms. A warm load is 182 ms.
+
+      **The captions are CP852, not CP1250.** `Skloňuji...` arrives as `Skloĺuji...`,
+      and it is not a fault in 4.1's codec: the engine prints them through
+      `NAPIS_TEXT_V_LATIN_2` (`VSTUP.FU:1230`), which converts to CP852 first — hazard
+      6's "Latin 2" — for a DOS console. So `progress.ts` *recognises* those four lines
+      as the bytes they are and never displays them. What it displays is the author's
+      own loading-window text, from `PROSTRED.FU:568/576/579/586/599`,
+      `SLOVNIK.FU:3261/3331/3342` and `IQPokyd.rc:124`.
+
+      **`IQPokyd.rc:122-132` turned out to be the spec**, three phases before 6.1 was
+      going to read it: `IDD_NACITANI` is a caption, a smooth bordered bar, a
+      right-aligned percentage and a cancel button, and `VLAKNO__PROCENTA_PROGRESU`
+      (`PROSTRED.FU:509-548`) formats that percentage with one decimal and a **decimal
+      comma**. `loading.ts` draws that. The cancel button is the one control left out:
+      `g_zavritvlaknoprocesu` and every check of it are behind `IQPOKYDWINMFC`, so there
+      is nothing for a button to set.
+
+      **The one deliberate divergence** is the weighting. The author gave inflecting
+      0–50% and sorting 50–100% (`PROSTRED.FU:517-520`), which against this engine is a
+      bar that reaches half way in one second and spends twelve and a half crossing the
+      rest. The weights are the measured ones instead, and that is the whole reason 4.3
+      exists.
+
+      **The worker change.** `worker.ts` sent at most one `output` per 60 ms, which is
+      right for 397,897 percentages and wrong for the eight lines that are not one:
+      three of the four step markers land in the middle of a percentage run and were
+      being dropped, so the caption would never have changed. The throttle now applies
+      to bare percentages only. `test/web/progress.test.mjs` is what says all four
+      markers cross the boundary — 233 events for 397,897 segments, and every marker
+      among them.
+
+      Two tests. `node test/web/progress.test.ts` puts **92 checks** on it in node,
+      against a synthetic stream and then against real cold and warm loads, and is where
+      the engine's console output is written down: exactly eight non-percentage lines per
+      cold load, the four markers' bytes, and the sort out-printing the inflection loop
+      392,702 to 1,122. `node test/web/progress.test.mjs` puts **47** on the real thing
+      in Chrome — the worker, the throttle, and the loading window read back out of the
+      DOM at every change, ending on `100,0%` with the author's comma.
 - [x] 4.4 **Persist the `SLOVNIK.TMP` cache blob to IndexedDB, keyed by dictionary hash.
       Done.** `src/web/cache.ts` is the whole of it: `fnv1a64`, `pokydCacheKey`,
       `PokydCacheStore` and `startCached()`, which is `PokydClient.start()` with the
