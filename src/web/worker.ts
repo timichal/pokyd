@@ -136,6 +136,8 @@ async function handle(request: PokydRequest): Promise<[unknown, unknown[]]> {
     case "getSettings": return [M.getSettings(), []];
     case "setSettings": M.setSettings(request.settings); return [null, []];
     case "setMood":     M.setMood(request.mood);     return [null, []];
+    case "setMoodPoints": M.setMoodPoints(request.points); return [null, []];
+    case "debugInfo":   return [M.debugInfo(), []];
     case "progress":    return [M.progress(), []];
     case "dictionaryHash": return [M.dictionaryHash(), []];
     case "exportCache": {

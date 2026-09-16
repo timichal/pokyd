@@ -47,7 +47,9 @@
    so importing it here costs a node process nothing. */
 import { fnv1a64 } from "./cache.ts";
 import { decodeCp1250, encodeCp1250, encodeCp1250Z } from "./cp1250.ts";
-import type { PokydProgress, PokydSettings } from "./protocol.ts";
+import type {
+  PokydDebugInfo, PokydProgress, PokydSettings,
+} from "./protocol.ts";
 import { POKYD_PHASE_DONE } from "./protocol.ts";
 
 /* ------------------------------------------------------- the module as it is */
@@ -76,6 +78,8 @@ export interface PokydWasm {
   _pokyd_get_settings(out: number): void;
   _pokyd_set_settings(src: number): void;
   _pokyd_set_mood(mood: number): void;
+  _pokyd_set_mood_points(points: number): void;
+  _pokyd_debug_info(out: number): void;
 
   _pokyd_progress(): number;
   _pokyd_phase(): number;
@@ -128,6 +132,41 @@ if (SETTINGS_LAYOUT.length !== POKYD_SETTINGS_FIELDS
     + SETTINGS_LAYOUT.length + " fields and " + layoutSize
     + " bytes, but struct pokyd_settings is " + POKYD_SETTINGS_FIELDS
     + " and " + POKYD_SETTINGS_SIZE);
+}
+
+/* ---------------------------------------------------------- the debug struct */
+
+/* struct pokyd_debug, in declaration order and on the same terms as the table
+   above: a running sum of widths, with 4 for each of the five counters and the
+   array length for each string.  Unlike pokyd_settings this one is *not*
+   padding-free -- the counters want four-byte alignment, so the struct's own
+   alignment is four and the two trailing bytes are followed by one of padding.
+   That affects the size and not a single offset, which is why the size below is
+   written down separately rather than derived, and why pokyd_api.cpp carries a
+   static_assert on the same number. */
+const DEBUG_LAYOUT: ReadonlyArray<readonly [keyof PokydDebugInfo, number]> = [
+  ["allocatedBlocks", 4], ["maxWords", 4], ["answerCount", 4],
+  ["baseWords", 4], ["rules", 4],
+  ["lastAnswer", 201], ["lastSentence", 501],
+  ["subject", 201], ["predicate", 201], ["object", 201],
+  ["mood", 1], ["moodPoints", 1],
+];
+
+const DEBUG_OFFSET: Partial<Record<keyof PokydDebugInfo, number>> = {};
+let debugSum = 0;
+for (const [name, width] of DEBUG_LAYOUT) {
+  DEBUG_OFFSET[name] = debugSum;
+  debugSum += width;
+}
+
+export const POKYD_DEBUG_FIELDS = 12;
+/** sizeof(struct pokyd_debug): the 1327 bytes the table adds up to, rounded up
+ *  to the four-byte alignment the counters impose. */
+export const POKYD_DEBUG_SIZE = 1328;
+if (DEBUG_LAYOUT.length !== POKYD_DEBUG_FIELDS || debugSum !== 1327) {
+  throw new Error("src/web/engine.ts: the debug table is "
+    + DEBUG_LAYOUT.length + " fields and " + debugSum
+    + " bytes, but struct pokyd_debug is " + POKYD_DEBUG_FIELDS + " and 1327");
 }
 
 /* What NASTAV_STANDARDNE writes (NASTAVEN.PR:25-43).  Read back through the
@@ -396,6 +435,35 @@ export class PokydEngine {
     this.M._pokyd_set_mood(mood);
   }
 
+  /* naladabody 0..90, with mood recomputed from it -- the direction
+   CDebugNastaveni::OnOK takes (debugnastaveni.cpp:220-224).  His own dialog
+   refuses anything outside 0..90 with a MessageBox; this throws, and
+   src/app/debug.ts says the same thing in his words before it ever gets here. */
+  setMoodPoints(points: number): void {
+    this.requireAlive("setMoodPoints");
+    if (!Number.isInteger(points) || points < 0 || points > 90) {
+      throw new RangeError("setMoodPoints: naladabody is 0..90, got " + points);
+    }
+    this.M._pokyd_set_mood_points(points);
+  }
+
+  /* ---------------------------------------------------------- debug info */
+
+  /* The ten globals IDD_DEBUGNASTAVENI showed, in one snapshot.  Safe before a
+     load, which matters: Ctrl+Shift+Alt+D works while the dictionary is still
+     inflecting, and it did in 2005 too. */
+  debugInfo(): PokydDebugInfo {
+    this.requireAlive("debugInfo");
+    const p = this.M._malloc(POKYD_DEBUG_SIZE);
+    if (p === 0) throw new Error("debugInfo: out of wasm memory");
+    try {
+      this.M._pokyd_debug_info(p);
+      return this.readDebug(p);
+    } finally {
+      this.M._free(p);
+    }
+  }
+
   /* ------------------------------------------------------------- progress */
 
   /* g_praveprovadenaakce and g_procentanacitani.  Read this from an output
@@ -506,6 +574,26 @@ export class PokydEngine {
       out[name] = width === 1 ? h[at] : decodeCp1250(this.readBytes(at));
     }
     return out as unknown as PokydSettings;
+  }
+
+  /* The counters are little-endian unsigned 32-bit -- wasm is little-endian and
+     pokyd_api.h made them `unsigned int` precisely so the width does not follow
+     the data model.  Read byte by byte off HEAPU8 rather than through a
+     DataView, because the heap is replaced whenever the memory grows. */
+  private readDebug(p: number): PokydDebugInfo {
+    const h = this.M.HEAPU8;
+    const out: Record<string, number | string> = {};
+    for (const [name, width] of DEBUG_LAYOUT) {
+      const at = p + (DEBUG_OFFSET[name] as number);
+      if (width === 1) { out[name] = h[at]; continue; }
+      if (width === 4) {
+        out[name] = (h[at] | (h[at + 1] << 8) | (h[at + 2] << 16)
+          | (h[at + 3] << 24)) >>> 0;
+        continue;
+      }
+      out[name] = decodeCp1250(this.readBytes(at));
+    }
+    return out as unknown as PokydDebugInfo;
   }
 
   private writeSettings(p: number, settings: PokydSettings): void {

@@ -9,7 +9,35 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 7 — settings and state — **is complete, 7.1 through 7.5. IQ Pokyd
+**Phase:** 8 — extras — **is complete, and two of its four items are the decision not to
+build them.** 8.1 and 8.3 are dropped: the conversation log has nothing to write to and
+nothing left to promise, so `IDC_UKLADATROZHOVOR` came off the settings dialog with it,
+and the attribution page was already on the screen twice over once 8.2 landed. What is
+built is **8.2 — the help, version and about screens, and the menu merged around them** —
+and **8.4, the cheat panel, drawn whole.**
+
+The menu is the visible half. `exhibitMenu` (`src/app/caption.ts`) is **the one place
+this port rearranges the author's own menu**: `ID_KONEC`, `ID_NAPOVEDA_INTERNET` and
+`ID_VELKANAPOVEDA` are dropped — a window a page does not own, a URL that has not
+answered in twenty years, and a `CTI_ME.HTM` that is not in the archive — and the two
+popups that are left become one. **Nothing on the bar is greyed any more**, which closes
+the rule 6.3 opened.
+
+The three text screens are **string literals in the source and not the `.HLP` files the
+plan named**; `test/app/help.test.ts` reassembles each of them out of the author's own C,
+splice for splice, and got all 40 checks on the first run. The cheat panel needed new C:
+`pokyd_debug_info` and `pokyd_set_mood_points`, eighteen exported functions now, with a
+`static_assert` on one side of the struct and a thrown layout check on the other. Four
+tests are new or rewritten — **40 checks** on the help screens, **56** on the cheat
+panel, and `test/app/chat.test.mjs` grew from 219 to **355** and still reproduces the
+golden conversation byte for byte on both visits.
+
+One fix found by looking at the thing rather than at the tests: `mountText` and
+`mountAbout` reported their close to the caller without taking themselves off the page,
+so the X did nothing. Every way out of one of his dialogs is one `WM_CLOSE` and now says
+so in the code.
+
+**Phase 7** — settings and state — **is complete, 7.1 through 7.5. IQ Pokyd
 can be set the way he could be set: his own dialog opens on F4, his own
 IQPOKYD.CFG is written next to the page, and the exhibit a visitor comes back to
 is the one they left.** The dialog is `src/app/dialog.ts` over
@@ -1059,9 +1087,15 @@ Specific things that will bite. Each has a task attached in the phases below.
       because the page is a maximized window and a maximized window has none. The
       custom TTF turned out not to be a font (6.2), so the font work is a CSS
       stack and not an asset.
-- [ ] Do we want the debug/cheat panel (`Ctrl` shortcuts, `debugnastaveni.cpp`,
-      `Debug/CHEAT.FU`)? It exposes mood points, last subject/predicate/object. Fun for a
-      museum piece. Low priority.
+- [x] ~~Do we want the debug/cheat panel?~~ **Yes, and it is phase 8.4.** Mood points,
+      last subject/predicate/object, the two spelling parameters and his twelve tool
+      tips, reached by Ctrl+Shift+Alt+D or by typing `::debuginfo`. `Debug/CHEAT.FU` is
+      **not** part of it and is not ported: `VRAT_TEXT_CHEATU_MISA` is a private letter
+      XOR-128'd into a string constant, and the only code that ever showed it is
+      commented out in `mfcDlg.cpp:573-585` with the author's own note that it was a
+      cheat "jen ve verzi 0.1". It was not reachable in 0.15 and it is not made
+      reachable here — running an obfuscator over somebody's letter to somebody is not
+      the same as publishing it.
 
 ---
 
@@ -2192,16 +2226,105 @@ rather than a thing built.
 
 ## Phase 8 — Extras
 
-- [ ] 8.1 Conversation log (the original's `KYDY.TXT`) — keep in memory, offer as a download.
-- [ ] 8.2 Help / about / version screens. `res/html1.htm` and the `.HLP` files are the source.
-- [ ] 8.3 Attribution page: Aleš Janda / KÝBLSoft, `iqpokyd.kyblsoft.cz`, plus `info.txt`
-      reproduced in full.
-- [ ] 8.4 Optional: debug/cheat panel (see open questions).
+- [x] ~~8.1 Conversation log (the original's `KYDY.TXT`)~~ — **dropped, with the setting
+      that switched it.** `ukladatrozhovor` wrote `KYDY.TXT` next to the executable; a
+      page has no next-to, an in-memory transcript offered as a download would be a
+      feature of ours rather than his, and since 6.5 the conversation is already on the
+      screen and scrolls back the hundred sentences `g_poslednich100vet` keeps. So there
+      is nothing left for the tick to promise, and `IDC_UKLADATROZHOVOR` is the ninth
+      entry in `DROPPED` (`src/app/dialog.ts`) — **the first one taken off the page that
+      *is* drawn**, which is what made `droppedRows` necessary: a band with nothing in it
+      closes up, so the three checkboxes under it move into its place and "Prostředí"
+      gets 11 dialog units shorter. The setting itself is untouched: `NASTAV_STANDARDNE`
+      still sets it to 1, the engine still carries it, and `src/app/config.ts` still
+      writes `Ukladat rozhovor: ano` into `IQPOKYD.CFG`, because that file is his format
+      and not ours to edit.
+- [x] **8.2 Help / about / version screens.** ~~`res/html1.htm` and the `.HLP` files are
+      the source.~~ **They are not, and that line was wrong.** `res/html1.htm` is a
+      forty-byte AppWizard stub that says "Ahoj!!", and the two `.HLP` files are WinHelp
+      binaries nothing in the program opens. The three screens are **string literals in
+      the source**: `ZOBRAZ_NAPOVEDU` (`PROSTRED.FU:775`), `CMfcDlg::OnOverzi`
+      (`mfcDlg.cpp:815`) and `CAboutDlg::OnInitDialog`'s paragraph of thanks (`:705`).
+      All three are in `src/app/help.ts`, and `test/app/help.test.ts` **reassembles each
+      of them out of the author's own C string literals** — splice for splice, macro
+      included — and compares them for a man and for a woman. 40 checks, and they passed
+      on the first run, so the transcription is byte-exact.
+
+      The windows are `src/app/screens.ts`: `IDD_TEXT` twice over and `IDD_ABOUTBOX`
+      once, in the frame phase 7.1 invented and phase 8.2 moved into `src/app/frame.ts`
+      so that all four of his dialogs share one. The rich edit is the interesting half —
+      `NAPIS_FORMATOVANY_TEXT_NAPOVEDY` (`:1116`) reads four tags and sends one
+      `EM_SETCHARFORMAT` per run between them, and each argument is one CSS declaration:
+      `<u>` is a *double* underline, `<c>` is `crBackColor 0x00FFE0D0` and therefore
+      `#d0e0ff` byte-reversed, `<h>` is 350 twips against the body's 220.
+
+      **The menu was merged and three commands were dropped**, which is the other half of
+      8.2 and the only place this port rearranges the author's own menu:
+      `exhibitMenu` in `src/app/caption.ts`, with `DROPPED_COMMANDS` beside it.
+      `ID_KONEC` closes a window a page does not own; `ID_NAPOVEDA_INTERNET` and
+      `CAboutDlg`'s own `IDC_INTERNET` both open `http://iqpokyd.kyblsoft.cz`, which has
+      not answered in twenty years; and `ID_VELKANAPOVEDA` shells out to
+      `JMENO_SOUBORU_S_NAPOVEDOU`, which is `CTI_ME.HTM` (`KONSTANT.K:29`) and **is not
+      in the archive at all** — it shipped beside the executable. Four commands are left
+      and four items do not want two popups, so the two are one, in his order, with a
+      separator where they met. **Nothing on the bar is greyed any more**, which closes
+      the rule phase 6.3 opened: every item drawn has a handler.
+- [x] ~~8.3 Attribution page~~ — **dropped: 8.2 made it redundant.** `IDD_ABOUTBOX` is
+      the attribution page and always was — Aleš Janda © KÝBLSoft 1999-2005, ":: freeware
+      ::", the KÝBLSoft logo, both addresses and the whole paragraph of thanks — and the
+      Malá nápověda signs off with the same name and the same two addresses. His name is
+      on the main window before a menu is opened (`IDC_NADPIS1`, `IDC_NADPIS3`). A page
+      of ours saying it a third time would be the only screen in the exhibit he did not
+      write. `original/info.txt` belongs in the README instead (9.1), which is where the
+      licensing note (9.2) already had to live.
+- [x] **8.4 The cheat panel.** `IDD_DEBUGNASTAVENI`, drawn whole — **the only one of his
+      four dialogs this port draws with nothing dropped and nothing greyed.**
+      Ctrl+Shift+Alt+D, which is `ID_CHEAT_DEBUGINFO` and the one entry in `IDR_ZKRATKY`
+      with all three modifiers, or `::debuginfo` typed into the sentence line
+      (`mfcDlg.cpp:562`) — his two doors, and both work, the second one returning before
+      the engine or the input line is touched, exactly as `OnNovaVeta` does.
+
+      **It needed new C.** The report prints ten globals that live inside the engine's own
+      translation unit and nothing outside it could reach one, so `pokyd_api.h` grew a
+      second struct — `pokyd_debug`, filled by `pokyd_debug_info` in one call because the
+      author's own tool tip claims it is a snapshot ("platné v okamžiku spuštění tohoto
+      dialogu") — plus `pokyd_set_mood_points`, which is `pokyd_set_mood` the other way
+      round. Eighteen exported functions now, and **the five counters in that struct are
+      `unsigned int` rather than the engine's `DWORD`**: `src/web/engine.ts` reads it out
+      of the heap against a written-down table of offsets, and `long` is four bytes on
+      wasm32 and on Windows and eight on Linux, so a width that followed the data model
+      would put that table right on one host and wrong on another. `pokyd_api.cpp` carries
+      a `static_assert` on the size and `engine.ts` throws on the table, so the two cannot
+      drift apart quietly.
+
+      Everything else in it is the author's, including the parts that read oddly:
+      "Minimální počet slov" is `debug_maxpocetvsechslov`, the high-water mark, and
+      "Aktuální nálada počítače" prints `naladabody` with the `nalada` word beside it.
+      `src/app/debug.ts` is `CDebugNastaveni` with the window taken off and
+      `test/app/debug.test.ts` reads all of it back out of `debugnastaveni.cpp` — his
+      `sprintf`, his two `CheckDlgButton` switches, both refusals, the one `MB_OKCANCEL`
+      and all twelve `AddTool` calls. **His `OnOK` is a loop and not a parse**, and that
+      is visible from outside: `999x` is refused for being out of range rather than for
+      the `x`, because the overflow test fires on the third 9 before the fourth character
+      is ever read. The test checks it with exactly that input.
+
+      Two things it makes good that earlier phases wrote off. The twelve tool tips are
+      **the only tool tips in the port** and are the best writing in the archive — a
+      paragraph per option explaining what it really does — so `zobrazovatpopisky`
+      means something again, and with it the closing note the report grows when it is
+      off. And the `MB_OKCANCEL` is the only question in the whole program: moving one of
+      the three parameters that change how the engine reads a sentence asks before it
+      saves, and Cancel abandons the whole of `OnOK`, the mood included (`:218`). A page
+      has no modal that is not a lie, so the question is written into the dialog over the
+      buttons, where the two refusals already go, and the second press of OK is the
+      answer.
 
 ## Phase 9 — Ship
 
 - [ ] 9.1 README: what this is, whose it is, how it was ported, what changed and why
-      (link `PATCHES.md`).
+      (link `PATCHES.md`). **`original/info.txt` goes here**, reproduced in full — phase
+      8.3 was going to give it a page of its own and that page is dropped, because
+      `IDD_ABOUTBOX` is the attribution screen and the author wrote it.
 - [ ] 9.2 Licensing note. The author released under GNU/GPL *and* added "no commercial use",
       which the GPL does not actually permit as a combination. Whatever we conclude, the
       practical commitments are: keep attribution, keep `info.txt`, don't monetize it.
@@ -2245,6 +2368,21 @@ rather than a thing built.
   visitor sees and `src/app/main.ts` is what `index.html` runs — phase 5.1, and
   `src/README.md` has the table and the three things worth knowing before changing any
   of them. `npm run dev` serves it, `npm run build` writes `dist/`.
+- The four text screens: `src/app/help.ts` is the words — `ZOBRAZ_NAPOVEDU`,
+  `CMfcDlg::OnOverzi` and the about box's thanks, all three of them string literals in
+  the archive rather than resources — plus `markup()`, the parsing half of
+  `NAPIS_FORMATOVANY_TEXT_NAPOVEDY`. `src/app/screens.ts` draws `IDD_TEXT` and
+  `IDD_ABOUTBOX` over it, `src/app/frame.ts` is the window all four of his dialogs wear,
+  and `node test/app/help.test.ts` reassembles every one of those strings out of his own
+  C string literals — phase 8.2. Read `DROPPED_COMMANDS` in `src/app/caption.ts` before
+  wondering where a menu item went.
+- The cheat panel: `src/app/debug.ts` is `CDebugNastaveni` with the window taken off and
+  `src/app/cheat.ts` draws `IDD_DEBUGNASTAVENI` over it — phase 8.4, and the only one of
+  his dialogs the port draws whole. `node test/app/debug.test.ts` reads his `sprintf`,
+  his two switches, both refusals, the `MB_OKCANCEL` and all twelve tool tips back out of
+  `debugnastaveni.cpp`. Ctrl+Shift+Alt+D, or type `::debuginfo`. What it reads out of the
+  engine is `pokyd_debug_info` (`src/api/pokyd_api.h`); the note there about `unsigned
+  int` is load-bearing on Linux.
 - The settings: `src/app/settings.ts` is `CNastaveni` with the window taken off —
   his `OnInitDialog`, his `OnOK`, his name check and the two lists of controls his
   two pages showed — and `src/app/dialog.ts` draws IDD_NASTAVENI over it (phase
@@ -2257,8 +2395,8 @@ rather than a thing built.
   rule base and the page from source on a Linux runner, gates on the golden
   conversation, and publishes `dist/` to GitHub Pages. Nothing compiled is committed,
   which is why it reproduces the whole chain rather than uploading an artefact.
-- All the tests: `npm test`, which is `node test/run.mjs` — fifteen programs in phase
-  order, `--quick` for the eleven that do not launch a browser. The one that says the
+- All the tests: `npm test`, which is `node test/run.mjs` — seventeen programs in phase
+  order, `--quick` for the thirteen that do not launch a browser. The one that says the
   port works is `test/app/chat.test.mjs`, phase 5.2: it builds the app, drives the
   built page through the golden conversation in Chrome and compares what was on the
   screen with `test/golden/rozhovor.txt`.

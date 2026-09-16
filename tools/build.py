@@ -118,13 +118,14 @@ EM_CACHE = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".cache") / "pok
 
 WASM = ROOT / "build" / "wasm"
 
-# The 15 of pokyd_api.h, plus the allocator: the CP1250 boundary in phase 4.1 has
+# The 18 of pokyd_api.h, plus the allocator: the CP1250 boundary in phase 4.1 has
 # to put bytes into the heap itself, because there is no UTF-8 helper that will do
 # it for a code page.  The leading underscore is the C symbol as the linker sees it.
 EXPORTS = [
     "_pokyd_init", "_pokyd_load_dictionaries", "_pokyd_shutdown", "_pokyd_error",
     "_pokyd_say", "_pokyd_sentence_count", "_pokyd_seed",
     "_pokyd_get_settings", "_pokyd_set_settings", "_pokyd_set_mood",
+    "_pokyd_set_mood_points", "_pokyd_debug_info",
     "_pokyd_progress", "_pokyd_phase",
     "_pokyd_export_cache", "_pokyd_import_cache", "_pokyd_free",
     "_malloc", "_free",

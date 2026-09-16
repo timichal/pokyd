@@ -65,24 +65,16 @@ import { DIALOGS, dluToPx } from "./resources.ts";
 import type { RcControl, RcDialog } from "./resources.ts";
 import { dialogBaseUnits } from "./dlu.ts";
 import {
+  DIALOG_CLASS, DIALOG_FONT, makeStatic, mountFrame, placeControl, renderLabel,
+} from "./frame.ts";
+import {
   ADVANCED_CONTROLS, CHARACTERS, FEMALE, MALE, MOODS, NAME_LIMIT, edit,
   formFromSettings,
 } from "./settings.ts";
 import type { PokydSettingsEdit, PokydSettingsForm } from "./settings.ts";
 import type { PokydSettings } from "../web/protocol.ts";
 
-/* ----------------------------------------------------------------- the font */
-
-/* The template asks for 12-point "System", the bitmap face Windows dialogs wore
-   before Tahoma.  Nothing has it now, so this is a stack of the faces that
-   replaced it -- and it does not have to be the same face, only the face the
-   base units are measured from, which is what MapDialogRect guarantees: measure
-   the font the visitor really got and his rectangles come out the right size
-   for it.  Same argument as SANS in src/app/chat.ts, same mechanism. */
-const DIALOG_FONT =
-  "Tahoma, \"Segoe UI\", \"DejaVu Sans\", system-ui, sans-serif";
-
-const CLASS = "pokyd-dialog";
+const CLASS = DIALOG_CLASS;
 
 /* ------------------------------------------------------------ what is dropped */
 
@@ -112,39 +104,47 @@ const CLASS = "pokyd-dialog";
    the settings, not the missing control -- so a visit started with ?bezpozadi
    keeps its black background through as many trips to this dialog as it likes.
 
+   **Phase 8 added a ninth, and it is the first one taken off the page that is
+   drawn**: IDC_UKLADATROZHOVOR, "Ukladat rozhovor do souboru".  ukladatrozhovor
+   switched the KYDY.TXT conversation log (ZAPIS_DO_SOUBORU_TEXTOVY_ZAZNAM), and
+   phase 8 dropped the log: there is no file to write next to a page, an
+   in-memory transcript offered as a download is a feature of ours rather than
+   his, and the conversation is already on the screen and scrolls back a hundred
+   sentences.  A tick for a file nobody can ever look at is the same broken
+   promise as a greyed menu item pretending to be live.  The setting itself
+   stays where it always was -- NASTAV_STANDARDNE still sets it to 1, the engine
+   still carries it and src/app/config.ts still writes "Ukladat rozhovor: ano"
+   into IQPOKYD.CFG, because that file is his format and not ours to edit.
+
    Everything left is live: the engine reads it, the window shows it, or phase
    7.3 stores it. */
 const DROPPED: readonly string[] = [
   "IDC_ZAKLADNINASTAVENI",
   "IDC_ROZSIRENENASTAVENI",
+  "IDC_UKLADATROZHOVOR",
   ...ADVANCED_CONTROLS,
 ];
 
-/** The row those two buttons stood in (:0..13 in the template), which is what
- *  the dialog and everything on it move up by.  Read off the button rather
- *  than written down: this file has no measurements of its own. */
-function droppedRow(dialog: RcDialog): number {
-  const button = dialog.controls.find((c) => c.id === "IDC_ZAKLADNINASTAVENI");
-  return button === undefined ? 0 : button.rect.cy;
-}
+/* ----------------------------------------------------------- what moves up */
 
-/* ---------------------------------------------------------------- the labels */
+/** A band of the template with nothing left in it.  Everything below one moves
+ *  up by its height, anything that spans one gets that much shorter, and the
+ *  dialog does both.  Two of them, and both are read off the control that
+ *  stood there rather than written down: this file has no measurements. */
+interface DroppedRow { top: number; height: number }
 
-/** A caption split the way Windows reads it: `&` marks the mnemonic.  The same
- *  reading src/app/menu.ts does of a menu item, which needs the tab as well;
- *  a control's caption has no accelerator text in it. */
-function renderLabel(raw: string): { node: DocumentFragment; key: string } {
-  const fragment = document.createDocumentFragment();
-  const at = raw.indexOf("&");
-  if (at === -1 || at === raw.length - 1) {
-    fragment.append(raw);
-    return { node: fragment, key: "" };
+function droppedRows(dialog: RcDialog): DroppedRow[] {
+  /* IDC_ZAKLADNINASTAVENI and IDC_ROZSIRENENASTAVENI share one row at the top
+     of the template (0..13), and the 5-unit gap under it is the template's own
+     gap before the first group box.  IDC_UKLADATROZHOVOR is the first row
+     inside "Prostredi", so the three check boxes under it move up into its
+     place and the group box closes over them. */
+  const rows: DroppedRow[] = [];
+  for (const id of ["IDC_ZAKLADNINASTAVENI", "IDC_UKLADATROZHOVOR"]) {
+    const rc = dialog.controls.find((c) => c.id === id);
+    if (rc !== undefined) rows.push({ top: rc.rect.y, height: rc.rect.cy });
   }
-  fragment.append(raw.slice(0, at));
-  const mnemonic = document.createElement("u");
-  mnemonic.textContent = raw[at + 1]!;
-  fragment.append(mnemonic, raw.slice(at + 2));
-  return { node: fragment, key: raw[at + 1]!.toLowerCase() };
+  return rows;
 }
 
 /* ---------------------------------------------------------------- the options */
@@ -178,12 +178,25 @@ export function mountSettings(
   const form: PokydSettingsForm = formFromSettings(options.settings);
 
   const base = dialogBaseUnits(DIALOG_FONT, dialog.font!.size);
-  const px = (rect: { x: number; y: number; cx: number; cy: number }) =>
-    dluToPx(rect, base);
-  /* The page buttons' row, off the top of the template and off the top of
-     everything in it -- see DROPPED. */
-  const shift = droppedRow(dialog);
-  const size = px({ ...dialog.rect, cy: dialog.rect.cy - shift });
+  /* The two bands with nothing left in them -- see DROPPED and droppedRows. */
+  const rows = droppedRows(dialog);
+
+  /** How far up a control moves: the height of every dropped row entirely
+   *  above it. */
+  const shiftFor = (rc: { rect: { y: number } }): number => rows
+    .filter((row) => rc.rect.y >= row.top + row.height)
+    .reduce((sum, row) => sum + row.height, 0);
+
+  /** How much shorter a control gets: the height of every dropped row it spans.
+   *  Only two things do -- IDC_RAMECEK2, which closes over the check box that
+   *  went, and the dialog itself, which closes over both rows. */
+  const shrinkFor = (rc: { rect: { y: number; cy: number } }): number => rows
+    .filter((row) => row.top >= rc.rect.y
+      && row.top + row.height <= rc.rect.y + rc.rect.cy)
+    .reduce((sum, row) => sum + row.height, 0);
+
+  const size = dluToPx(
+    { ...dialog.rect, cy: dialog.rect.cy - shrinkFor(dialog) }, base);
 
   const control = (id: string): RcControl => {
     const found = dialog.controls.find((c) => c.id === id);
@@ -193,39 +206,21 @@ export function mountSettings(
 
   /* ---------------------------------------------------------------- the frame */
 
-  const element = document.createElement("div");
-  element.className = CLASS;
-  element.setAttribute("role", "dialog");
-  element.setAttribute("aria-modal", "true");
-  element.setAttribute("aria-label", dialog.caption!);
-
-  const frame = document.createElement("form");
-  frame.className = CLASS + "-frame";
-  frame.style.width = size.width + "px";
-  frame.tabIndex = -1;
-
-  /* WS_CAPTION and WS_SYSMENU.  Ours to draw and his to say. */
-  const titleBar = document.createElement("div");
-  titleBar.className = CLASS + "-caption";
-  const title = document.createElement("span");
-  title.className = CLASS + "-title";
-  title.textContent = dialog.caption!;
-  const closeBox = document.createElement("button");
-  closeBox.type = "button";
-  closeBox.className = CLASS + "-close";
-  closeBox.textContent = "x";
-  /* The X and Storno are one command, so they carry one name -- his. */
-  closeBox.setAttribute("aria-label", control("IDCANCEL").text!.replace("&", ""));
-  titleBar.append(title, closeBox);
-
-  const body = document.createElement("div");
-  body.className = CLASS + "-body";
-  body.style.height = size.height + "px";
-  body.style.fontFamily = DIALOG_FONT;
-  body.style.fontSize = Math.round((dialog.font!.size * 96) / 72) + "px";
-
-  frame.append(titleBar, body);
-  element.appendChild(frame);
+  /* src/app/frame.ts, and it is the same frame all four of his dialogs wear
+     since phase 8.2: the XP caption bar, the close box carrying IDCANCEL's own
+     name, Escape, and the Tab trap. */
+  const mounted = mountFrame(parent, {
+    caption: dialog.caption!,
+    closeLabel: control("IDCANCEL").text!,
+    width: size.width,
+    height: size.height,
+    fontSize: dialog.font!.size,
+    onCancel: (): void => { cancel(); },
+    modifier: CLASS + "--settings",
+  });
+  const element = mounted.element;
+  const frame = mounted.frame;
+  const body = mounted.body;
 
   /* ------------------------------------------------------------ the controls */
 
@@ -239,24 +234,11 @@ export function mountSettings(
    *  from the static he put the `&` on. */
   const mnemonics = new Map<string, { key: string; target: HTMLElement }>();
 
-  /** Absolute at the author's rectangle, in pixels, always. */
+  /** Absolute at the author's rectangle, in pixels, always -- up by the rows
+   *  DROPPED took out above it, and shorter by any it closes over. */
   function place(node: HTMLElement, rc: RcControl): void {
-    const box = px({ ...rc.rect, y: rc.rect.y - shift });
-    node.style.left = box.x + "px";
-    node.style.top = box.y + "px";
-    node.style.width = box.width + "px";
-    node.style.height = box.height + "px";
-    node.dataset["control"] = rc.id;
-  }
-
-  /** A static: CTEXT centres, RTEXT is right-aligned, LTEXT is neither. */
-  function makeStatic(rc: RcControl): HTMLElement {
-    const span = document.createElement("span");
-    span.className = CLASS + "-static";
-    if (rc.implicitStyles.includes("SS_CENTER")) span.style.textAlign = "center";
-    if (rc.implicitStyles.includes("SS_RIGHT")) span.style.textAlign = "right";
-    span.append(renderLabel(rc.text ?? "").node);
-    return span;
+    placeControl(node, { ...rc.rect, cy: rc.rect.cy - shrinkFor(rc) },
+      base, rc.id, shiftFor(rc));
   }
 
   /** BS_AUTOCHECKBOX and BS_AUTORADIOBUTTON, which are the same control with a
@@ -467,11 +449,12 @@ export function mountSettings(
       computerName: value("IDC_JMENOPOCITACE"),
       character: chosen("IDC_CHARAKTER", form.character),
       mood: chosen("IDC_NALADA", form.mood),
-      saveConversation: checked("IDC_UKLADATROZHOVOR", form.saveConversation),
       useSounds: checked("IDC_POUZIVATZVUKY", form.useSounds),
       useEffects: checked("IDC_POUZIVATEFEKTY", form.useEffects),
       formalCzech: checked("IDC_SPISOVNACESTINA", form.formalCzech),
-      /* The eight below are DROPPED, every one of them. */
+      /* The nine below are DROPPED, every one of them -- eight on the page that
+         is not drawn and, since phase 8, the conversation log's own tick. */
+      saveConversation: checked("IDC_UKLADATROZHOVOR", form.saveConversation),
       emulateKeyboard: checked("IDC_EMULOVATKLAVESNICI", form.emulateKeyboard),
       slovakKeyboard:
         checked("IDC_EMULOVATSLOVENSKOUKLAVESNICI", form.slovakKeyboard),
@@ -506,43 +489,17 @@ export function mountSettings(
 
   /* -------------------------------------------------------------- the wiring */
 
+  /* Escape, the close box and the Tab trap are src/app/frame.ts's, and Escape
+     is his as well: ON_COMMAND(ID_ZKRATKA_SMAZRADEK, OnClose) at :42 puts the
+     main window's Escape accelerator on this dialog too. */
   frame.addEventListener("submit", (event: SubmitEvent): void => {
     event.preventDefault();
     accept();
   });
 
   boxes.get("IDCANCEL")?.addEventListener("click", cancel);
-  closeBox.addEventListener("click", cancel);
 
-  /* Escape is IDCANCEL, and it is his as well: ON_COMMAND(ID_ZKRATKA_SMAZRADEK,
-     OnClose) at :42 puts the main window's Escape accelerator on this dialog
-     too.  Tab is the modal half -- a dialog nothing can tab out of. */
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === "Escape") { event.preventDefault(); cancel(); return; }
-    if (event.key !== "Tab") return;
-    const reachable = Array.from(frame.querySelectorAll<HTMLElement>(
-      "button, input, select"))
-      .filter((el) => !(el as HTMLInputElement).disabled
-        && el.offsetParent !== null);
-    if (reachable.length === 0) return;
-    const first = reachable[0]!;
-    const last = reachable[reachable.length - 1]!;
-    const active = document.activeElement;
-    if (!event.shiftKey && active === last) { event.preventDefault(); first.focus(); }
-    if (event.shiftKey && (active === first || active === frame)) {
-      event.preventDefault();
-      last.focus();
-    }
-  };
-  element.addEventListener("keydown", onKeyDown);
-
-  parent.appendChild(element);
-  frame.focus();
-
-  function close(): void {
-    element.removeEventListener("keydown", onKeyDown);
-    element.remove();
-  }
+  function close(): void { mounted.close(); }
 
   return {
     element,

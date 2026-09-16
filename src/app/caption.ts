@@ -1,9 +1,9 @@
-/* IQ Pokyd - src/app/caption.ts - the two things about IDR_MENU that are not in
-   IQPokyd.rc.  Phase 6.3 of PLAN.md.
+/* IQ Pokyd - src/app/caption.ts - the things about IDR_MENU that are not in
+   IQPokyd.rc.  Phase 6.3 of PLAN.md, with a third added at 8.2.
 
    src/app/resources.ts has the menu the author wrote, down to his mnemonics and
    his accelerator text, because it is in the resource script and the extractor
-   read it.  Two things about that menu are not, and both are here:
+   read it.  Three things about that menu are not, and all three are here:
 
      1. **what the right-justified item says.**  The script gives it the
         placeholder "Nalada", and ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI
@@ -19,6 +19,11 @@
         pairing exists nowhere else; the test reads those seven calls back out of
         mfcDlg.cpp and compares them with the table.
 
+     3. **which of his commands the exhibit still has**, which is phase 8.2 and
+        the only place in this port where the author's own menu is *rearranged*
+        rather than read.  `exhibitMenu` below is that rearrangement and the
+        reasoning is written out over it.
+
    Nothing here touches the DOM and nothing here imports a picture, which is what
    lets a node test have it: src/app/menu.ts draws it, src/app/assets.ts is where
    the seven URLs come from, and both need a bundler.
@@ -28,6 +33,7 @@
    the author's own spelling beside it.
 */
 
+import type { RcMenu, RcMenuItem } from "./resources.ts";
 import type { PokydSettings } from "../web/protocol.ts";
 
 /* PROSTRED.FU:254-257 and :264-267.  A person with no name is their gender.
@@ -117,3 +123,98 @@ export const MENU_BITMAPS: Record<string, string> = {
   ID_OVERZI: "IDB_MENUOVERZI",
   ID_OPROGRAMU: "IDB_MENUOPROGRAMU",
 };
+
+/* ------------------------------------------------------- the menu, rearranged */
+
+/* **Phase 8.2, and the one deliberate change to the author's menu.**  IDR_MENU
+   is two popups and a right-justified caption; what the exhibit shows is one
+   popup and the caption, because two of the seven commands cannot be honoured
+   in a browser and dropping them empties the first popup out.
+
+   What went, and why each one is a cut rather than a port:
+
+     - **ID_KONEC** (Konec, Alt+F4).  CMfcDlg::OnMenuClose closes the window.  A
+       page has no window of its own to close -- `window.close()` is refused for
+       anything the script did not open -- so this was greyed from phase 6.3
+       onwards and is the one item in the menu that could never become live.  A
+       visitor closes the tab.
+     - **ID_NAPOVEDA_INTERNET** (IQ Pokyd na internetu..., Alt+F12).
+       JDI_NA_WWW_STRANKU("http://iqpokyd.kyblsoft.cz"), mfcDlg.cpp:1005.  It
+       *worked* -- 6.3 honoured it, and it was the only command that phase could
+       -- but the site has not answered since the 2000s, so what it opens now is
+       a browser error page with the author's name on it.  A dead link is worse
+       than no link; the address itself is still on the screen, twice, in
+       IDD_ABOUTBOX and at the foot of the Mala napoveda.
+     - **ID_VELKANAPOVEDA** (Velka napoveda..., Alt+F1).  OnVelkaNapoveda
+       (mfcDlg.cpp:732) is forty lines of FindExecutable and ShellExecute around
+       one file: JMENO_SOUBORU_S_NAPOVEDOU, which is CTI_ME.HTM (KONSTANT.K:29).
+       **That file is not in the archive.**  It shipped beside the executable
+       and the source drop does not have it, so there is nothing to show and
+       nothing to write in its place that would be the author's.  Four of his
+       own error messages in that function are for exactly this case.
+
+   What is left is the four that are all text and all in the archive -- the
+   settings, the small help, the version notes and the about box -- and four
+   items do not want two popups.  So they are one, under the first popup's own
+   title, in the order the author had them: his IQ Pokyd popup first, then his
+   Napoveda popup, with a separator where the two met.  Nothing is renamed,
+   nothing is reordered within a popup, and every item keeps its own accelerator
+   text and its own 14x14 bitmap.
+
+   Everything else the menu does is unchanged: an item with no handler is still
+   drawn greyed rather than hidden (src/app/menu.ts), and the accelerator table
+   is bound whole -- so Alt+F12 and Alt+F1 are not bound either, because the
+   commands behind them are not in `commands`.  Two keys and two items, gone
+   together. */
+
+/** The commands IDR_MENU has that the exhibit does not draw, with the reason
+ *  above.  `exhibitMenu` drops them; test/app/caption.test.ts checks that each
+ *  one really is in the author's menu, so that a typo here is not a silent
+ *  no-op. */
+export const DROPPED_COMMANDS: readonly string[] = [
+  "ID_KONEC",
+  "ID_VELKANAPOVEDA",
+  "ID_NAPOVEDA_INTERNET",
+];
+
+/** Collapse a run of separators, and drop the ones at either end.  IDR_MENU
+ *  opens and closes both of its popups with one -- a habit of his, and harmless
+ *  with items between them -- but with three items removed they would become a
+ *  rule above nothing.  The one that survives is the one between the two
+ *  popups, which is the only place two of his groups meet. */
+function tidy(items: readonly RcMenuItem[]): RcMenuItem[] {
+  const out: RcMenuItem[] = [];
+  for (const item of items) {
+    if (item.kind !== "separator") { out.push(item); continue; }
+    if (out.length === 0) continue;
+    if (out[out.length - 1]!.kind === "separator") continue;
+    out.push(item);
+  }
+  while (out.length > 0 && out[out.length - 1]!.kind === "separator") out.pop();
+  return out;
+}
+
+/** IDR_MENU as the exhibit shows it: the two popups merged under the first
+ *  one's title, the three dead commands gone, the right-justified caption
+ *  untouched.  Everything it returns is the author's own object -- the items
+ *  are not copied, only chosen, so a string that moves in IQPokyd.rc still
+ *  moves on the screen. */
+export function exhibitMenu(menu: RcMenu): RcMenu {
+  const keep = (item: RcMenuItem): boolean =>
+    item.id === null || !DROPPED_COMMANDS.includes(item.id);
+
+  const popups = menu.items.filter((i) => i.kind === "popup");
+  const first = popups[0];
+  if (first === undefined) return menu;
+
+  const merged: RcMenuItem = {
+    ...first,
+    items: tidy(popups.flatMap((popup) => popup.items.filter(keep))),
+  };
+
+  return {
+    ...menu,
+    items: [merged, ...menu.items.filter(
+      (i) => i.kind !== "popup" && keep(i))],
+  };
+}

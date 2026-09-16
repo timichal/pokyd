@@ -20,6 +20,7 @@
 
 import type {
   PokydCall,
+  PokydDebugInfo,
   PokydProgress,
   PokydReply,
   PokydRequest,
@@ -179,6 +180,17 @@ export class PokydClient {
 
   setMood(mood: number): Promise<null> {
     return this.send({ type: "setMood", mood });
+  }
+
+  /** naladabody 0..90, with the mood recomputed from it -- the direction the
+   *  cheat panel takes.  setMood is the other one. */
+  setMoodPoints(points: number): Promise<null> {
+    return this.send({ type: "setMoodPoints", points });
+  }
+
+  /** The ten globals IDD_DEBUGNASTAVENI showed, in one snapshot.  Phase 8.4. */
+  debugInfo(): Promise<PokydDebugInfo> {
+    return this.send({ type: "debugInfo" });
   }
 
   progress(): Promise<PokydProgress> {

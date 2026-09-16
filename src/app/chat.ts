@@ -91,6 +91,12 @@ import { settingsCaption, CHARACTERS } from "./caption.ts";
 import { openingGreeting } from "./greeting.ts";
 import { dialogBaseUnits, emForCellHeight } from "./dlu.ts";
 import { mountSettings } from "./dialog.ts";
+import { mountAbout, mountText } from "./screens.ts";
+import { mountCheat } from "./cheat.ts";
+import {
+  HELP_CAPTION, THANKS, VERSION_CAPTION, helpText, versionText,
+} from "./help.ts";
+import { CHEAT_SENTENCE } from "./debug.ts";
 import { MOODS } from "./settings.ts";
 import { CONFIG_BROKEN, CONFIG_OK, loadStored, read, store } from "./config.ts";
 
@@ -123,13 +129,10 @@ const FAILED_SAY = "(IQ Pokyd neodpověděl.)";  /* "did not answer" */
    the screen.  Making the transcript scrollable made it a focusable region (see
    `transcript.tabIndex` below), and a focusable region needs a name; nothing but
    assistive technology ever reads this one.  The word is the author's own for
-   the thing, out of IDD_NASTAVENI's "Ukladat rozhovor do souboru". */
+   the thing, out of IDD_NASTAVENI's "Ukladat rozhovor do souboru" -- which is
+   a tick phase 8 took off that dialog (DROPPED in src/app/dialog.ts), so this
+   is now the only place the port uses the word at all. */
 const TRANSCRIPT_LABEL = "Rozhovor";
-
-/* mfcDlg.cpp:1005.  The one command in IDR_MENU that phase 6.3 can honour --
-   the rest open dialogs that belong to phases 7 and 8, and src/app/menu.ts
-   greys out anything with no handler.  His spelling, his scheme. */
-const HOMEPAGE = "http://iqpokyd.kyblsoft.cz";
 
 /* The fonts, and the whole of the font work in this phase: iqpokyd.ttf turned
    out to be a .FOT stub pointing at Microsoft's Arial CE Bold Italic, which is
@@ -295,12 +298,17 @@ export function mountChat(
      all and are reachable only that way. */
   const menu = mountMenu(element, {
     commands: {
-      /* JDI_NA_WWW_STRANKU, mfcDlg.cpp:1005.  His URL, his scheme. */
-      ID_NAPOVEDA_INTERNET: (): void => {
-        window.open(HOMEPAGE, "_blank", "noopener,noreferrer");
-      },
       /* CMfcDlg::OnNastaveni, mfcDlg.cpp:792. */
       ID_NASTAVENI: (): void => { openSettings(); },
+      /* CMfcDlg::OnMalaNapoveda, :788 -- ZOBRAZ_NAPOVEDU, PROSTRED.FU:775. */
+      ID_MALANAPOVEDA: (): void => { openText(HELP_CAPTION, helpText); },
+      /* CMfcDlg::OnOverzi, :815.  The same CText with another text in it. */
+      ID_OVERZI: (): void => { openText(VERSION_CAPTION, versionText); },
+      /* CMfcDlg::OnAbout, :801-804 -- CAboutDlg, IDD_ABOUTBOX. */
+      ID_OPROGRAMU: (): void => { openAbout(); },
+      /* CMfcDlg::OnCheatDebugInfo, :889.  In no menu: IDR_ZKRATKY binds it to
+         Ctrl+Shift+Alt+D, and `say` below answers "::debuginfo" with it. */
+      ID_CHEAT_DEBUGINFO: (): void => { openCheat(); },
       /* mfcDlg.cpp:944-972.  1 is the best mood and 0 the coldest character, so
          "better" counts down in both and the two bounds are his. */
       ID_ZLEPSENINALADY: (): void => { stepMood(-1); },
@@ -517,10 +525,83 @@ export function mountChat(
     }, 20);
   }
 
-  /* -------------------------------------------------------- the settings dialog */
+  /* --------------------------------------------------------------- the dialogs */
 
-  /** `static BYTE ukazanonastaveni`, mfcDlg.cpp:793-799: one at a time. */
+  /** Whichever of his four modals is on the screen, or null.
+   *
+   *  He guarded two of them with a `static BYTE` of their own --
+   *  `ukazanonastaveni` at mfcDlg.cpp:793 and `praveukazovano` at :890 -- and
+   *  did not have to guard CText or CAboutDlg, because DoModal is modal and
+   *  nothing else can reach a menu while one is up.  A page has no DoModal, so
+   *  one variable does for all four: a second dialog is refused while one is
+   *  open, which is what the message pump did for him. */
   let dialog: { remove(): void } | null = null;
+
+  /** The three of them that only ever close.  `open` is what puts one on the
+   *  page; this is the handler each of them gets. */
+  function closeDialog(): void {
+    dialog = null;
+    input.focus();
+  }
+
+  /** IDD_TEXT, twice over: CMfcDlg::OnMalaNapoveda and CMfcDlg::OnOverzi.  Both
+   *  are `CText dlg; dlg.nadpis=...; dlg.text=...; dlg.DoModal();` and differ
+   *  only in the two strings, which is why this takes them -- and takes the
+   *  text as a function, because both inflect off the settings the page holds
+   *  now rather than off the ones it held when the menu was built. */
+  function openText(caption: string,
+                    text: (s: PokydSettings) => string): void {
+    if (dialog !== null || settings === null) return;
+    dialog = mountText(element, {
+      caption, text: text(settings), onClose: closeDialog,
+    });
+  }
+
+  /** CMfcDlg::OnAbout, mfcDlg.cpp:801-804. */
+  function openAbout(): void {
+    if (dialog !== null) return;
+    dialog = mountAbout(element, { thanks: THANKS, onClose: closeDialog });
+  }
+
+  /** CMfcDlg::OnCheatDebugInfo, mfcDlg.cpp:889-899.  The one dialog that has to
+   *  ask the engine something first: pokyd_debug_info is a snapshot and the
+   *  report is made of it, so the window cannot be built until it arrives.
+   *
+   *  It is deliberately not gated on `state`: his shortcut worked while the
+   *  dictionary was still loading, and pokyd_debug_info is safe before a load
+   *  (src/api/pokyd_api.h).  What it is gated on is `settings`, because there
+   *  is nothing to read at all until pokyd_init has run. */
+  function openCheat(): void {
+    if (dialog !== null || settings === null) return;
+    const base = settings;
+    void (async (): Promise<void> => {
+      const info = await pokyd.debugInfo();
+      if (dialog !== null) return;      /* something else got there first */
+      dialog = mountCheat(element, {
+        settings: base,
+        info,
+        onAccept: (result): void => {
+          dialog = null;
+          void (async (): Promise<void> => {
+            /* debugnastaveni.cpp:219-227, in his order: the three parameters
+               through the struct, then naladabody through its own call because
+               nalada has to be recomputed from it, then the menu, then the
+               file.  `save` is his `ulozeni`. */
+            if (result.settings !== null) await pokyd.setSettings(result.settings);
+            if (result.moodPoints !== null) {
+              await pokyd.setMoodPoints(result.moodPoints);
+            }
+            const applied = await refreshCaption();
+            if (result.save && applied !== null) store(applied);
+            input.focus();
+          })().catch((): void => {});
+        },
+        onCancel: closeDialog,
+      });
+    })().catch((): void => {});
+  }
+
+  /* -------------------------------------------------------- the settings dialog */
 
   /** CMfcDlg::OnNastaveni, and also what the load calls on a visit with no
    *  IQPOKYD.CFG to read.  The settings it fills the controls from are the ones
@@ -741,6 +822,19 @@ export function mountChat(
     /* mfcDlg.cpp:556 -- an empty sentence is not one. */
     const sentence = text.trim();
     if (sentence.length === 0) return "";
+
+    /* mfcDlg.cpp:562, and it comes before everything: a line that is exactly
+       "::debuginfo" opens the cheat panel and the engine never sees it.  His
+       `strcmp` is exact and case-sensitive, and it is tested before the
+       g_bezivlaknoprocesu guard below, so it worked while the program was busy
+       -- which is why this is above the `state` check and not under it.  The
+       line is not cleared, because his OnNovaVeta returns before the
+       SetWindowText that would have cleared it. */
+    if (sentence === CHEAT_SENTENCE) {
+      openCheat();
+      return "";
+    }
+
     if (state !== "ready") {
       throw new Error("IQ Pokyd is not listening (state: " + state + ")");
     }
@@ -769,7 +863,9 @@ export function mountChat(
     event.preventDefault();
     const text = input.value;
     if (text.trim().length === 0) return;
-    input.value = "";
+    /* The line is cleared where mfcDlg.cpp:570 clears it -- after the two early
+       returns above it, which is why "::debuginfo" stays in the box. */
+    if (text.trim() !== CHEAT_SENTENCE) input.value = "";
     say(text).catch((): void => {});     /* it is already on the screen */
   });
 

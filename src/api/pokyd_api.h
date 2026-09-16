@@ -4,7 +4,7 @@
    globals and no entry point of its own -- IQ_POKYDE_ODPOVEZ lives in
    Prostred/PROSTRED.FU, which BEZ_PROSTREDI compiles out, and the loading
    sequence lives in an MFC worker thread in the same file.  This header is the
-   whole of what a caller may use instead: sixteen functions and one struct.
+   whole of what a caller may use instead: eighteen functions and two structs.
    Nothing here exposes a C++ type, so the Emscripten side can bind it with
    EXPORTED_FUNCTIONS and the phase 4.2 worker never sees a class layout.
 
@@ -217,6 +217,65 @@ void pokyd_set_settings(const pokyd_settings *in);
 /* mood 1..5, and recompute mood_points from it -- Nastaveni.cpp:167.  Values
    outside 1..5 are ignored. */
 void pokyd_set_mood(unsigned char mood);
+
+/* naladabody 0..90, with mood recomputed from it -- the other direction, and the
+   one CDebugNastaveni::OnOK takes (!Prostre/debugnastaveni.cpp:220-224).  His
+   own bounds are 0..90; anything outside them is ignored here, the way
+   pokyd_set_mood ignores a mood outside 1..5. */
+void pokyd_set_mood_points(unsigned char points);
+
+/* ----------------------------------------------------------------- debug info */
+
+/* What IDD_DEBUGNASTAVENI put on the screen, and the only reason any of it is
+   exported: CDebugNastaveni::OnInitDialog reads ten globals that live inside the
+   engine's own translation unit, and nothing outside it can reach one.
+   Ctrl+Shift+Alt+D in 2005 (ID_CHEAT_DEBUGINFO, IDR_ZKRATKY), and still that --
+   src/app/cheat.ts is the window.
+
+   It is a *snapshot*, which is the author's own word for it: "platne v okamziku
+   spusteni tohoto dialogu", the tooltip he hung on IDC_HODNOTY.  Hence mood and
+   mood_points ride along rather than being read a second time through
+   pokyd_get_settings -- one call, one consistent picture.
+
+   The three sentence parts are debug_poslednipodmetcloveka and its two
+   neighbours (Vstup/VSTUP.FU:872-876) with ODUPRAV_SLOVO_PRO_IQPOKYD applied,
+   exactly as debugnastaveni.cpp:105-118 applies it: they are kept in the
+   engine's internal phoneme spelling and are unreadable without it.  A sentence
+   with no subject leaves "-", which is his placeholder and not ours.
+
+   Anything longer than its field is truncated rather than refused.  The only one
+   that realistically can be is last_sentence, which is whatever the visitor
+   typed; the author sprintf'd it into a 5000-byte buffer and would have
+   overflowed.
+
+   The five counters are `unsigned int` and not the `unsigned long` the engine's
+   own DWORDs are, which is the one place this struct disagrees with what it
+   mirrors.  src/web/engine.ts reads it out of the heap byte by byte against a
+   written-down table of offsets, and `long` is 4 bytes on wasm32 and on Windows
+   and 8 on Linux -- so a member whose width follows the data model would put
+   that table right on one host and wrong on another.  Every value here is a
+   count the engine keeps in a DWORD, so 32 bits is exactly what they are. */
+typedef struct pokyd_debug {
+  unsigned int allocated_blocks;    /* debug_pocetalokovani */
+  unsigned int max_words;           /* debug_maxpocetvsechslov */
+  unsigned int answer_count;        /* g_pocetodpovedipocitace */
+  unsigned int base_words;          /* g_pocetslovvzakladnidatabazi */
+  unsigned int rules;               /* g_pocetiqpodminek */
+
+  char last_answer[201];            /* g_odpovedpocitace */
+  char last_sentence[501];          /* g_predchozivetacloveka, truncated */
+  char subject[201];                /* debug_poslednipodmetcloveka, odupraveny */
+  char predicate[201];              /* debug_posledniprisudekcloveka */
+  char object[201];                 /* debug_poslednipredmetcloveka */
+
+  unsigned char mood;               /* g_nastaveni.nalada, 1..5 */
+  unsigned char mood_points;        /* g_nastaveni.naladabody, 0..90 */
+ } pokyd_debug;
+
+/* Fills `out`.  Safe before a load -- the counters are zero and the three parts
+   are the "-" PRIPRAV_GLOBALY put there -- which matters, because the shortcut
+   works while the dictionary is still inflecting. */
+void pokyd_debug_info(pokyd_debug *out);
 
 /* -------------------------------------------------------------------- progress */
 

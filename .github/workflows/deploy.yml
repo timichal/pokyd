@@ -98,7 +98,7 @@ jobs:
 
       - run: npm run typecheck
 
-      # The gate. node test/run.mjs --quick is the six tests that need no
+      # The gate. node test/run.mjs --quick is the thirteen tests that need no
       # browser, and among them is test/wasm/smoke.mjs: the 23 sentences of
       # test/golden/rozhovor.in through this build, compared byte for byte with
       # what the MinGW build printed in 2026. The four browser tests, phase 5.2's

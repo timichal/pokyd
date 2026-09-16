@@ -575,6 +575,12 @@ body {
 .pokyd-dialog-static {
   display: block;
   background: none;
+  /* An LTEXT/CTEXT/RTEXT static wraps and honours the newlines in its own
+     caption, and one of his does have them: IDD_ABOUTBOX's "Web:
+E-mail:" is
+     a two-line label sitting beside two addresses.  `pre-line` is that -- the
+     breaks he wrote are kept and the runs between them still wrap. */
+  white-space: pre-line;
 }
 
 .pokyd-dialog-static label { display: block; }
@@ -663,3 +669,99 @@ body {
 
 .pokyd-dialog-refusal strong { display: block; color: #a12b2b; }
 .pokyd-dialog-refusal p { margin: 0.25em 0 0; }
+
+/* ============================================================== phase 8.2, 8.4
+
+   The other three dialogs.  They share everything above -- the frame, the
+   caption bar, the close box, the grey tile, the group boxes, the buttons --
+   because src/app/frame.ts draws one frame for all four and they were all the
+   same XP window.  What is below is only what each of the three has that
+   IDD_NASTAVENI does not.
+
+   IDD_TEXT: the rich edit.  Text.cpp:76 gives it g_stetecbilepozadi and the
+   template gives it WS_BORDER | WS_VSCROLL, so it is a white box with a sunken
+   edge that scrolls.  The four character formats under it are
+   NAPIS_FORMATOVANY_TEXT_NAPOVEDY's own EM_SETCHARFORMAT arguments
+   (PROSTRED.FU:1160-1166), converted once: yHeight is in twips, so 220 is 11pt
+   and 350 is 17.5pt, and crBackColor is a COLORREF, so 0x00FFE0D0 is #d0e0ff
+   and not #ffe0d0. */
+
+.pokyd-dialog-richedit {
+  overflow: auto;
+  padding: 2px 3px;
+  color: #000;
+  background: #fff;
+  /* WS_BORDER on a rich edit is the sunken client edge. */
+  border: 1px solid #7f9db9;
+  box-shadow: inset 1px 1px 0 #d4d0c8;
+  /* His \r\n are the line breaks; nothing splits the text. */
+  white-space: pre-wrap;
+  /* chf.yHeight = 220 twips.  The face is the dialog's own Tahoma. */
+  font-size: 11pt;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.pokyd-dialog-b { font-weight: bold; }
+/* CFU_UNDERLINEDOUBLE, and it is a double rule -- not the single one a plain
+   text-decoration would give. */
+.pokyd-dialog-u { text-decoration: underline double; }
+.pokyd-dialog-c { background: #d0e0ff; }
+.pokyd-dialog-h { font-size: 17.5pt; }
+
+/* IDD_ABOUTBOX.  Two controls the template does not describe: the thanks, which
+   OnInitDialog fills and sets Times New Roman on (mfcDlg.cpp:698-717), and the
+   web address, which gets an underline and 0x00FF0000 -- a COLORREF again, so
+   blue.  It is not a link; src/app/screens.ts says why. */
+
+.pokyd-dialog-thanks {
+  overflow: auto;
+  padding: 1px 2px;
+  color: #000;
+  background: #fff;
+  border: 1px solid #7f9db9;
+  box-shadow: inset 1px 1px 0 #d4d0c8;
+  white-space: pre-wrap;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.pokyd-dialog-www {
+  color: #0000ff;
+  text-decoration: underline;
+}
+
+/* The logo, IDB_KYBLSOFT.  A SS_BITMAP static draws the bitmap at the control's
+   own rectangle, and the author's rectangle is half the bitmap's pixels -- 66x22
+   dialog units against 132x44 -- so it is scaled, not cropped. */
+.pokyd-dialog--about img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+/* IDD_DEBUGNASTAVENI.  The report is a read-only multi-line EDITTEXT, and it is
+   monospaced here for a reason the author's own text gives: his three section
+   rules are runs of dashes with the heading centred in them by counting
+   characters, and they only line up in a fixed-pitch face.  IDD_DEBUGNASTAVENI
+   asks for 10-point System, which was one. */
+
+.pokyd-dialog-report {
+  overflow: auto;
+  padding: 2px 3px;
+  color: #000;
+  background: #fff;
+  border: 1px solid #7f9db9;
+  box-shadow: inset 1px 1px 0 #d4d0c8;
+  white-space: pre-wrap;
+  font-family: "Consolas", "DejaVu Sans Mono", "Courier New", monospace;
+  font-size: 10px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+/* The tool tips are `title` attributes -- the browser's own bubble, which is
+   the nearest thing a page has to CToolTipCtrl.  Nothing to style; the cursor
+   is the only hint that one is there. */
+.pokyd-dialog--cheat [title] { cursor: help; }

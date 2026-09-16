@@ -14,8 +14,8 @@
 
    --quick keeps only the tests that do not start a browser. A pattern keeps the
    tests whose name contains it. Needs python3 tools/build.py --wasm to have run
-   -- everything except the codec loads the engine -- and npm install for the
-   last one, which builds the app with Vite first.
+   -- everything except the codec loads the engine -- and npm install for
+   test/app/chat.test.mjs, which builds the app with Vite first.
 
    Written by us, not ported. English identifiers and ASCII only, like the rest
    of the non-engine code.
@@ -45,6 +45,8 @@ const TESTS = [
   { phase: "6.4", file: "test/app/greeting.test.ts", browser: false },
   { phase: "7.1", file: "test/app/settings.test.ts", browser: false },
   { phase: "7.3", file: "test/app/config.test.ts", browser: false },
+  { phase: "8.2", file: "test/app/help.test.ts", browser: false },
+  { phase: "8.4", file: "test/app/debug.test.ts", browser: false },
 ];
 
 const args = process.argv.slice(2);

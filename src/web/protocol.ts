@@ -3,8 +3,8 @@
    Phase 4.2 of PLAN.md.  3.4 measured a first visit at 15.3 s in Chrome and the
    load is one synchronous call, so running the engine on the main thread is a
    frozen tab for a quarter of a minute.  The engine therefore lives in a Web
-   Worker, and this file is the whole vocabulary of that boundary: twelve
-   requests, one reply union, and the struct that crosses it.
+   Worker, and this file is the whole vocabulary of that boundary: fourteen
+   requests, one reply union, and the two structs that cross it.
 
    The rule the protocol is built on: it mirrors src/api/pokyd_api.h and adds
    almost nothing.  One request per exported function, same names in the same
@@ -75,6 +75,34 @@ export interface PokydSettings {
   cmdNoBackground: number;             /* prikaz_nezobrazovatpozadi */
 }
 
+/* ---------------------------------------------------------------- debug info */
+
+/* struct pokyd_debug (src/api/pokyd_api.h), field for field and in the same
+   order, on the same terms as PokydSettings above.  It is the ten globals
+   CDebugNastaveni::OnInitDialog read, and phase 8.4 is the only thing that asks
+   for it.
+
+   A snapshot, and deliberately one: mood and moodPoints are in here rather than
+   fetched again through getSettings, so that everything the cheat panel shows
+   was true at the same instant -- which is the author's own claim for it
+   ("platne v okamziku spusteni tohoto dialogu"). */
+export interface PokydDebugInfo {
+  allocatedBlocks: number;             /* debug_pocetalokovani */
+  maxWords: number;                    /* debug_maxpocetvsechslov */
+  answerCount: number;                 /* g_pocetodpovedipocitace */
+  baseWords: number;                   /* g_pocetslovvzakladnidatabazi */
+  rules: number;                       /* g_pocetiqpodminek */
+
+  lastAnswer: string;                  /* g_odpovedpocitace */
+  lastSentence: string;                /* g_predchozivetacloveka */
+  subject: string;                     /* debug_poslednipodmetcloveka */
+  predicate: string;                   /* debug_posledniprisudekcloveka */
+  object: string;                      /* debug_poslednipredmetcloveka */
+
+  mood: number;                        /* nalada 1..5 */
+  moodPoints: number;                  /* naladabody 0..90 */
+}
+
 /* ---------------------------------------------------------------- load phases */
 
 /* The five captions VLAKNO__NACITEJ_JAK_DIVEJ put in the loading window, plus
@@ -105,6 +133,8 @@ export type PokydRequest =
   | { type: "getSettings" }
   | { type: "setSettings"; settings: PokydSettings }
   | { type: "setMood"; mood: number }
+  | { type: "setMoodPoints"; points: number }
+  | { type: "debugInfo" }
   | { type: "progress" }
   | { type: "exportCache" }
   | { type: "dictionaryHash" }
@@ -137,6 +167,8 @@ export interface PokydResultMap {
   getSettings: PokydSettings;
   setSettings: null;
   setMood: null;
+  setMoodPoints: null;
+  debugInfo: PokydDebugInfo;
   progress: PokydProgress;
   /* null is not an error: there is no SLOVNIK.TMP before a cold load has
      finished writing one, and none at all when cmdReadOnly is set. */

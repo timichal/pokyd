@@ -304,6 +304,242 @@ async function visit({ kind, sentences }) {
     transcript += (turn.who === "human" ? "> " : "< ") + turn.text + "\r\n";
   }
 
+  /* ------------------------------------------ the four text screens, 8.2/8.4 */
+
+  /* Everything phase 8 added, driven the way a visitor drives it: the menu, the
+     four accelerators, the two CText screens, the about box and the cheat
+     panel.  It runs *before* dialogReport, because that one deliberately moves
+     the settings about and three of these four inflect off them.
+
+     Nothing here applies a change that would outlive the visit, with one
+     exception that dialogReport's step 7 puts back: the cheat panel sets
+     naladabody, and the mood is restored there along with everything else.  The
+     three parameters that change how the engine answers are *not* applied --
+     the warning is shown to have appeared and then Storno is pressed, which is
+     what his MB_OKCANCEL's Cancel did. */
+  async function screensReport() {
+    const dialog = () => doc.querySelector(".pokyd-dialog");
+    const press = (key, init = {}) => (doc.activeElement || doc).dispatchEvent(
+      new win.KeyboardEvent("keydown",
+        { key, bubbles: true, cancelable: true, ...init }));
+    const item = (id) =>
+      doc.querySelector('.pokyd-dialog-item[data-control="' + id + '"]');
+    /* Named `field`, not `input`: the sentence line is `input` in the scope
+       above and this function types "::debuginfo" into it. */
+    const field = (id) => {
+      const box = item(id);
+      return box === null ? null : (box.matches("input, select") ? box
+        : box.querySelector("input, select"));
+    };
+    const shut = async (what) => {
+      press("Escape");
+      await until(what + " to close", () => dialog() === null, 5000);
+    };
+
+    const out = {};
+
+    /* 1. the bar itself.  Two popups became one and three commands went with
+          them -- exhibitMenu in src/app/caption.ts.  What is reported is every
+          command still on it and every one that is greyed; node holds both
+          against the author's own menu. */
+    out.commands = Array.from(doc.querySelectorAll(".pokyd-menu-item"))
+      .map((b) => b.dataset.command || "(none)");
+    out.greyed = Array.from(doc.querySelectorAll(".pokyd-menu-item"))
+      .filter((b) => b.disabled).map((b) => b.dataset.command).sort();
+
+    /* 2. Mala napoveda, from the menu.  The caption, the markup, and the whole
+          of the text -- node compares it with src/app/help.ts, which its own
+          test has already held against PROSTRED.FU. */
+    doc.querySelector(".pokyd-menu-title").click();
+    doc.querySelector('.pokyd-menu-item[data-command="ID_MALANAPOVEDA"]').click();
+    await until("the small help", dialog, 5000);
+    {
+      const view = doc.querySelector(".pokyd-dialog-richedit");
+      out.help = {
+        caption: doc.querySelector(".pokyd-dialog-title").textContent,
+        modal: dialog().getAttribute("aria-modal"),
+        text: Array.from(encodeCp1250(view.textContent)),
+        /* The four character formats, counted: his <h> is once, at the top. */
+        large: view.querySelectorAll(".pokyd-dialog-h").length,
+        underline: view.querySelectorAll(".pokyd-dialog-u").length,
+        highlight: view.querySelectorAll(".pokyd-dialog-c").length,
+        /* Text.cpp:76 -- the rich edit is the one white control. */
+        background: win.getComputedStyle(view).backgroundColor,
+        scrollable: view.scrollHeight > view.clientHeight + 1,
+        okLabel: item("IDC_BUTTON").textContent,
+      };
+      /* The OK button closes it (Text.cpp:71). */
+      item("IDC_BUTTON").click();
+      out.help.closedByOk = dialog() === null;
+    }
+
+    /* 3. and F1 opens the same thing, which is IDR_ZKRATKY's own binding. */
+    press("F1");
+    await until("the small help by F1", dialog, 5000);
+    out.helpByF1 = doc.querySelector(".pokyd-dialog-title").textContent;
+    await shut("the small help");
+
+    /* 4. Informace o verzi, by Alt+V. */
+    press("v", { altKey: true });
+    await until("the version screen", dialog, 5000);
+    {
+      const view = doc.querySelector(".pokyd-dialog-richedit");
+      out.version = {
+        caption: doc.querySelector(".pokyd-dialog-title").textContent,
+        text: Array.from(encodeCp1250(view.textContent)),
+      };
+      /* The close box in the caption bar, which is the third way out. */
+      doc.querySelector(".pokyd-dialog-close").click();
+      out.version.closedByX = dialog() === null;
+    }
+
+    /* 5. O programu, by Shift+F1.  IDD_ABOUTBOX is the one dialog of his the
+          port draws with nothing taken off it. */
+    press("F1", { shiftKey: true });
+    await until("the about box", dialog, 5000);
+    {
+      out.about = {
+        caption: doc.querySelector(".pokyd-dialog-title").textContent,
+        controls: doc.querySelectorAll(".pokyd-dialog-item").length,
+        shown: Array.from(doc.querySelectorAll(".pokyd-dialog-item"))
+          .map((el) => el.dataset.control).sort(),
+        heading: item("IDC_NADPIS").textContent,
+        internet: item("IDC_INTERNET").textContent,
+        /* mfcDlg.cpp:931 -- 0x00FF0000 is a COLORREF, so blue. */
+        internetColour: win.getComputedStyle(item("IDC_INTERNET")).color,
+        internetIsLink: item("IDC_INTERNET").querySelector("a") !== null,
+        thanks: Array.from(encodeCp1250(
+          doc.querySelector(".pokyd-dialog-thanks").textContent)),
+        logo: doc.querySelector(".pokyd-dialog--about img") !== null,
+      };
+      item("IDOK").click();
+      out.about.closedByOk = dialog() === null;
+    }
+
+    /* 6. the cheat panel, by Ctrl+Shift+Alt+D -- the one entry in IDR_ZKRATKY
+          with all three modifiers, and in no menu at all. */
+    const before = await handle.client.getSettings();
+    /* The same snapshot the dialog is about to take, taken a moment earlier:
+       nothing between the two calls allocates, says anything or moves a
+       setting, so node can rebuild the report from it and compare the whole
+       string with what ends up on the screen. */
+    const info = await handle.client.debugInfo();
+    press("d", { ctrlKey: true, shiftKey: true, altKey: true });
+    await until("the cheat panel", dialog, 5000);
+    out.cheat = {
+      info,
+      caption: doc.querySelector(".pokyd-dialog-title").textContent,
+      controls: doc.querySelectorAll(".pokyd-dialog-item").length,
+      shown: Array.from(doc.querySelectorAll(".pokyd-dialog-item"))
+        .map((el) => el.dataset.control).sort(),
+      report: Array.from(encodeCp1250(
+        doc.querySelector(".pokyd-dialog-report").textContent)),
+      moodPointsShown: field("IDC_NALADABODY").value,
+      moodPointsNow: before.moodPoints,
+      /* NASTAV_STANDARDNE's own two, which nothing in this visit has moved. */
+      tolerance: field("IDC_UPLNATOLERANCEPRAVOPISU").checked,
+      recursion: field("IDC_STREDNIREKURZEPROHLEDAVANI").checked,
+      fastExit: field("IDC_RYCHLEUKONCOVANI").checked,
+      /* BublinkovaNapoveda, as `title` attributes.  zobrazovatpopisky is 1 by
+         default, so they are on. */
+      tips: Array.from(doc.querySelectorAll(".pokyd-dialog-item[title]"))
+        .map((el) => el.dataset.control).sort(),
+      tipOnValues: item("IDC_HODNOTY").title || "",
+    };
+
+    /* 6a. his first refusal: a character that is not a digit. */
+    field("IDC_NALADABODY").value = "12x";
+    item("IDOK").click();
+    out.cheat.notANumber = {
+      shown: !doc.querySelector(".pokyd-dialog-refusal").hidden,
+      title: doc.querySelector(".pokyd-dialog-refusal strong").textContent,
+      text: doc.querySelector(".pokyd-dialog-refusal p").textContent,
+      stillOpen: dialog() !== null,
+    };
+
+    /* 6b. and his second: a number over 90. */
+    field("IDC_NALADABODY").value = "95";
+    item("IDOK").click();
+    out.cheat.outOfRange = {
+      text: doc.querySelector(".pokyd-dialog-refusal p").textContent,
+      stillOpen: dialog() !== null,
+    };
+
+    /* 6c. the MB_OKCANCEL, which is the only question in the program.  Moving
+           the tolerance asks it; Storno abandons the whole of OnOK, so nothing
+           at all is applied -- not even the mood, which is his :218 `return`. */
+    field("IDC_NALADABODY").value = "40";
+    field("IDC_ZADNATOLERANCEPRAVOPISU").checked = true;
+    field("IDC_ZADNATOLERANCEPRAVOPISU").dispatchEvent(
+      new win.Event("change", { bubbles: true }));
+    item("IDOK").click();
+    out.cheat.warning = {
+      shown: !doc.querySelector(".pokyd-dialog-refusal").hidden,
+      title: doc.querySelector(".pokyd-dialog-refusal strong").textContent,
+      text: doc.querySelector(".pokyd-dialog-refusal p").textContent,
+      stillOpen: dialog() !== null,
+    };
+    item("IDCANCEL").click();
+    out.cheat.cancelled = dialog() === null;
+    {
+      const after = await handle.client.getSettings();
+      out.cheat.afterCancel = {
+        tolerance: after.debugSpellingTolerance,
+        recursion: after.debugSpellingRecursion,
+        moodPoints: after.moodPoints,
+      };
+    }
+
+    /* 6d. and the path that does apply: naladabody alone, which asks nothing
+           and recomputes nalada from it (:221-222).  80 is his "hrozna". */
+    press("d", { ctrlKey: true, shiftKey: true, altKey: true });
+    await until("the cheat panel again", dialog, 5000);
+    field("IDC_NALADABODY").value = "80";
+    item("IDOK").click();
+    out.cheat.closedByOk = dialog() === null;
+    await until("the mood points to reach the engine",
+      async () => (await handle.client.getSettings()).moodPoints === 80, 5000);
+    {
+      const after = await handle.client.getSettings();
+      out.cheat.applied = { moodPoints: after.moodPoints, mood: after.mood };
+    }
+    out.cheat.captionAfter = doc.querySelector(".pokyd-menu-state").textContent;
+    /* :227 -- ZAPIS_NASTAVENI_DO_SOUBORU, and naladabody is not in that file:
+       what is written is the nalada it was recomputed into. */
+    out.cheat.storedAfter = win.localStorage.getItem("IQPOKYD.CFG");
+
+    /* 6e. and put it back, through the same dialog: everything after this point
+           -- dialogReport's F7 and F8, and the settings the second visit reads
+           -- expects the mood the conversation drifted to and not the 80 above.
+           It is also the one thing here that proves the panel can move the mood
+           in both directions. */
+    press("d", { ctrlKey: true, shiftKey: true, altKey: true });
+    await until("the cheat panel a third time", dialog, 5000);
+    field("IDC_NALADABODY").value = String(before.moodPoints);
+    item("IDOK").click();
+    await until("the mood points to go back", async () =>
+      (await handle.client.getSettings()).moodPoints === before.moodPoints, 5000);
+    out.cheat.restored = (await handle.client.getSettings()).mood;
+
+    /* 7. the other door: "::debuginfo" typed into the sentence line opens the
+          same dialog, and the engine never sees the line (mfcDlg.cpp:562). */
+    const turnsBefore = doc.querySelectorAll(".pokyd-turn").length;
+    input.value = "::debuginfo";
+    send.click();
+    await until("the cheat panel from the sentence line", dialog, 5000);
+    out.cheatSentence = {
+      caption: doc.querySelector(".pokyd-dialog-title").textContent,
+      /* Nothing was said: no turn, and the line still holds what was typed --
+         his OnNovaVeta returns before the SetWindowText that clears it. */
+      turnsAdded: doc.querySelectorAll(".pokyd-turn").length - turnsBefore,
+      lineKept: input.value,
+    };
+    await shut("the cheat panel");
+    input.value = "";
+
+    return out;
+  }
+
   /* ------------------------------------------------ the settings dialog, 7.1 */
 
   /* IDD_NASTAVENI, opened the two ways a visitor can open it and driven the way
@@ -388,6 +624,7 @@ async function visit({ kind, sentences }) {
           off the dialog, the two buttons with it -- src/app/dialog.ts DROPPED.
           Checked by absence, which is the only way a cut can be checked. */
     out.droppedFound = ["IDC_ZAKLADNINASTAVENI", "IDC_ROZSIRENENASTAVENI",
+      "IDC_UKLADATROZHOVOR",
       "IDC_EMULOVATKLAVESNICI", "IDC_EMULOVATCESKOUKLAVESNICI",
       "IDC_EMULOVATSLOVENSKOUKLAVESNICI", "IDC_KLAVESNICEQWERTY",
       "IDC_TEXTKEMULACI", "IDC_ZOBRAZOVATSTANDARDNIKURZOR",
@@ -402,12 +639,20 @@ async function visit({ kind, sentences }) {
     const groupRect = item("IDC_RAMECEK1").getBoundingClientRect();
     const rects = Array.from(doc.querySelectorAll(".pokyd-dialog-item"))
       .map((el) => el.getBoundingClientRect());
+    const group2Rect = item("IDC_RAMECEK2").getBoundingClientRect();
     out.rect = {
       /* Nothing fell off the top or out of the bottom. */
       fits: rects.every((r) => r.top >= bodyRect.top - 1
         && r.bottom <= bodyRect.bottom + 1),
       heightInGroups: bodyRect.height / groupRect.height,
       topGapInGroups: (groupRect.top - bodyRect.top) / groupRect.height,
+      /* Phase 8's own drop: "Uklada rozhovor do souboru" was the first row
+         inside "Prostredi", so the group box closed over it and the three
+         check boxes under it moved up into its place. */
+      group2InGroups: group2Rect.height / groupRect.height,
+      firstCheckInGroups:
+        (item("IDC_POUZIVATZVUKY").getBoundingClientRect().top - group2Rect.top)
+          / groupRect.height,
     };
 
     /* 3. a name that is two words: his MessageBox, and the dialog stays. */
@@ -512,6 +757,10 @@ async function visit({ kind, sentences }) {
      below takes the document with it. */
   const window63 = windowReport();
 
+  /* Phase 8, before the settings are moved about: the menu, the two CText
+     screens, the about box and the cheat panel. */
+  const screens = await screensReport();
+
   /* And again at the end, which is the same number only if the mood never
      moved.  It does move -- INTELIG.FU:532 -- and phase 7.2 is where that
      became something a visitor sees, in the menu bar and in the mood list. */
@@ -528,7 +777,7 @@ async function visit({ kind, sentences }) {
   stage.replaceChildren();
 
   return {
-    kind, loadMs, sentenceCount, unfreed, busySeen, moodAfter, dialog,
+    kind, loadMs, sentenceCount, unfreed, busySeen, moodAfter, dialog, screens,
     captionBefore, window: window63, greeting,
     firstState, loadingShown, loadingGone, inputLive, focused,
     turns: turns.length,

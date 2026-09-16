@@ -40,6 +40,11 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { ROOT, runPage } from "../browser.mjs";
+/* The codec, for the same reason test/app/caption.test.ts uses it: what came
+   back from the browser is an array of CP1250 bytes, and comparing it with a
+   module's string means going through phase 4.1 in one direction or the
+   other. */
+import { decodeCp1250, encodeCp1250 } from "../../src/web/cp1250.ts";
 /* Phase 6.3.  Two data modules, and only data: PALETTE and WINDOW_LAYOUT are
    what test/app/resources.test.ts reads back out of the engine source, and
    MENUS is the author's own menu -- so comparing the page with them closes the
@@ -48,7 +53,21 @@ import { ROOT, runPage } from "../browser.mjs";
 import {
   DIALOGS, MENUS, PALETTE, WINDOW_LAYOUT,
 } from "../../src/app/resources.ts";
-import { GENDERS, MENU_BITMAPS, settingsCaption } from "../../src/app/caption.ts";
+import {
+  DROPPED_COMMANDS, GENDERS, MENU_BITMAPS, exhibitMenu, settingsCaption,
+} from "../../src/app/caption.ts";
+/* Phase 8.2 and 8.4.  The same rule a third time: data and pure functions
+   only, each of them already held against the archive by a test of its own --
+   test/app/help.test.ts reassembles the three texts out of the author's C, and
+   test/app/debug.test.ts does the same for the cheat panel's report and its two
+   refusals.  So what is compared with the screens below is his own writing. */
+import {
+  HELP_CAPTION, THANKS, VERSION_CAPTION, helpText, markup, plain, versionText,
+} from "../../src/app/help.ts";
+import {
+  CHEAT_SENTENCE, ERROR_TITLE, MOOD_NOT_A_NUMBER, MOOD_OUT_OF_RANGE,
+  WARNING_TITLE, report as debugReport, tooltips, warningText,
+} from "../../src/app/debug.ts";
 /* Phase 7.1.  The same three rules again: data only, and data that
    test/app/settings.test.ts has already held against Nastaveni.cpp -- so what
    is compared with the dialog on the screen is the author's own dialog. */
@@ -95,10 +114,18 @@ const ALWAYS_SHOWN = ["IDOK", "IDCANCEL", "IDC_RAMECEK1", "IDC_RAMECEK2"];
    proves nothing -- ADVANCED_CONTROLS is held against Nastaveni.cpp by
    test/app/settings.test.ts, and this is held against the screen. */
 const DROPPED = ["IDC_ZAKLADNINASTAVENI", "IDC_ROZSIRENENASTAVENI",
+  "IDC_UKLADATROZHOVOR",
   "IDC_EMULOVATKLAVESNICI", "IDC_EMULOVATCESKOUKLAVESNICI",
   "IDC_EMULOVATSLOVENSKOUKLAVESNICI", "IDC_KLAVESNICEQWERTY",
   "IDC_TEXTKEMULACI", "IDC_ZOBRAZOVATSTANDARDNIKURZOR",
   "IDC_NEZOBRAZOVATPOZADI", "IDC_READONLYMOD", "IDC_ZOBRAZOVATPOPISKY"];
+
+/* The one control of OnZakladniNastaveni's own list that is not on the screen:
+   phase 8 dropped the conversation log, so its tick went with it -- the
+   argument is in src/app/dialog.ts's DROPPED.  It is named here rather than
+   taken out of BASIC_CONTROLS, because that list is the *author's* page and
+   test/app/settings.test.ts holds it against Nastaveni.cpp. */
+const DROPPED_FROM_BASIC = ["IDC_UKLADATROZHOVOR"];
 
 /* GENDERS[1], "muz" -- what the caption says for a computer with no name. */
 const GENDER_WORD = GENDERS[1];
@@ -126,6 +153,23 @@ function ok(label, cond, detail = "") {
 function eq(label, got, expected) {
   ok(label, Object.is(got, expected),
     "got " + JSON.stringify(got) + ", expected " + JSON.stringify(expected));
+}
+
+/** A screen's text, which came back as CP1250 bytes, against a module's string.
+ *  Byte for byte, and it says where they part rather than printing nine
+ *  thousand characters twice. */
+function eqBytes(label, got, expected) {
+  const a = Uint8Array.from(got);
+  const b = encodeCp1250(expected);
+  if (Buffer.compare(a, b) === 0) { ok(label, true); return; }
+  let at = 0;
+  while (at < a.length && at < b.length && a[at] === b[at]) at++;
+  ok(label, false, "they part at byte " + at + " of " + b.length
+    + " (got " + a.length + ")"
+    + "\n        got      " + JSON.stringify(
+      decodeCp1250(a.subarray(Math.max(0, at - 30), at + 40)))
+    + "\n        expected " + JSON.stringify(
+      decodeCp1250(b.subarray(Math.max(0, at - 30), at + 40))));
 }
 
 /* Where two CP1250 transcripts first differ, in the terms the golden file is
@@ -304,27 +348,32 @@ function checkWindow(run) {
   eq("the > and < are in the markup and not in the window", w.markerDisplay,
     "none");
 
-  /* 7. IDR_MENU: two popups, the right-justified caption, and the bitmaps
-        mfcDlg.cpp hangs on seven of the items. */
-  const popups = MENUS["IDR_MENU"].items.filter((i) => i.kind === "popup");
+  /* 7. The menu.  Phase 8.2 merged his two popups into one and took three
+        commands out of it, so what is on the bar is exhibitMenu(IDR_MENU) --
+        and every number below is counted off that rather than written down.
+        The author's own menu is still what it is built from: the test that the
+        three really were in it is in checkScreens. */
+  const shown = exhibitMenu(MENUS["IDR_MENU"]);
+  const popups = shown.items.filter((i) => i.kind === "popup");
   const menuItems = popups.reduce(
     (n, p) => n + p.items.filter((i) => i.kind === "item").length, 0);
   const separators = popups.reduce(
     (n, p) => n + p.items.filter((i) => i.kind === "separator").length, 0);
-  eq("every top-level item of IDR_MENU is on the bar", w.menu.titles.length,
-    MENUS["IDR_MENU"].items.length);
-  eq("and every item in the popups", w.menu.items, menuItems);
-  eq("with his separators, top and bottom ones included", w.menu.separators,
-    separators);
-  eq("seven items carry a bitmap", w.menu.bitmaps,
-    Object.keys(MENU_BITMAPS).length);
-  eq("and seven carry accelerator text", w.menu.accelerators.length, menuItems);
-  /* Everything else in this menu opens a dialog phase 8 has still to build, so
-     it is drawn MF_GRAYED rather than doing nothing quietly.  Phase 7.1 added
-     the second of the two: ID_NASTAVENI now opens IDD_NASTAVENI. */
+  const withBitmap = popups.reduce((n, p) => n + p.items
+    .filter((i) => i.id !== null && MENU_BITMAPS[i.id] !== undefined).length, 0);
+  eq("every top-level item of the menu is on the bar", w.menu.titles.length,
+    shown.items.length);
+  eq("and every item in the popup", w.menu.items, menuItems);
+  eq("with the separators the merge left", w.menu.separators, separators);
+  eq("each one carries its bitmap", w.menu.bitmaps, withBitmap);
+  eq("and each one its accelerator text", w.menu.accelerators.length, menuItems);
+  /* Phase 6.3 drew five greyed items and honoured one command; 8.2 and 8.4
+     finished the job from both ends -- the three that could never work are
+     gone, and the four that are left all have a handler.  Nothing on this bar
+     is greyed any more. */
   /* eq() here is Object.is, so the list is compared as a string. */
-  eq("the two commands the port can honour",
-    w.menu.enabled.join(","), "ID_NAPOVEDA_INTERNET,ID_NASTAVENI");
+  eq("every command on the bar is live", w.menu.enabled.join(","),
+    ["ID_MALANAPOVEDA", "ID_NASTAVENI", "ID_OPROGRAMU", "ID_OVERZI"].join(","));
 
   /* 8. ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI, which is the point of the whole
         right-hand side of the bar -- and it is *live*: the same 23 sentences
@@ -366,8 +415,10 @@ function checkSettings(run, cold) {
   eq("and it is modal", d.modal, "true");
   eq("every control of IDD_NASTAVENI that is not dropped is on it", d.controls,
     template.controls.length - DROPPED.length);
-  eq("and what it shows is OnZakladniNastaveni's own list, entire",
-    d.shown.join(","), [...BASIC_CONTROLS, ...ALWAYS_SHOWN].sort().join(","));
+  eq("and what it shows is OnZakladniNastaveni's own list, less the one tick"
+    + " phase 8 took off it", d.shown.join(","),
+    [...BASIC_CONTROLS.filter((id) => !DROPPED_FROM_BASIC.includes(id)),
+      ...ALWAYS_SHOWN].sort().join(","));
   eq("the two group boxes wear the template's own captions, with nothing left"
     + " to swap them for", d.groups.join(" / "),
     template.controls.find((c) => c.id === "IDC_RAMECEK1").text + " / "
@@ -387,10 +438,10 @@ function checkSettings(run, cold) {
   /* 3. and that page, checked the only way a cut can be: by absence.  The
         eleven controls of OnRozsireneNastaveni and the two buttons that
         switched between the pages are not on the dialog at all. */
-  eq("the advanced page is not drawn, and neither are the two page buttons",
-    d.droppedFound.join(","), "");
-  eq("  which is the whole of ADVANCED_CONTROLS, plus the two buttons",
-    DROPPED.slice(2).join(","), ADVANCED_CONTROLS.join(","));
+  eq("the advanced page is not drawn, and neither are the two page buttons"
+    + " or the conversation log's tick", d.droppedFound.join(","), "");
+  eq("  which is the whole of ADVANCED_CONTROLS, plus the two buttons and that"
+    + " one tick", DROPPED.slice(3).join(","), ADVANCED_CONTROLS.join(","));
 
   /* And the window is that much smaller.  Both numbers come off the screen as
      multiples of IDC_RAMECEK1's own height, so the comparison is in the
@@ -398,18 +449,32 @@ function checkSettings(run, cold) {
      of them -- which is the same trick phase 6.3 measures the main window with,
      one step further in. */
   const rc = (id) => template.controls.find((c) => c.id === id).rect;
-  const shift = rc("IDC_ZAKLADNINASTAVENI").cy;
+  /* The two bands with nothing left in them: the page buttons' row at the top
+     of the template, and -- since phase 8 -- the conversation log's tick, which
+     was the first row inside "Prostredi". */
+  const topRow = rc("IDC_ZAKLADNINASTAVENI").cy;
+  const logRow = rc("IDC_UKLADATROZHOVOR").cy;
+  const unit = rc("IDC_RAMECEK1").cy;
   const near = (a, b) => Math.abs(a - b) < 0.03;
   ok("no control fell off the dialog on the way up", d.rect.fits);
-  ok("the dialog is exactly the page buttons' row shorter -- " + shift
-    + " dialog units off " + template.rect.cy,
-    near(d.rect.heightInGroups, (template.rect.cy - shift) / rc("IDC_RAMECEK1").cy),
+  ok("the dialog is exactly those two rows shorter -- " + topRow + " + "
+    + logRow + " dialog units off " + template.rect.cy,
+    near(d.rect.heightInGroups, (template.rect.cy - topRow - logRow) / unit),
     d.rect.heightInGroups.toFixed(3));
-  ok("and the first group box kept the template's own gap above it, less that"
-    + " same row",
-    near(d.rect.topGapInGroups,
-      (rc("IDC_RAMECEK1").y - shift) / rc("IDC_RAMECEK1").cy),
+  ok("and the first group box kept the template's own gap above it, less the"
+    + " row above it",
+    near(d.rect.topGapInGroups, (rc("IDC_RAMECEK1").y - topRow) / unit),
     d.rect.topGapInGroups.toFixed(3));
+  /* The second band is inside a group box rather than above everything, so it
+     shortens the box instead of moving it -- and the three ticks under it move
+     up into the place the fourth used to have. */
+  ok("the second group box closed over the tick that went",
+    near(d.rect.group2InGroups, (rc("IDC_RAMECEK2").cy - logRow) / unit),
+    d.rect.group2InGroups.toFixed(3));
+  ok("and the first tick left sits where his first one sat",
+    near(d.rect.firstCheckInGroups,
+      (rc("IDC_UKLADATROZHOVOR").y - rc("IDC_RAMECEK2").y) / unit),
+    d.rect.firstCheckInGroups.toFixed(3));
 
   /* 4. the one refusal, which in 2005 was a MessageBox. */
   ok("a two-word name is refused", d.refusal.shown);
@@ -494,6 +559,179 @@ function checkSettings(run, cold) {
   }
 }
 
+/* --------------------------------------------- phase 8.2 and 8.4: the screens */
+
+/* The four windows phase 8 added, read off the screen a visitor was looking at
+   and compared with the author's own words -- which, by the time they reach
+   here, have already been reassembled out of his own C by
+   test/app/help.test.ts and test/app/debug.test.ts.  So this closes the loop
+   the rest of the file closes: from the archive, through a module, to pixels,
+   and back.
+
+   And the cut, which is the other half of 8.2: three commands are gone from the
+   menu, and the check that they are is that they were in IDR_MENU to begin
+   with. */
+function checkScreens(run) {
+  const s = run.screens;
+  const settings = { humanGender: GENDER };
+
+  heading(run.kind + " visit -- the menu after phase 8.2");
+
+  /* The cut, at both ends: each dropped command really is one of his, and none
+     of the three is on the bar. */
+  const inArchive = new Set();
+  const walk = (items) => {
+    for (const item of items) {
+      if (item.id !== null) inArchive.add(item.id);
+      walk(item.items);
+    }
+  };
+  walk(MENUS["IDR_MENU"].items);
+  eq("all three dropped commands were in IDR_MENU",
+    DROPPED_COMMANDS.filter((id) => !inArchive.has(id)).join(","), "");
+  eq("and none of them is on the bar",
+    DROPPED_COMMANDS.filter((id) => s.commands.includes(id)).join(","), "");
+  eq("what is left is his four, in his order", s.commands.join(","),
+    ["ID_NASTAVENI", "ID_MALANAPOVEDA", "ID_OVERZI", "ID_OPROGRAMU"].join(","));
+  eq("and nothing on it is greyed", s.greyed.join(","), "");
+
+  /* ------------------------------------------------------- Mala napoveda */
+
+  heading("Mala napoveda -- ZOBRAZ_NAPOVEDU, in a window");
+  const help = helpText(settings);
+  eq("the caption is his", s.help.caption, HELP_CAPTION);
+  eq("and it is modal", s.help.modal, "true");
+  eqBytes("the text on the screen is the text in PROSTRED.FU",
+    s.help.text, plain(help));
+  /* NAPIS_FORMATOVANY_TEXT_NAPOVEDY's four formats, counted off the same parse
+     the page drew with -- so a run that lost its class shows up here. */
+  const runsWith = (text, flag) => markup(text).filter((r) => r[flag]).length;
+  eq("<h> is on exactly the runs it is on in his text",
+    s.help.large, runsWith(help, "large"));
+  eq("and <u>", s.help.underline, runsWith(help, "underline"));
+  eq("and <c>", s.help.highlight, runsWith(help, "highlight"));
+  eq("the rich edit is white (Text.cpp:76)", s.help.background,
+    "rgb(255, 255, 255)");
+  ok("it scrolls, because his text does not fit in 166 dialog units",
+    s.help.scrollable);
+  eq("the button says what IDD_TEXT says", s.help.okLabel, "OK");
+  ok("and it closes the window", s.help.closedByOk);
+  eq("F1 opens the same screen", s.helpByF1, HELP_CAPTION);
+
+  /* ----------------------------------------------------- Informace o verzi */
+
+  heading("Informace o verzi -- CMfcDlg::OnOverzi, in the same window");
+  eq("the caption is his", s.version.caption, VERSION_CAPTION);
+  eqBytes("and the text is the one in mfcDlg.cpp",
+    s.version.text, plain(versionText(settings)));
+  ok("the close box in the caption bar shuts it", s.version.closedByX);
+
+  /* ------------------------------------------------------------ O programu */
+
+  heading("O programu -- IDD_ABOUTBOX, drawn whole");
+  const about = DIALOGS["IDD_ABOUTBOX"];
+  eq("the caption is the template's", s.about.caption, about.caption);
+  eq("every one of its controls is on the screen", s.about.controls,
+    about.controls.length);
+  eq("the heading is the template's", s.about.heading, "IQ Pokyd v0.15");
+  eq("the web address is his", s.about.internet, "http://iqpokyd.kyblsoft.cz");
+  eq("in the blue his COLORREF actually is", s.about.internetColour,
+    "rgb(0, 0, 255)");
+  ok("and it is text, not a link -- the site has not answered in twenty years",
+    !s.about.internetIsLink);
+  eqBytes("the thanks are the paragraph he wrote", s.about.thanks, THANKS);
+  ok("the KYBLSoft logo is IDB_KYBLSOFT", s.about.logo);
+  ok("and OK closes it", s.about.closedByOk);
+
+  /* ------------------------------------------------------ the cheat panel */
+
+  heading("the cheat panel -- IDD_DEBUGNASTAVENI, Ctrl+Shift+Alt+D");
+  const cheat = DIALOGS["IDD_DEBUGNASTAVENI"];
+  eq("the caption is the template's", s.cheat.caption, cheat.caption);
+  eq("every one of its controls is drawn -- nothing is dropped here",
+    s.cheat.controls, cheat.controls.length);
+  eq("the mood edit holds naladabody as the conversation left it",
+    s.cheat.moodPointsShown, String(s.cheat.moodPointsNow));
+  ok("the tolerance NASTAV_STANDARDNE sets is ticked", s.cheat.tolerance);
+  ok("and the recursion", s.cheat.recursion);
+  ok("and fast exit is not", !s.cheat.fastExit);
+  eq("his twelve tool tips are on twelve controls", s.cheat.tips.length, 12);
+  eq("and the one on the report is the paragraph he wrote", s.cheat.tipOnValues,
+    tooltips({ humanGender: GENDER })["IDC_HODNOTY"]);
+
+  /* The report itself.  Everything in it came back through the same
+     pokyd_debug_info the page read, so node can rebuild the whole string with
+     src/app/debug.ts and compare it -- which is what says a rule of dashes that
+     lost a dash, or a label that lost a diacritic, is caught. */
+  const reportText = decodeCp1250(Uint8Array.from(s.cheat.report));
+  eq("the dictionary it names is the one the engine loaded",
+    reportText.includes("11207"), true);
+  eq("the rule base is the 182 of phase 2.4",
+    reportText.includes("182"), true);
+  ok("the three sentence parts VSTUP.FU:872 keeps are in it",
+    ["Podmět:", "Přísudek:", "Předmět:"]
+      .every((w) => reportText.includes(w)), reportText);
+  ok("and so is the last thing IQ Pokyd said",
+    reportText.includes(run.greeting === null ? "" : "Poslední odpov"));
+  /* debugReport is src/app/debug.ts's own sprintf; feeding it the numbers the
+     screen showed has to reproduce the screen exactly. */
+  eqBytes("the whole report is his sprintf, character for character",
+    s.cheat.report, debugReport(s.cheat.info, { showLabels: 1 }));
+
+  /* His two refusals, both reached the way his loop reaches them. */
+  heading("the cheat panel's two refusals, and its one question");
+  ok("a character that is not a digit is refused", s.cheat.notANumber.shown);
+  eq("  with his title", s.cheat.notANumber.title, ERROR_TITLE);
+  eq("  and his words", s.cheat.notANumber.text, MOOD_NOT_A_NUMBER);
+  ok("  and the dialog stays up", s.cheat.notANumber.stillOpen);
+  eq("a number over 90 gets the other one", s.cheat.outOfRange.text,
+    MOOD_OUT_OF_RANGE);
+  ok("  and the dialog stays up for that too", s.cheat.outOfRange.stillOpen);
+
+  /* The MB_OKCANCEL: the only place in the program where OK is a question. */
+  ok("moving the spelling tolerance asks before it saves",
+    s.cheat.warning.shown);
+  eq("  with his title", s.cheat.warning.title, WARNING_TITLE);
+  eq("  and his words, inflected for whoever is reading",
+    s.cheat.warning.text, warningText(settings));
+  ok("  and the dialog stays up to be answered", s.cheat.warning.stillOpen);
+  ok("Storno closes it", s.cheat.cancelled);
+  /* :218's `return` abandons the whole of OnOK, so the mood typed alongside the
+     tolerance is not applied either. */
+  eq("and nothing at all was applied -- the tolerance",
+    s.cheat.afterCancel.tolerance, 1);
+  eq("  the recursion", s.cheat.afterCancel.recursion, 11);
+  eq("  and the mood, which was typed in the same trip",
+    s.cheat.afterCancel.moodPoints, s.cheat.moodPointsNow);
+
+  /* And the path that applies, which asks nothing: naladabody alone. */
+  heading("the cheat panel, applying");
+  ok("OK closes it", s.cheat.closedByOk);
+  eq("naladabody is what was typed", s.cheat.applied.moodPoints, 80);
+  /* SPOCITEJ_NALADU_PODLE_NALADABODY: 80/15 is 5, and 5 is his worst. */
+  eq("and nalada was recomputed from it, not set", s.cheat.applied.mood, 5);
+  ok("the menu bar moved with it",
+    s.cheat.captionAfter.endsWith(MOODS[4]), s.cheat.captionAfter);
+  /* :227, and the file has no naladabody in it: what is written is the nalada
+     that was recomputed. */
+  ok("and IQPOKYD.CFG was written",
+    s.cheat.storedAfter !== null
+      && s.cheat.storedAfter.includes("Nalada: hrozna"),
+    String(s.cheat.storedAfter).split("\r\n").find((l) => l.startsWith("Nalada")));
+  /* And back again through the same dialog, which is what leaves the rest of
+     this file the mood the conversation drifted to. */
+  eq("and a third trip puts the mood back where the conversation left it",
+    s.cheat.restored, MOOD_AFTER);
+
+  /* ------------------------------------------------------- "::debuginfo" */
+
+  heading("the other door -- \"" + CHEAT_SENTENCE + "\", mfcDlg.cpp:562");
+  eq("typing it opens the same dialog", s.cheatSentence.caption, cheat.caption);
+  eq("nothing was said to the engine", s.cheatSentence.turnsAdded, 0);
+  eq("and the line was not cleared, because OnNovaVeta returned before it was",
+    s.cheatSentence.lineKept, CHEAT_SENTENCE);
+}
+
 /* -------------------------------------------------------------- the driver */
 
 async function main() {
@@ -553,6 +791,9 @@ async function main() {
   checkVisit(data.warm, golden, false, data.seed);
   checkWindow(data.warm);
   checkSettings(data.warm, false);
+
+  checkScreens(data.cold);
+  checkScreens(data.warm);
 
   heading("the two visits together");
   ok("both used the same cache key: " + data.cold.report.key,

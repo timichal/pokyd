@@ -3,17 +3,18 @@
    Phase 6.3 of PLAN.md.
 
      1. **The menu the author wrote**, straight out of src/app/resources.ts:
-        two popups and a right-justified item, their separators, their
-        mnemonics, their accelerator text, and the seven 14x14 bitmaps
-        mfcDlg.cpp:388-401 hangs on them with SetMenuItemBitmaps.  Nothing here
-        spells a Czech word: every string is read from MENUS.IDR_MENU, which
-        tools/extract-rc.mjs read out of IQPokyd.rc as CP1250 bytes.
+        a popup and a right-justified item, their separators, their mnemonics,
+        their accelerator text, and the 14x14 bitmaps mfcDlg.cpp:388-401 hangs
+        on them with SetMenuItemBitmaps.  Nothing here spells a Czech word:
+        every string is read from MENUS.IDR_MENU, which tools/extract-rc.mjs
+        read out of IQPokyd.rc as CP1250 bytes.
 
-     2. **The two things about that menu that are not in the script**, which
+     2. **The three things about that menu that are not in the script**, which
         are in src/app/caption.ts and not here, because a node test can have
         that file and cannot have this one: the words
         ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI puts in the right-justified item,
-        and the seven bitmaps mfcDlg.cpp hangs on seven commands.
+        the seven bitmaps mfcDlg.cpp hangs on seven commands, and which of those
+        commands the exhibit still has -- see below.
 
      3. **the author's accelerator table**, added at phase 7.1: IDR_ZKRATKY
         names the same commands by key, and four of them -- the mood and the
@@ -25,8 +26,15 @@
    map from the author's symbolic id to a handler, an item with no entry in it
    is drawn MF_GRAYED, and a phase that lands adds a key.  Phase 6.3 could
    honour one, ID_NAPOVEDA_INTERNET, which is a URL (mfcDlg.cpp:1005); 7.1 added
-   ID_NASTAVENI and the four shortcuts, and the help and about screens are 8.2
-   and 8.3.
+   ID_NASTAVENI and the four shortcuts; **8.2 filled the menu in and emptied it
+   at the same time.**  Three of the seven commands cannot be honoured at all --
+   ID_KONEC, ID_VELKANAPOVEDA and, as it turns out, that same URL -- so the menu
+   this file is handed is no longer IDR_MENU itself but `exhibitMenu(IDR_MENU)`,
+   which drops those three and merges what is left into one popup.  Nothing here
+   knows which ones or why; src/app/caption.ts does, because a node test can
+   have that file.  After 8.2 and 8.4 nothing on the bar is greyed: every item
+   drawn has a handler, and ID_CHEAT_DEBUGINFO reaches its dialog by key alone,
+   as it did in 2005.
 
    The caption is a menu item too, and the same ID_NASTAVENI as "Nastaveni...",
    which is the author's doing: IQPokyd.rc:150 gives it the HELP flag, and that
@@ -40,7 +48,7 @@
 import { ACCELERATORS, MENUS } from "./resources.ts";
 import type { RcAccelerators, RcMenu, RcMenuItem } from "./resources.ts";
 import { BITMAP_ASSETS } from "./assets.ts";
-import { MENU_BITMAPS } from "./caption.ts";
+import { MENU_BITMAPS, exhibitMenu } from "./caption.ts";
 
 /* ----------------------------------------------------------------- the menu */
 
@@ -50,7 +58,10 @@ export interface PokydMenuOptions {
    *  here is drawn greyed and cannot be chosen, which is how a menu written in
    *  2005 sits honestly on top of a port that is only at phase 6. */
   commands?: Record<string, () => void>;
-  /** IDR_MENU by default; a test can hand in another. */
+  /** `exhibitMenu(IDR_MENU)` by default -- the author's menu with the three
+   *  commands a browser cannot honour taken out and the two popups merged, for
+   *  which src/app/caption.ts has the reasoning.  A test can hand in another,
+   *  and handing in MENUS["IDR_MENU"] itself gets the 2005 arrangement back. */
   menu?: RcMenu;
   /** IDR_ZKRATKY by default.  Phase 7.1: the same commands, reached by key
    *  instead of by pointer -- and four of them are reachable no other way,
@@ -96,7 +107,7 @@ export function mountMenu(
   parent: Element,
   options: PokydMenuOptions = {},
 ): PokydMenuHandle {
-  const menu = options.menu ?? MENUS["IDR_MENU"];
+  const menu = options.menu ?? exhibitMenu(MENUS["IDR_MENU"]);
   const commands = options.commands ?? {};
 
   const element = document.createElement("nav");

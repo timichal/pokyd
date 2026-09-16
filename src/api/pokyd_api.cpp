@@ -352,6 +352,66 @@ void pokyd_set_mood(unsigned char mood) {
   g_nastaveni.SPOCITEJ_NALADABODY_Z_NALADY();
  }
 
+void pokyd_set_mood_points(unsigned char points) {
+  /* !Prostre/debugnastaveni.cpp:220-224, which is pokyd_set_mood the other way
+     round: naladabody is the state that drifts and nalada is recomputed from it.
+     His own two refusals -- "must be a whole positive number" and "must be
+     0 - 90" -- are the dialog's, so what is left here is the bound itself. */
+  if (points > 90) return;
+  g_nastaveni.naladabody=(BYTE)points;
+  g_nastaveni.SPOCITEJ_NALADU_PODLE_NALADABODY();
+ }
+
+/* ------------------------------------------------------------------- debug info */
+
+/* strncpy with the NUL guaranteed.  Every field of pokyd_debug is a fixed array
+   and every source is either the engine's own bounded buffer or something a
+   visitor typed, so truncation is the only sane failure. */
+static void copy_field(char *out,size_t size,const char *in) {
+  if (in == NULL) { out[0]=0; return; }
+  strncpy(out,in,size-1);
+  out[size-1]=0;
+ }
+
+/* !Prostre/debugnastaveni.cpp:105-118: the three sentence parts are stored in
+   the engine's phoneme spelling and have to be read back out of it.  His own
+   scratch buffer is ALOKUJ_RETEZEC(200), and the size matters -- ODUPRAV_SLOVO_
+   PRO_IQPOKYD expands as it goes ('*' becomes "ch") and writes back in place. */
+static void copy_word(char *out,size_t size,const char *in) {
+char scratch[200];
+  copy_field(scratch,sizeof(scratch),in);
+  ODUPRAV_SLOVO_PRO_IQPOKYD(scratch);
+  copy_field(out,size,scratch);
+ }
+
+void pokyd_debug_info(pokyd_debug *out) {
+  if (out == NULL) return;
+  memset(out,0,sizeof(*out));
+
+  out->allocated_blocks=(unsigned int)debug_pocetalokovani;
+  out->max_words=(unsigned int)debug_maxpocetvsechslov;
+  out->answer_count=(unsigned int)g_pocetodpovedipocitace;
+  out->base_words=(unsigned int)g_pocetslovvzakladnidatabazi;
+  out->rules=(unsigned int)g_pocetiqpodminek;
+
+  copy_field(out->last_answer,sizeof(out->last_answer),g_odpovedpocitace);
+  copy_field(out->last_sentence,sizeof(out->last_sentence),g_predchozivetacloveka);
+  copy_word(out->subject,sizeof(out->subject),debug_poslednipodmetcloveka);
+  copy_word(out->predicate,sizeof(out->predicate),debug_posledniprisudekcloveka);
+  copy_word(out->object,sizeof(out->object),debug_poslednipredmetcloveka);
+
+  out->mood=g_nastaveni.nalada;
+  out->mood_points=g_nastaveni.naladabody;
+ }
+
+/* The one number src/web/engine.ts cannot derive and must agree with: it reads
+   this struct field by field out of the wasm heap, so a member that grows or a
+   pad byte that appears here has to fail the build rather than the page. */
+#if defined(__cplusplus) && __cplusplus >= 201103L
+static_assert(sizeof(pokyd_debug) == 1328,
+  "struct pokyd_debug changed size -- update POKYD_DEBUG_SIZE in src/web/engine.ts");
+#endif
+
 /* ------------------------------------------------------------------------ cache */
 
 /* Plain malloc/fopen, deliberately, and not the engine's allocator: everything
