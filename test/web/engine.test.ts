@@ -52,253 +52,254 @@ import type { PokydModuleFactory } from "../../src/web/engine.ts";
 import { POKYD_PHASE_DONE, POKYD_PHASE_INFLECTING } from "../../src/web/protocol.ts";
 import type { PokydSettings } from "../../src/web/protocol.ts";
 
-const KOREN = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const MODUL = join(KOREN, "build", "wasm", "pokyd.mjs");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const MODULE_PATH = join(ROOT, "build", "wasm", "pokyd.mjs");
 
 /* The settings the golden conversation was recorded with -- test/golden/README.md.
    They are NASTAV_STANDARDNE's own defaults, pinned here for the same reason the
    driver pins them on the command line: so the test does not move if a default
    does. */
-const SEMENO = 20050415;
-const CHARAKTER = 3;            /* prumerny */
-const NALADA = 3;               /* normalni */
-const POHLAVI_CLOVEKA = 1;      /* muz -- NASTAVEN.PR:26 */
-const POHLAVI_POCITACE = 1;
+const SEED = 20050415;
+const CHARACTER = 3;       /* prumerny -- average */
+const MOOD = 3;            /* normalni -- normal */
+const HUMAN_GENDER = 1;    /* muz -- male; NASTAVEN.PR:26 */
+const COMPUTER_GENDER = 1;
 
 /* ------------------------------------------------------------- the scoreboard */
 
-let poctu = 0;
-let chyby = 0;
+let checks = 0;
+let failures = 0;
 
-function nadpis(text: string): void {
+function heading(text: string): void {
   console.log("\n" + text);
 }
 
-function ok(co: string, podminka: boolean, detail = ""): void {
-  poctu++;
-  if (podminka) {
-    console.log("  ok    " + co);
+function ok(label: string, cond: boolean, detail = ""): void {
+  checks++;
+  if (cond) {
+    console.log("  ok    " + label);
   } else {
-    chyby++;
-    console.log("  FAIL  " + co + (detail ? "\n        " + detail : ""));
+    failures++;
+    console.log("  FAIL  " + label + (detail ? "\n        " + detail : ""));
   }
 }
 
-function rovno(co: string, mame: unknown, ocekavame: unknown): void {
-  ok(co, Object.is(mame, ocekavame),
-    "got " + JSON.stringify(mame) + ", expected " + JSON.stringify(ocekavame));
+function eq(label: string, got: unknown, expected: unknown): void {
+  ok(label, Object.is(got, expected),
+    "got " + JSON.stringify(got) + ", expected " + JSON.stringify(expected));
 }
 
-function hodi(co: string, cinnost: () => void, castZpravy: string): void {
-  poctu++;
+function throwsWith(label: string, action: () => void, wanted: string): void {
+  checks++;
   try {
-    cinnost();
-    chyby++;
-    console.log("  FAIL  " + co + "\n        it did not throw");
+    action();
+    failures++;
+    console.log("  FAIL  " + label + "\n        it did not throw");
   } catch (e) {
-    const zprava = e instanceof Error ? e.message : String(e);
-    if (zprava.indexOf(castZpravy) >= 0) {
-      console.log("  ok    " + co);
+    const message = e instanceof Error ? e.message : String(e);
+    if (message.indexOf(wanted) >= 0) {
+      console.log("  ok    " + label);
     } else {
-      chyby++;
-      console.log("  FAIL  " + co + "\n        threw " + JSON.stringify(zprava)
-        + ", expected it to mention " + JSON.stringify(castZpravy));
+      failures++;
+      console.log("  FAIL  " + label + "\n        threw " + JSON.stringify(message)
+        + ", expected it to mention " + JSON.stringify(wanted));
     }
   }
 }
 
 /* ----------------------------------------------------------------- the diff */
 
-function porovnejBajty(co: string, mame: Uint8Array, ocekavame: Uint8Array): void {
-  poctu++;
-  if (mame.length === ocekavame.length) {
+function bytesEq(label: string, got: Uint8Array, expected: Uint8Array): void {
+  checks++;
+  if (got.length === expected.length) {
     let i = 0;
-    while (i < mame.length && mame[i] === ocekavame[i]) i++;
-    if (i === mame.length) {
-      console.log("  ok    " + co + ": " + mame.length + " bytes, identical");
+    while (i < got.length && got[i] === expected[i]) i++;
+    if (i === got.length) {
+      console.log("  ok    " + label + ": " + got.length + " bytes, identical");
       return;
     }
   }
-  chyby++;
+  failures++;
   let i = 0;
-  while (i < mame.length && i < ocekavame.length && mame[i] === ocekavame[i]) i++;
-  const radek = decodeCp1250(ocekavame.subarray(0, i)).split("\r\n").length;
-  console.log("  FAIL  " + co + ": differs from the golden file");
-  console.log("        " + mame.length + " bytes here, " + ocekavame.length + " expected");
-  console.log("        first difference at byte " + i + ", line " + radek);
-  const nase = decodeCp1250(mame).split("\r\n");
-  const jejich = decodeCp1250(ocekavame).split("\r\n");
-  for (let r = Math.max(0, radek - 2); r < Math.min(jejich.length, radek + 1); r++) {
-    if (nase[r] !== jejich[r]) {
-      console.log("        line " + (r + 1) + " golden: " + JSON.stringify(jejich[r]));
-      console.log("        line " + (r + 1) + " engine: " + JSON.stringify(nase[r]));
+  while (i < got.length && i < expected.length && got[i] === expected[i]) i++;
+  const line = decodeCp1250(expected.subarray(0, i)).split("\r\n").length;
+  console.log("  FAIL  " + label + ": differs from the golden file");
+  console.log("        " + got.length + " bytes here, " + expected.length + " expected");
+  console.log("        first difference at byte " + i + ", line " + line);
+  const ours = decodeCp1250(got).split("\r\n");
+  const theirs = decodeCp1250(expected).split("\r\n");
+  for (let r = Math.max(0, line - 2); r < Math.min(theirs.length, line + 1); r++) {
+    if (ours[r] !== theirs[r]) {
+      console.log("        line " + (r + 1) + " golden: " + JSON.stringify(theirs[r]));
+      console.log("        line " + (r + 1) + " engine: " + JSON.stringify(ours[r]));
     }
   }
 }
 
 /* --------------------------------------------------------------------- a run */
 
-interface Vystup {
-  segmenty: string[];
-  behemNacitani: number;
-  procentaBehemSklonovani: number[];
-  fazeBehemNacitani: Set<number>;
+interface Output {
+  segments: string[];
+  duringLoad: number;
+  percentsWhileInflecting: number[];
+  phasesDuringLoad: Set<number>;
 }
 
-interface Beh {
-  prepis: Uint8Array;
-  vystup: Vystup;
-  neuvolneno: number;
-  poctvet: number;
+interface Run {
+  transcript: Uint8Array;
+  output: Output;
+  unfreed: number;
+  sentenceCount: number;
   cache: Uint8Array | null;
-  nacitani_ms: number;
+  loadMs: number;
 }
 
-async function jedenRozhovor(factory: PokydModuleFactory, vety: string[],
-                             volby: { cache: Uint8Array | null; vyvez: boolean;
-                                      verbose: boolean }): Promise<Beh> {
-  const vystup: Vystup = {
-    segmenty: [], behemNacitani: 0, procentaBehemSklonovani: [],
-    fazeBehemNacitani: new Set<number>(),
+async function oneConversation(factory: PokydModuleFactory, sentences: string[],
+                               options: { cache: Uint8Array | null;
+                                          wantCache: boolean;
+                                          verbose: boolean }): Promise<Run> {
+  const output: Output = {
+    segments: [], duringLoad: 0, percentsWhileInflecting: [],
+    phasesDuringLoad: new Set<number>(),
   };
-  let nacita = false;
+  let loading = false;
 
-  const motor = await PokydEngine.create(factory, {
+  const engine = await PokydEngine.create(factory, {
     onOutput: (text: string) => {
-      vystup.segmenty.push(text);
-      if (!nacita) return;
-      vystup.behemNacitani++;
+      output.segments.push(text);
+      if (!loading) return;
+      output.duringLoad++;
       /* Read from inside the blocked call: this is exactly what the worker does
          and the only moment the counters mean anything. */
-      const stav = motor.progress();
-      vystup.fazeBehemNacitani.add(stav.phase);
-      if (stav.phase === POKYD_PHASE_INFLECTING) {
-        vystup.procentaBehemSklonovani.push(stav.percent);
+      const state = engine.progress();
+      output.phasesDuringLoad.add(state.phase);
+      if (state.phase === POKYD_PHASE_INFLECTING) {
+        output.percentsWhileInflecting.push(state.percent);
       }
     },
   });
 
-  if (volby.cache !== null) motor.importCache(volby.cache);
+  if (options.cache !== null) engine.importCache(options.cache);
 
-  const nastaveni = motor.getSettings();
-  nastaveni.pohlavicloveka = POHLAVI_CLOVEKA;
-  nastaveni.pohlavipocitace = POHLAVI_POCITACE;
-  nastaveni.charakter = CHARAKTER;
-  motor.setSettings(nastaveni);
-  motor.setMood(NALADA);
+  const settings = engine.getSettings();
+  settings.humanGender = HUMAN_GENDER;
+  settings.computerGender = COMPUTER_GENDER;
+  settings.character = CHARACTER;
+  engine.setSettings(settings);
+  engine.setMood(MOOD);
 
-  nacita = true;
+  loading = true;
   const t0 = performance.now();
-  motor.load();
-  const nacitani_ms = performance.now() - t0;
-  nacita = false;
+  engine.load();
+  const loadMs = performance.now() - t0;
+  loading = false;
 
-  motor.seed(SEMENO);
+  engine.seed(SEED);
 
-  let prepis = "";
-  for (const veta of vety) {
-    const odpoved = motor.say(veta);
-    prepis += "> " + veta + "\r\n< " + odpoved + "\r\n";
-    if (volby.verbose) console.log("    > " + veta + "\n    < " + odpoved);
+  let transcript = "";
+  for (const sentence of sentences) {
+    const answer = engine.say(sentence);
+    transcript += "> " + sentence + "\r\n< " + answer + "\r\n";
+    if (options.verbose) console.log("    > " + sentence + "\n    < " + answer);
   }
 
-  const poctvet = motor.sentenceCount();
-  const cache = volby.vyvez ? motor.exportCache() : null;
-  const neuvolneno = motor.shutdown();
+  const sentenceCount = engine.sentenceCount();
+  const cache = options.wantCache ? engine.exportCache() : null;
+  const unfreed = engine.shutdown();
 
   return {
-    prepis: encodeCp1250(prepis), vystup, neuvolneno, poctvet, cache,
-    nacitani_ms,
+    transcript: encodeCp1250(transcript), output, unfreed, sentenceCount, cache,
+    loadMs,
   };
 }
 
 /* -------------------------------------------------------------------- driver */
 
 async function main(): Promise<number> {
-  let studenyBeh = true;
+  let coldRun = true;
   let verbose = false;
-  for (const prepinac of process.argv.slice(2)) {
-    if (prepinac === "--no-cold") studenyBeh = false;
-    else if (prepinac === "-v" || prepinac === "--verbose") verbose = true;
+  for (const arg of process.argv.slice(2)) {
+    if (arg === "--no-cold") coldRun = false;
+    else if (arg === "-v" || arg === "--verbose") verbose = true;
     else {
-      console.error("engine.test: unknown option \"" + prepinac + "\"");
+      console.error("engine.test: unknown option \"" + arg + "\"");
       console.error("usage: node test/web/engine.test.ts [--no-cold] [-v]");
       return 2;
     }
   }
 
-  if (!existsSync(MODUL)) {
-    console.error("engine.test: no " + MODUL
+  if (!existsSync(MODULE_PATH)) {
+    console.error("engine.test: no " + MODULE_PATH
       + "\n             build it with: python3 tools/build.py --wasm");
     return 1;
   }
 
-  const zlate = new Uint8Array(readFileSync(join(KOREN, "test", "golden", "rozhovor.txt")));
+  const golden = new Uint8Array(readFileSync(join(ROOT, "test", "golden", "rozhovor.txt")));
   /* Exactly what the driver's loop does: strip the CR, drop empty lines
      (mfcDlg.cpp:556).  Decoded here, because above src/web/engine.ts everything
      is a string -- which is the thing being tested. */
-  const vety = decodeCp1250(readFileSync(join(KOREN, "test", "golden", "rozhovor.in")))
+  const sentences = decodeCp1250(readFileSync(join(ROOT, "test", "golden", "rozhovor.in")))
     .split("\n").map((r) => r.replace(/\r+$/, "")).filter((r) => r.length > 0);
 
   const { default: factory } =
-    await import(pathToFileURL(MODUL).href) as { default: PokydModuleFactory };
+    await import(pathToFileURL(MODULE_PATH).href) as { default: PokydModuleFactory };
 
   console.log("node    " + process.version);
-  console.log("module  " + MODUL);
-  console.log("input   " + vety.length + " sentences, decoded from CP1250");
+  console.log("module  " + MODULE_PATH);
+  console.log("input   " + sentences.length + " sentences, decoded from CP1250");
 
-  const nativniCache = join(KOREN, "build", "run", "SLOVNIK.TMP");
+  const nativeCache = join(ROOT, "build", "run", "SLOVNIK.TMP");
   let blob: Uint8Array | null = null;
 
-  if (studenyBeh) {
-    nadpis("cold (an empty MEMFS, so the dictionary gets inflected)");
-    const beh = await jedenRozhovor(factory, vety,
-      { cache: null, vyvez: true, verbose });
-    console.log("  load  " + (beh.nacitani_ms / 1000).toFixed(2) + " s");
-    porovnejBajty("cold transcript, re-encoded", beh.prepis, zlate);
-    rovno("cold: pokyd_sentence_count()", beh.poctvet, vety.length);
-    rovno("cold: unfreed blocks", beh.neuvolneno, 0);
+  if (coldRun) {
+    heading("cold (an empty MEMFS, so the dictionary gets inflected)");
+    const run = await oneConversation(factory, sentences,
+      { cache: null, wantCache: true, verbose });
+    console.log("  load  " + (run.loadMs / 1000).toFixed(2) + " s");
+    bytesEq("cold transcript, re-encoded", run.transcript, golden);
+    eq("cold: pokyd_sentence_count()", run.sentenceCount, sentences.length);
+    eq("cold: unfreed blocks", run.unfreed, 0);
 
     /* 4. The finding phase 4.3 is built on.  Emscripten calls the stdout hook
        synchronously from inside pokyd_load_dictionaries(), so text arrives while
        the call has not returned -- and the counter that ought to accompany it
        does not move, because SLOVNIK.FU:3318 is behind IQPOKYDWINMFC == 1. */
     ok("the engine's console output arrives during the load, not after it",
-      beh.vystup.behemNacitani > 100,
-      beh.vystup.behemNacitani + " segments arrived while load() was running");
+      run.output.duringLoad > 100,
+      run.output.duringLoad + " segments arrived while load() was running");
     ok("at least one of them is a percentage the loading bar could use",
-      beh.vystup.segmenty.some((s) => /^\d+\.\d%\s*$/.test(s)),
+      run.output.segments.some((s) => /^\d+\.\d%\s*$/.test(s)),
       "no segment looked like \"47.3%\"");
     ok("it reports POKYD_PHASE_INFLECTING while it is inflecting",
-      beh.vystup.fazeBehemNacitani.has(POKYD_PHASE_INFLECTING),
-      "phases seen: " + [...beh.vystup.fazeBehemNacitani].join(", "));
+      run.output.phasesDuringLoad.has(POKYD_PHASE_INFLECTING),
+      "phases seen: " + [...run.output.phasesDuringLoad].join(", "));
     /* The claim is not "it never changes" -- the sub-step boundaries slam it to
        100 and back to 0 -- but "it never takes a value in between", which is
        what a progress bar would need.  SLOVNIK.FU:3318, the one assignment that
        would give it a gradient, is behind IQPOKYDWINMFC == 1. */
-    const videna = [...new Set(beh.vystup.procentaBehemSklonovani)].sort((a, b) => a - b);
+    const seen = [...new Set(run.output.percentsWhileInflecting)].sort((a, b) => a - b);
     ok("pokyd_progress() has no gradient through it -- see PROGRESS in protocol.ts",
-      videna.length > 0 && videna.every((p) => p === 0 || p === 100),
-      videna.length === 0
+      seen.length > 0 && seen.every((p) => p === 0 || p === 100),
+      seen.length === 0
         ? "no sample was taken during POKYD_PHASE_INFLECTING"
-        : "the counter took intermediate values: " + videna.slice(0, 8).join(", ")
+        : "the counter took intermediate values: " + seen.slice(0, 8).join(", ")
             + " -- if SLOVNIK.FU:3318 is now compiled in, src/web/protocol.ts and"
             + " phase 4.3 both want updating");
 
-    poctu++;
-    if (beh.cache === null) {
-      chyby++;
+    checks++;
+    if (run.cache === null) {
+      failures++;
       console.log("  FAIL  the cold run exported no cache -- no SLOVNIK.TMP was written");
     } else {
-      console.log("  ok    cache exported: " + beh.cache.length + " bytes");
-      blob = beh.cache;
-      if (existsSync(nativniCache)) {
-        porovnejBajty("SLOVNIK.TMP vs the native one", blob,
-          new Uint8Array(readFileSync(nativniCache)));
+      console.log("  ok    cache exported: " + run.cache.length + " bytes");
+      blob = run.cache;
+      if (existsSync(nativeCache)) {
+        bytesEq("SLOVNIK.TMP vs the native one", blob,
+          new Uint8Array(readFileSync(nativeCache)));
       }
     }
-  } else if (existsSync(nativniCache)) {
-    blob = new Uint8Array(readFileSync(nativniCache));
+  } else if (existsSync(nativeCache)) {
+    blob = new Uint8Array(readFileSync(nativeCache));
     console.log("\n--no-cold: warming up from build/run/SLOVNIK.TMP ("
       + blob.length + " bytes)");
   } else {
@@ -308,89 +309,89 @@ async function main(): Promise<number> {
   }
 
   if (blob !== null) {
-    nadpis("warm (the cache imported before the load)");
-    const beh = await jedenRozhovor(factory, vety,
-      { cache: blob, vyvez: false, verbose });
-    console.log("  load  " + (beh.nacitani_ms / 1000).toFixed(2) + " s");
-    porovnejBajty("warm transcript, re-encoded", beh.prepis, zlate);
-    rovno("warm: pokyd_sentence_count()", beh.poctvet, vety.length);
-    rovno("warm: unfreed blocks", beh.neuvolneno, 0);
+    heading("warm (the cache imported before the load)");
+    const run = await oneConversation(factory, sentences,
+      { cache: blob, wantCache: false, verbose });
+    console.log("  load  " + (run.loadMs / 1000).toFixed(2) + " s");
+    bytesEq("warm transcript, re-encoded", run.transcript, golden);
+    eq("warm: pokyd_sentence_count()", run.sentenceCount, sentences.length);
+    eq("warm: unfreed blocks", run.unfreed, 0);
   }
 
   /* --------------------------------------------------------- the small ones */
 
   /* Everything below runs on an engine that is never loaded, so it costs a
      module instantiation and nothing else. */
-  nadpis("the ordering rules pokyd_api.h states and does not enforce");
+  heading("the ordering rules pokyd_api.h states and does not enforce");
   {
-    const motor = await PokydEngine.create(factory);
-    rovno("a fresh engine is not loaded", motor.isLoaded, false);
-    rovno("pokyd_phase() is POKYD_FAZE_NECINNY", motor.progress().phase, 0);
-    hodi("say() before load() throws", () => motor.say("ahoj"), "not loaded");
-    hodi("seed() before load() throws", () => motor.seed(1), "SLOVNIK.FU:1732");
-    hodi("importCache() rejects an empty blob",
-      () => motor.importCache(new Uint8Array(0)), "empty");
-    hodi("setMood() rejects a mood outside 1..5", () => motor.setMood(6), "1..5");
+    const engine = await PokydEngine.create(factory);
+    eq("a fresh engine is not loaded", engine.isLoaded, false);
+    eq("pokyd_phase() is POKYD_PHASE_IDLE", engine.progress().phase, 0);
+    throwsWith("say() before load() throws", () => engine.say("ahoj"), "not loaded");
+    throwsWith("seed() before load() throws", () => engine.seed(1), "SLOVNIK.FU:1732");
+    throwsWith("importCache() rejects an empty blob",
+      () => engine.importCache(new Uint8Array(0)), "empty");
+    throwsWith("setMood() rejects a mood outside 1..5", () => engine.setMood(6), "1..5");
     /* Found here, and it is the reason pokyd_api.h now says so: tearing down an
        engine that never loaded aborts the wasm module, because
        Typ_slova::VYMAZ_OBSAH frees twenty pointers that the base-dictionary read
        would have allocated and UVOLNI_X(NULL) is fatal by design. */
-    hodi("shutdown() before a load throws rather than aborting the module",
-      () => motor.shutdown(), "SKLONOV.FU:1348");
+    throwsWith("shutdown() before a load throws rather than aborting the module",
+      () => engine.shutdown(), "SKLONOV.FU:1348");
   }
 
-  nadpis("the settings struct, from JavaScript");
+  heading("the settings struct, from JavaScript");
   {
-    const motor = await PokydEngine.create(factory);
-    rovno("sizeof(struct pokyd_settings)", POKYD_SETTINGS_SIZE, 220);
+    const engine = await PokydEngine.create(factory);
+    eq("sizeof(struct pokyd_settings)", POKYD_SETTINGS_SIZE, 220);
 
-    const vychozi = motor.getSettings();
-    rovno("NASTAV_STANDARDNE: charakter", vychozi.charakter, 3);
-    rovno("NASTAV_STANDARDNE: nalada", vychozi.nalada, 3);
-    rovno("NASTAV_STANDARDNE: debug_pravopisnarekurze",
-      vychozi.debug_pravopisnarekurze, 11);
-    rovno("NASTAV_STANDARDNE: the names start out empty", vychozi.jmenocloveka, "");
-    rovno("every field of struct pokyd_settings is present",
-      Object.keys(vychozi).length, 20);
+    const defaults = engine.getSettings();
+    eq("NASTAV_STANDARDNE: character", defaults.character, 3);
+    eq("NASTAV_STANDARDNE: mood", defaults.mood, 3);
+    eq("NASTAV_STANDARDNE: debugSpellingRecursion",
+      defaults.debugSpellingRecursion, 11);
+    eq("NASTAV_STANDARDNE: the names start out empty", defaults.humanName, "");
+    eq("every field of struct pokyd_settings is present",
+      Object.keys(defaults).length, 20);
 
     /* "Michal" and "Pokyd" would prove nothing.  These are the letters CP1250
        has and ASCII does not, inside a char[101] the engine will read back. */
-    const jmeno = "Zlatkovsk\u00fd \u010cen\u011bk";        /* Zlatkovsky Cenek */
-    const pocitac = "IQ Pokyd \u2013 p\u0159\u00edtel";     /* en dash, r-caron */
-    const nove: PokydSettings = { ...vychozi, jmenocloveka: jmeno,
-      jmenopocitace: pocitac, pohlavicloveka: 1, spisovnacestina: 1 };
-    motor.setSettings(nove);
-    const zpet = motor.getSettings();
-    rovno("a Czech name survives the round trip", zpet.jmenocloveka, jmeno);
-    rovno("so does an en dash, which CP1250 has", zpet.jmenopocitace, pocitac);
-    rovno("and so does a plain flag", zpet.spisovnacestina, 1);
+    const name = "Zlatkovsk\u00fd \u010cen\u011bk";        /* Zlatkovsky Cenek */
+    const botName = "IQ Pokyd \u2013 p\u0159\u00edtel";     /* en dash, r-caron */
+    const updated: PokydSettings = { ...defaults, humanName: name,
+      computerName: botName, humanGender: 1, formalCzech: 1 };
+    engine.setSettings(updated);
+    const back = engine.getSettings();
+    eq("a Czech name survives the round trip", back.humanName, name);
+    eq("so does an en dash, which CP1250 has", back.computerName, botName);
+    eq("and so does a plain flag", back.formalCzech, 1);
 
     /* char[101] is a hundred bytes and a terminator, and CP1250 is one byte per
        character, so the two counts agree and truncation is exact. */
-    const dlouhe = "\u017e".repeat(150);
-    motor.setSettings({ ...zpet, jmenocloveka: dlouhe });
-    rovno("a name longer than char[101] is truncated to 100 characters",
-      motor.getSettings().jmenocloveka.length, 100);
+    const longName = "\u017e".repeat(150);
+    engine.setSettings({ ...back, humanName: longName });
+    eq("a name longer than char[101] is truncated to 100 characters",
+      engine.getSettings().humanName.length, 100);
 
-    motor.setMood(5);
-    const mrzuty = motor.getSettings();
-    rovno("setMood(5) sets nalada", mrzuty.nalada, 5);
-    ok("setMood(5) moves naladabody with it, which is the field that drifts",
-      mrzuty.naladabody !== vychozi.naladabody,
-      "naladabody is still " + mrzuty.naladabody);
+    engine.setMood(5);
+    const grumpy = engine.getSettings();
+    eq("setMood(5) sets mood", grumpy.mood, 5);
+    ok("setMood(5) moves moodPoints with it, which is the field that drifts",
+      grumpy.moodPoints !== defaults.moodPoints,
+      "moodPoints is still " + grumpy.moodPoints);
   }
 
-  nadpis("the phase constants agree with pokyd_api.h");
+  heading("the phase constants agree with pokyd_api.h");
   {
-    rovno("POKYD_FAZE_SKLONOVANI", POKYD_PHASE_INFLECTING, 3);
-    rovno("POKYD_FAZE_HOTOVO", POKYD_PHASE_DONE, 6);
+    eq("POKYD_PHASE_INFLECTING", POKYD_PHASE_INFLECTING, 3);
+    eq("POKYD_PHASE_DONE", POKYD_PHASE_DONE, 6);
   }
 
-  console.log(chyby === 0
-    ? "\nPASS -- " + poctu + " checks.  The engine answers the same through a"
+  console.log(failures === 0
+    ? "\nPASS -- " + checks + " checks.  The engine answers the same through a"
       + " string boundary as it does through a byte one."
-    : "\nFAIL -- " + chyby + " of " + poctu + " checks did not hold.");
-  return chyby === 0 ? 0 : 1;
+    : "\nFAIL -- " + failures + " of " + checks + " checks did not hold.");
+  return failures === 0 ? 0 : 1;
 }
 
 process.exit(await main());

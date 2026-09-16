@@ -54,18 +54,18 @@ import type { PokydClient, PokydStartOptions } from "./client.ts";
    under 2^42 -- inside what a double represents exactly, so no step of this
    rounds.  Checked against Python's own computation on the empty string, "a",
    "hello world" and original/slovnik.iqp. */
-export function fnv1a64(bajty: Uint8Array): string {
+export function fnv1a64(bytes: Uint8Array): string {
   let hi = 0xcbf29ce4;
   let lo = 0x84222325;
-  for (let i = 0; i < bajty.length; i++) {
-    lo = (lo ^ bajty[i]) >>> 0;
+  for (let i = 0; i < bytes.length; i++) {
+    lo = (lo ^ bytes[i]) >>> 0;
     /* h *= 2^40 + 0x1b3, modulo 2^64. */
-    const soucin = lo * 0x1b3;                       /* < 2^41, exact */
-    const noveLo = soucin >>> 0;                     /* ToUint32 is mod 2^32 */
-    const prenos = Math.floor(soucin / 0x100000000);
+    const product = lo * 0x1b3;                       /* < 2^41, exact */
+    const newLo = product >>> 0;                     /* ToUint32 is mod 2^32 */
+    const carry = Math.floor(product / 0x100000000);
     /* hi*0x1b3 < 2^41 and (lo & 0xffffff)*0x100 < 2^32, so the sum is exact. */
-    hi = (hi * 0x1b3 + prenos + (lo & 0xffffff) * 0x100) >>> 0;
-    lo = noveLo;
+    hi = (hi * 0x1b3 + carry + (lo & 0xffffff) * 0x100) >>> 0;
+    lo = newLo;
   }
   return hi.toString(16).padStart(8, "0") + lo.toString(16).padStart(8, "0");
 }
@@ -94,9 +94,9 @@ export const POKYD_CACHE_STORE = "slovnik";
 
 /** The IndexedDB key a blob is stored under: format and engine version, then the
  *  hash of the dictionary it was inflected from. */
-export function pokydCacheKey(hashSlovniku: string,
+export function pokydCacheKey(dictionaryHash: string,
                               version: string = POKYD_CACHE_VERSION): string {
-  return "pokyd/" + version + "/" + hashSlovniku;
+  return "pokyd/" + version + "/" + dictionaryHash;
 }
 
 /* --------------------------------------------------------------- the record */
@@ -115,10 +115,10 @@ export interface PokydCacheRecord {
 
 /* ---------------------------------------------------------------- the store */
 
-function pozadavek<T>(r: IDBRequest<T>): Promise<T> {
-  return new Promise<T>((splni, odmitni) => {
-    r.onsuccess = () => splni(r.result);
-    r.onerror = () => odmitni(r.error ?? new Error("IndexedDB request failed"));
+function request<T>(r: IDBRequest<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error ?? new Error("IndexedDB request failed"));
   });
 }
 
@@ -136,18 +136,18 @@ export class PokydCacheStore {
   private readonly dbName: string;
   private readonly storeName: string;
   private db: IDBDatabase | null = null;
-  private otevirani: Promise<IDBDatabase> | null = null;
+  private opening: Promise<IDBDatabase> | null = null;
 
-  constructor(volby: PokydCacheStoreOptions = {}) {
-    this.dbName = volby.dbName ?? POKYD_CACHE_DB;
-    this.storeName = volby.storeName ?? POKYD_CACHE_STORE;
+  constructor(options: PokydCacheStoreOptions = {}) {
+    this.dbName = options.dbName ?? POKYD_CACHE_DB;
+    this.storeName = options.storeName ?? POKYD_CACHE_STORE;
   }
 
   /** Open the database, creating the object store on first use.  Concurrent
    *  callers share one open request rather than racing two upgrades. */
   open(): Promise<IDBDatabase> {
     if (this.db !== null) return Promise.resolve(this.db);
-    if (this.otevirani !== null) return this.otevirani;
+    if (this.opening !== null) return this.opening;
 
     const idb = (globalThis as { indexedDB?: IDBFactory }).indexedDB;
     if (!idb) {
@@ -156,7 +156,7 @@ export class PokydCacheStore {
         + " kept between visits"));
     }
 
-    const otevri = new Promise<IDBDatabase>((splni, odmitni) => {
+    const opened = new Promise<IDBDatabase>((resolve, reject) => {
       const r = idb.open(this.dbName, 1);
       r.onupgradeneeded = () => {
         if (!r.result.objectStoreNames.contains(this.storeName)) {
@@ -165,23 +165,23 @@ export class PokydCacheStore {
       };
       /* A second tab holding the old version open blocks the upgrade forever;
          without this the promise never settles and the load never starts. */
-      r.onblocked = () => odmitni(new Error(
+      r.onblocked = () => reject(new Error(
         "another IQ Pokyd tab is holding " + this.dbName + " open"));
       r.onsuccess = () => {
         const db = r.result;
         /* Another tab wants an upgrade: let go rather than block it. */
         db.onversionchange = () => { this.close(); };
         this.db = db;
-        splni(db);
+        resolve(db);
       };
-      r.onerror = () => odmitni(r.error ?? new Error("cannot open " + this.dbName));
+      r.onerror = () => reject(r.error ?? new Error("cannot open " + this.dbName));
     });
     /* A failed open must not be remembered as the answer to the next one. */
-    this.otevirani = otevri.catch((e: unknown) => {
-      this.otevirani = null;
+    this.opening = opened.catch((e: unknown) => {
+      this.opening = null;
       throw e;
     });
-    return this.otevirani;
+    return this.opening;
   }
 
   /** The blob stored under `key`, or null if there is none.  A record whose blob
@@ -191,16 +191,16 @@ export class PokydCacheStore {
   async get(key: string): Promise<Uint8Array | null> {
     const db = await this.open();
     const t = db.transaction(this.storeName, "readonly");
-    const zaznam = await pozadavek<PokydCacheRecord | undefined>(
+    const record = await request<PokydCacheRecord | undefined>(
       t.objectStore(this.storeName).get(key));
-    if (zaznam === undefined) return null;
-    if (!(zaznam.blob instanceof Uint8Array)
-        || zaznam.blob.length !== zaznam.length
-        || zaznam.length === 0) {
+    if (record === undefined) return null;
+    if (!(record.blob instanceof Uint8Array)
+        || record.blob.length !== record.length
+        || record.length === 0) {
       await this.delete(key);
       return null;
     }
-    return zaznam.blob;
+    return record.blob;
   }
 
   /** Write the blob under `key`.  The value is structured-cloned by IndexedDB as
@@ -209,61 +209,61 @@ export class PokydCacheStore {
   async put(key: string, blob: Uint8Array): Promise<void> {
     if (blob.length === 0) throw new Error("put: the blob is empty");
     const db = await this.open();
-    const zaznam: PokydCacheRecord = {
+    const record: PokydCacheRecord = {
       key, blob, length: blob.length, savedAt: Date.now(),
     };
     const t = db.transaction(this.storeName, "readwrite");
-    const hotovo = new Promise<void>((splni, odmitni) => {
-      t.oncomplete = () => splni();
+    const done = new Promise<void>((resolve, reject) => {
+      t.oncomplete = () => resolve();
       /* QuotaExceededError arrives here rather than on the request, and 18 MB
          over an origin's quota is the ordinary way this fails. */
-      t.onerror = () => odmitni(t.error ?? new Error("cannot write " + key));
-      t.onabort = () => odmitni(t.error ?? new Error("the write of " + key
+      t.onerror = () => reject(t.error ?? new Error("cannot write " + key));
+      t.onabort = () => reject(t.error ?? new Error("the write of " + key
         + " was aborted -- most likely the storage quota"));
     });
-    t.objectStore(this.storeName).put(zaznam);
-    await hotovo;
+    t.objectStore(this.storeName).put(record);
+    await done;
   }
 
   async delete(key: string): Promise<void> {
     const db = await this.open();
     const t = db.transaction(this.storeName, "readwrite");
-    await pozadavek(t.objectStore(this.storeName).delete(key));
+    await request(t.objectStore(this.storeName).delete(key));
   }
 
   /** Every key currently stored.  Small: there should be one. */
   async keys(): Promise<string[]> {
     const db = await this.open();
     const t = db.transaction(this.storeName, "readonly");
-    const klice = await pozadavek<IDBValidKey[]>(
+    const all = await request<IDBValidKey[]>(
       t.objectStore(this.storeName).getAllKeys());
-    return klice.map(String);
+    return all.map(String);
   }
 
   /** Drop every blob but this one, and say how many went.  A redeploy or a new
    *  dictionary changes the key, and without this each one would leave its 18 MB
    *  behind for a question nobody is going to ask again. */
   async pruneExcept(key: string): Promise<number> {
-    const klice = await this.keys();
-    let smazano = 0;
-    for (const k of klice) {
+    const stored = await this.keys();
+    let deleted = 0;
+    for (const k of stored) {
       if (k === key) continue;
       await this.delete(k);
-      smazano++;
+      deleted++;
     }
-    return smazano;
+    return deleted;
   }
 
   async clear(): Promise<void> {
     const db = await this.open();
     const t = db.transaction(this.storeName, "readwrite");
-    await pozadavek(t.objectStore(this.storeName).clear());
+    await request(t.objectStore(this.storeName).clear());
   }
 
   close(): void {
     if (this.db !== null) this.db.close();
     this.db = null;
-    this.otevirani = null;
+    this.opening = null;
   }
 }
 
@@ -322,66 +322,66 @@ export interface PokydCacheReport {
    here.  What this does avoid is a fourth: importCache is handed the blob to
    transfer rather than to clone, which is why nothing below touches it again. */
 export async function startCached(
-  klient: PokydClient,
-  volby: PokydCachedStartOptions = {},
+  client: PokydClient,
+  options: PokydCachedStartOptions = {},
 ): Promise<PokydCacheReport> {
-  const sklad = volby.store ?? new PokydCacheStore();
+  const store = options.store ?? new PokydCacheStore();
 
-  await klient.init();
-  if (volby.settings !== undefined) await klient.setSettings(volby.settings);
-  if (volby.mood !== undefined) await klient.setMood(volby.mood);
+  await client.init();
+  if (options.settings !== undefined) await client.setSettings(options.settings);
+  if (options.mood !== undefined) await client.setMood(options.mood);
 
-  const key = pokydCacheKey(await klient.dictionaryHash(), volby.version);
+  const key = pokydCacheKey(await client.dictionaryHash(), options.version);
 
-  const zprava: PokydCacheReport = {
+  const report: PokydCacheReport = {
     key, hit: false, saved: false, bytes: 0, pruned: 0, loadMs: 0, error: null,
   };
 
   /* Read.  Anything that goes wrong here costs 15 s and nothing else. */
-  if (volby.ignoreStored !== true) {
+  if (options.ignoreStored !== true) {
     try {
-      const ulozeny = await sklad.get(key);
-      if (ulozeny !== null) {
-        const delka = ulozeny.length;
+      const stored = await store.get(key);
+      if (stored !== null) {
+        const size = stored.length;
         /* Only once the engine has taken it: an import that threw leaves no
            SLOVNIK.TMP behind, the load below goes the cold way, and `bytes`
            must not be reporting a blob nothing ever used. */
-        await klient.importCache(ulozeny, true);
-        zprava.bytes = delka;
-        zprava.hit = true;
+        await client.importCache(stored, true);
+        report.bytes = size;
+        report.hit = true;
       }
     } catch (e) {
-      zprava.error = chyba(e);
+      report.error = toError(e);
     }
   }
 
   const t0 = Date.now();
-  await klient.load();
-  zprava.loadMs = Date.now() - t0;
+  await client.load();
+  report.loadMs = Date.now() - t0;
 
-  if (volby.seed !== undefined) await klient.seed(volby.seed);
+  if (options.seed !== undefined) await client.seed(options.seed);
 
   /* Write, if this visit is the one that made it.  A hit has nothing new to
-     say, and prikaz_readonlymod means the engine wrote no SLOVNIK.TMP at all,
+     say, and cmdReadOnly means the engine wrote no SLOVNIK.TMP at all,
      which is why exportCache may legitimately hand back null. */
-  if (!zprava.hit && volby.doNotSave !== true) {
+  if (!report.hit && options.doNotSave !== true) {
     try {
-      const cerstvy = await klient.exportCache();
-      if (cerstvy !== null) {
-        zprava.bytes = cerstvy.length;
-        await sklad.put(key, cerstvy);
-        zprava.saved = true;
-        zprava.pruned = await sklad.pruneExcept(key);
+      const fresh = await client.exportCache();
+      if (fresh !== null) {
+        report.bytes = fresh.length;
+        await store.put(key, fresh);
+        report.saved = true;
+        report.pruned = await store.pruneExcept(key);
       }
     } catch (e) {
       /* Out of quota, most likely.  Next visit is slow; this one is not wrong. */
-      zprava.error = chyba(e);
+      report.error = toError(e);
     }
   }
 
-  return zprava;
+  return report;
 }
 
-function chyba(e: unknown): Error {
+function toError(e: unknown): Error {
   return e instanceof Error ? e : new Error(String(e));
 }

@@ -55,150 +55,150 @@ export interface PokydStartOptions {
    *  the last thing you were going to do with the blob. */
   transferCache?: boolean;
   settings?: PokydSettings;
-  /** nalada 1..5, applied through pokyd_set_mood rather than through settings,
-   *  because writing nalada alone is undone after the next sentence. */
+  /** mood 1..5, applied through pokyd_set_mood rather than through settings,
+   *  because writing mood alone is undone after the next sentence. */
   mood?: number;
   /** srand(), applied after the load, which is the only place it survives. */
   seed?: number;
 }
 
-const VYCHOZI_ADRESAR = "/pokyd";
+const DEFAULT_DATA_DIR = "/pokyd";
 
-interface Cekajici {
-  splni: (hodnota: unknown) => void;
-  odmitni: (duvod: Error) => void;
+interface Pending {
+  resolve: (value: unknown) => void;
+  reject: (reason: Error) => void;
 }
 
 export class PokydClient {
   private readonly worker: Worker;
   private readonly moduleUrl: string;
   private readonly dataDir: string;
-  private readonly cekajici = new Map<number, Cekajici>();
-  private dalsiId = 1;
-  private mrtvy: Error | null = null;
+  private readonly pending = new Map<number, Pending>();
+  private nextId = 1;
+  private dead: Error | null = null;
 
   /** Everything the engine wrote to its console.  Settable after construction
    *  so a page can attach a loading screen and drop it again. */
   onOutput: ((text: string, progress: PokydProgress) => void) | null;
 
-  constructor(volby: PokydClientOptions) {
+  constructor(options: PokydClientOptions) {
     /* Absolute, because the worker resolves it against its own URL and not
        against the page's -- a relative path that worked here would quietly
        point somewhere else there. */
-    this.moduleUrl = new URL(String(volby.moduleUrl), self.location.href).href;
-    this.dataDir = volby.dataDir ?? VYCHOZI_ADRESAR;
-    this.onOutput = volby.onOutput ?? null;
+    this.moduleUrl = new URL(String(options.moduleUrl), self.location.href).href;
+    this.dataDir = options.dataDir ?? DEFAULT_DATA_DIR;
+    this.onOutput = options.onOutput ?? null;
 
-    this.worker = new Worker(volby.workerUrl, { type: "module" });
-    this.worker.onmessage = (udalost: MessageEvent): void => {
-      this.prijmi(udalost.data as PokydReply);
+    this.worker = new Worker(options.workerUrl, { type: "module" });
+    this.worker.onmessage = (event: MessageEvent): void => {
+      this.receive(event.data as PokydReply);
     };
     /* A worker that fails to start -- a bad URL, a syntax error, a module the
        browser would not load -- never answers anything.  Without this every
        call would hang instead of failing. */
-    this.worker.onerror = (udalost: ErrorEvent): void => {
-      this.zabij(new Error("the IQ Pokyd worker failed to start: "
-        + (udalost.message || "no message")
-        + (udalost.filename ? " (" + udalost.filename + ":" + udalost.lineno + ")" : "")));
+    this.worker.onerror = (event: ErrorEvent): void => {
+      this.kill(new Error("the IQ Pokyd worker failed to start: "
+        + (event.message || "no message")
+        + (event.filename ? " (" + event.filename + ":" + event.lineno + ")" : "")));
     };
   }
 
   /* ------------------------------------------------------------- transport */
 
-  private prijmi(zprava: PokydReply): void {
-    if (zprava.kind === "output") {
-      const posluchac = this.onOutput;
-      if (posluchac) {
-        posluchac(zprava.text, { phase: zprava.phase, percent: zprava.percent });
+  private receive(reply: PokydReply): void {
+    if (reply.kind === "output") {
+      const listener = this.onOutput;
+      if (listener) {
+        listener(reply.text, { phase: reply.phase, percent: reply.percent });
       }
       return;
     }
-    const cekajici = this.cekajici.get(zprava.id);
-    if (cekajici === undefined) return;     /* a reply to a terminated call */
-    this.cekajici.delete(zprava.id);
-    if (zprava.kind === "ok") cekajici.splni(zprava.result);
-    else cekajici.odmitni(new Error(zprava.message));
+    const pending = this.pending.get(reply.id);
+    if (pending === undefined) return;     /* a reply to a terminated call */
+    this.pending.delete(reply.id);
+    if (reply.kind === "ok") pending.resolve(reply.result);
+    else pending.reject(new Error(reply.message));
   }
 
-  private zabij(duvod: Error): void {
-    this.mrtvy = duvod;
-    for (const cekajici of this.cekajici.values()) cekajici.odmitni(duvod);
-    this.cekajici.clear();
+  private kill(reason: Error): void {
+    this.dead = reason;
+    for (const pending of this.pending.values()) pending.reject(reason);
+    this.pending.clear();
   }
 
-  private posli<K extends PokydRequestType>(
-    pozadavek: PokydRequest & { type: K },
-    prevod: Transferable[] = [],
+  private send<K extends PokydRequestType>(
+    request: PokydRequest & { type: K },
+    transfer: Transferable[] = [],
   ): Promise<PokydResultOf<K>> {
-    if (this.mrtvy !== null) return Promise.reject(this.mrtvy);
-    const id = this.dalsiId++;
-    const volani: PokydCall = { id, request: pozadavek };
-    return new Promise<PokydResultOf<K>>((splni, odmitni) => {
-      this.cekajici.set(id, {
-        splni: splni as (hodnota: unknown) => void,
-        odmitni,
+    if (this.dead !== null) return Promise.reject(this.dead);
+    const id = this.nextId++;
+    const call: PokydCall = { id, request };
+    return new Promise<PokydResultOf<K>>((resolve, reject) => {
+      this.pending.set(id, {
+        resolve: resolve as (value: unknown) => void,
+        reject,
       });
-      this.worker.postMessage(volani, prevod);
+      this.worker.postMessage(call, transfer);
     });
   }
 
   /* -------------------------------------------------------- one per request */
 
   init(): Promise<null> {
-    return this.posli({
+    return this.send({
       type: "init", moduleUrl: this.moduleUrl, dataDir: this.dataDir,
     });
   }
 
   importCache(blob: Uint8Array, transfer = false): Promise<null> {
-    return this.posli({ type: "importCache", blob },
+    return this.send({ type: "importCache", blob },
       transfer ? [blob.buffer] : []);
   }
 
-  load(): Promise<null> { return this.posli({ type: "load" }); }
+  load(): Promise<null> { return this.send({ type: "load" }); }
 
   seed(value: number): Promise<null> {
-    return this.posli({ type: "seed", value });
+    return this.send({ type: "seed", value });
   }
 
   say(text: string): Promise<string> {
-    return this.posli({ type: "say", text });
+    return this.send({ type: "say", text });
   }
 
   sentenceCount(): Promise<number> {
-    return this.posli({ type: "sentenceCount" });
+    return this.send({ type: "sentenceCount" });
   }
 
   getSettings(): Promise<PokydSettings> {
-    return this.posli({ type: "getSettings" });
+    return this.send({ type: "getSettings" });
   }
 
   setSettings(settings: PokydSettings): Promise<null> {
-    return this.posli({ type: "setSettings", settings });
+    return this.send({ type: "setSettings", settings });
   }
 
   setMood(mood: number): Promise<null> {
-    return this.posli({ type: "setMood", mood });
+    return this.send({ type: "setMood", mood });
   }
 
   progress(): Promise<PokydProgress> {
-    return this.posli({ type: "progress" });
+    return this.send({ type: "progress" });
   }
 
   /** The 18 MB SLOVNIK.TMP, or null if there is none yet.  The worker transfers
    *  it rather than copying it. */
   exportCache(): Promise<Uint8Array | null> {
-    return this.posli({ type: "exportCache" });
+    return this.send({ type: "exportCache" });
   }
 
   /** Which SLOVNIK.IQP the worker is holding, as sixteen hex digits.  Valid
    *  from init() onwards; src/web/cache.ts turns it into the IndexedDB key. */
   dictionaryHash(): Promise<string> {
-    return this.posli({ type: "dictionaryHash" });
+    return this.send({ type: "dictionaryHash" });
   }
 
   /** Blocks the engine did not account for; it should be 0. */
-  shutdown(): Promise<number> { return this.posli({ type: "shutdown" }); }
+  shutdown(): Promise<number> { return this.send({ type: "shutdown" }); }
 
   /* ---------------------------------------------------------- the sequence */
 
@@ -208,29 +208,29 @@ export class PokydClient {
      has to be in place before the load looks for it, and the seed has to come
      after, because ZAPIS_DATABAZI_SLOV_DO_UPLNEHO_SLOVNIKU reseeds from the
      clock on its way out (SLOVNIK.FU:1732). */
-  async start(volby: PokydStartOptions = {}): Promise<void> {
+  async start(options: PokydStartOptions = {}): Promise<void> {
     await this.init();
-    if (volby.settings !== undefined) await this.setSettings(volby.settings);
-    if (volby.mood !== undefined) await this.setMood(volby.mood);
-    if (volby.cache !== undefined) {
-      await this.importCache(volby.cache, volby.transferCache === true);
+    if (options.settings !== undefined) await this.setSettings(options.settings);
+    if (options.mood !== undefined) await this.setMood(options.mood);
+    if (options.cache !== undefined) {
+      await this.importCache(options.cache, options.transferCache === true);
     }
     await this.load();
-    if (volby.seed !== undefined) await this.seed(volby.seed);
+    if (options.seed !== undefined) await this.seed(options.seed);
   }
 
   /** Shut the engine down cleanly and then stop the thread.  Returns the unfreed
    *  block count, which should be 0. */
   async close(): Promise<number> {
-    const neuvolneno = await this.shutdown();
+    const unfreed = await this.shutdown();
     this.terminate();
-    return neuvolneno;
+    return unfreed;
   }
 
   /** Stop the thread now, without asking the engine.  Every call still waiting
    *  is rejected rather than left hanging. */
   terminate(): void {
     this.worker.terminate();
-    this.zabij(new Error("the IQ Pokyd worker was terminated"));
+    this.kill(new Error("the IQ Pokyd worker was terminated"));
   }
 }

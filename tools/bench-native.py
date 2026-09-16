@@ -59,13 +59,13 @@ EXE = ROOT / "build" / "native" / "pokyd.exe"
 RUN = ROOT / "build" / "run"
 BENCH = ROOT / "build" / "bench" / "run"
 GOLDEN = ROOT / "test" / "golden" / "rozhovor.txt"
-VSTUP = ROOT / "test" / "golden" / "rozhovor.in"
+INPUT = ROOT / "test" / "golden" / "rozhovor.in"
 CACHE = "SLOVNIK.TMP"
 DATA = ("SLOVNIK.IQP", "IQPOKYD.IQP")
 
 # test/golden/README.md pins these on the command line rather than trusting
 # NASTAV_STANDARDNE, so the transcript does not move if a default ever does.
-NASTAVENI = ["--cp1250", "--seed", "20050415", "--character", "3", "--mood", "3",
+SETTINGS = ["--cp1250", "--seed", "20050415", "--character", "3", "--mood", "3",
              "--human", "m", "--computer", "m"]
 
 
@@ -84,12 +84,12 @@ class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
                 ("PeakPagefileUsage", ctypes.c_size_t)]
 
 
-def vrchol_pameti(proces):
+def peak_memory(proc):
     """Peak working set of a finished child, in bytes, or None if unknowable."""
     if os.name == "nt":
         pmc = PROCESS_MEMORY_COUNTERS()
         pmc.cb = ctypes.sizeof(pmc)
-        handle = ctypes.c_void_p(int(proces._handle))
+        handle = ctypes.c_void_p(int(proc._handle))
         if ctypes.windll.psapi.GetProcessMemoryInfo(handle, ctypes.byref(pmc), pmc.cb):
             return int(pmc.PeakWorkingSetSize)
         return None
@@ -97,25 +97,25 @@ def vrchol_pameti(proces):
         import resource
         # A high-water mark across every child of this process, not this one --
         # only meaningful for the largest run.  Linux reports kB, macOS bytes.
-        hodnota = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
-        return int(hodnota) * (1 if sys.platform == "darwin" else 1024)
+        value = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+        return int(value) * (1 if sys.platform == "darwin" else 1024)
     except Exception:
         return None
 
 
 # ---------------------------------------------------------------------- a run
 
-def priprav_data():
+def prepare_data():
     """build/bench/run/, holding the two data files and nothing else."""
     BENCH.mkdir(parents=True, exist_ok=True)
-    for jmeno in DATA:
-        zdroj = RUN / jmeno
-        if not zdroj.is_file():
-            print(f"bench: no {zdroj.relative_to(ROOT)} -- python3 tools/build.py first")
+    for name in DATA:
+        source = RUN / name
+        if not source.is_file():
+            print(f"bench: no {source.relative_to(ROOT)} -- python3 tools/build.py first")
             return False
-        cil = BENCH / jmeno
-        if not cil.is_file() or cil.read_bytes() != zdroj.read_bytes():
-            shutil.copyfile(zdroj, cil)
+        dest = BENCH / name
+        if not dest.is_file() or dest.read_bytes() != source.read_bytes():
+            shutil.copyfile(source, dest)
             # Nothing in SLOVNIK.TMP says which dictionary it was inflected from,
             # so a changed dictionary drops it -- build.py does the same.
             if (BENCH / CACHE).is_file():
@@ -123,61 +123,61 @@ def priprav_data():
     return True
 
 
-def jeden_beh(studeny, zlaty):
+def one_run(cold, golden):
     """One conversation.  Returns what it cost, and whether it still holds."""
-    if studeny and (BENCH / CACHE).is_file():
+    if cold and (BENCH / CACHE).is_file():
         (BENCH / CACHE).unlink()
-    prepis = BENCH.parent / "rozhovor.txt"
+    transcript = BENCH.parent / "rozhovor.txt"
 
-    prikaz = [str(EXE), "--data", str(BENCH), "--time",
-              "--transcript", str(prepis)] + NASTAVENI
+    cmd = [str(EXE), "--data", str(BENCH), "--time",
+              "--transcript", str(transcript)] + SETTINGS
 
     t0 = time.perf_counter()
-    proces = subprocess.Popen(prikaz, stdin=subprocess.PIPE,
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    ven, chyby = proces.communicate(VSTUP.read_bytes())
-    cas_procesu = (time.perf_counter() - t0) * 1000.0
-    vrchol = vrchol_pameti(proces)
+    out_text, err_text = proc.communicate(INPUT.read_bytes())
+    proc_ms = (time.perf_counter() - t0) * 1000.0
+    peak = peak_memory(proc)
 
-    if proces.returncode != 0:
-        print(f"bench: pokyd.exe exited {proces.returncode}")
-        print(chyby.decode("latin1"))
+    if proc.returncode != 0:
+        print(f"bench: pokyd.exe exited {proc.returncode}")
+        print(err_text.decode("latin1"))
         return None
 
-    chyby = chyby.decode("latin1")
-    ven = ven.decode("latin1")
-    nacitani = re.search(r"load ([0-9.]+) ms", chyby)
-    odpovedi = re.search(r"([0-9]+) answers ([0-9.]+) ms", chyby)
-    slova = re.search(r"Prevedeno ([0-9]+) slov", ven)
-    tvary = re.search(r"MAX_POCET_VSECH_SLOV: ([0-9]+)", ven)
+    err_text = err_text.decode("latin1")
+    out_text = out_text.decode("latin1")
+    m_load = re.search(r"load ([0-9.]+) ms", err_text)
+    m_answers = re.search(r"([0-9]+) answers ([0-9.]+) ms", err_text)
+    m_words = re.search(r"Prevedeno ([0-9]+) slov", out_text)
+    m_forms = re.search(r"MAX_POCET_VSECH_SLOV: ([0-9]+)", out_text)
 
     return {
-        "studeny": studeny,
-        "nacitani_ms": float(nacitani.group(1)) if nacitani else None,
-        "proces_ms": cas_procesu,
-        "odpovedi_ms": float(odpovedi.group(2)) if odpovedi else None,
-        "vrchol_b": vrchol,
+        "cold": cold,
+        "load_ms": float(m_load.group(1)) if m_load else None,
+        "proc_ms": proc_ms,
+        "answers_ms": float(m_answers.group(2)) if m_answers else None,
+        "peak_b": peak,
         "cache_b": (BENCH / CACHE).stat().st_size if (BENCH / CACHE).is_file() else 0,
-        "slova": int(slova.group(1)) if slova else None,
-        "tvary": int(tvary.group(1)) if tvary else None,
-        "prepis_sedi": prepis.read_bytes() == zlaty,
+        "words": int(m_words.group(1)) if m_words else None,
+        "forms": int(m_forms.group(1)) if m_forms else None,
+        "transcript_matches": transcript.read_bytes() == golden,
         # The engine reports unfreed blocks on stderr, and 1.6 checked that by
         # eye; here the only lines allowed are the two --time prints.
-        "stderr_cisty": all(radek.startswith("pokyd: load")
-                            or " answers " in radek
-                            or radek.strip() == ""
-                            for radek in chyby.splitlines()),
+        "stderr_clean": all(line.startswith("pokyd: load")
+                            or " answers " in line
+                            or line.strip() == ""
+                            for line in err_text.splitlines()),
     }
 
 
 # ------------------------------------------------------------------ reporting
 
-def mb(bajty):
-    return "--" if bajty is None else f"{bajty / 1048576.0:6.1f} MB"
+def mb(byte_count):
+    return "--" if byte_count is None else f"{byte_count / 1048576.0:6.1f} MB"
 
 
-def median(hodnoty):
-    h = sorted(x for x in hodnoty if x is not None)
+def median(values):
+    h = sorted(x for x in values if x is not None)
     if not h:
         return None
     return h[len(h) // 2] if len(h) % 2 else (h[len(h) // 2 - 1] + h[len(h) // 2]) / 2.0
@@ -194,12 +194,12 @@ def main() -> int:
     if not EXE.is_file():
         print(f"bench: no {EXE.relative_to(ROOT)} -- python3 tools/build.py first")
         return 1
-    if not priprav_data():
+    if not prepare_data():
         return 1
 
-    zlaty = GOLDEN.read_bytes()
-    behy = []
-    chyby = 0
+    golden = GOLDEN.read_bytes()
+    runs = []
+    failures = 0
 
     if not args.json:
         print(f"machine {platform.machine()}, {os.cpu_count()} cpus,"
@@ -209,53 +209,53 @@ def main() -> int:
         print()
         print("  run      load ms   answers   peak WS      SLOVNIK.TMP   transcript")
 
-    for studeny in (True, False):
+    for cold in (True, False):
         for i in range(args.repeats):
-            beh = jeden_beh(studeny, zlaty)
-            if beh is None:
+            run = one_run(cold, golden)
+            if run is None:
                 return 1
-            behy.append(beh)
-            if not beh["prepis_sedi"] or not beh["stderr_cisty"]:
-                chyby += 1
+            runs.append(run)
+            if not run["transcript_matches"] or not run["stderr_clean"]:
+                failures += 1
             if not args.json:
                 print("  {:<7} {:>7.0f} {:>8.0f}   {}  {:>12,}   {}".format(
-                    ("cold " if studeny else "warm ") + str(i + 1),
-                    beh["nacitani_ms"] or 0, beh["odpovedi_ms"] or 0,
-                    mb(beh["vrchol_b"]), beh["cache_b"],
-                    "identical" if beh["prepis_sedi"] else "DIFFERS"))
+                    ("cold " if cold else "warm ") + str(i + 1),
+                    run["load_ms"] or 0, run["answers_ms"] or 0,
+                    mb(run["peak_b"]), run["cache_b"],
+                    "identical" if run["transcript_matches"] else "DIFFERS"))
 
-    studene = [b for b in behy if b["studeny"]]
-    teple = [b for b in behy if not b["studeny"]]
-    souhrn = {
-        "stroj": platform.machine(),
+    colds = [b for b in runs if b["cold"]]
+    warms = [b for b in runs if not b["cold"]]
+    summary = {
+        "machine": platform.machine(),
         "system": f"{platform.system()} {platform.release()}",
-        "cold_ms": median([b["nacitani_ms"] for b in studene]),
-        "warm_ms": median([b["nacitani_ms"] for b in teple]),
-        "cold_peak_b": max([b["vrchol_b"] or 0 for b in studene] or [0]) or None,
-        "warm_peak_b": max([b["vrchol_b"] or 0 for b in teple] or [0]) or None,
-        "cache_b": studene[0]["cache_b"] if studene else None,
-        "slova": studene[0]["slova"] if studene else None,
-        "tvary": studene[0]["tvary"] if studene else None,
-        "chyby": chyby,
+        "cold_ms": median([b["load_ms"] for b in colds]),
+        "warm_ms": median([b["load_ms"] for b in warms]),
+        "cold_peak_b": max([b["peak_b"] or 0 for b in colds] or [0]) or None,
+        "warm_peak_b": max([b["peak_b"] or 0 for b in warms] or [0]) or None,
+        "cache_b": colds[0]["cache_b"] if colds else None,
+        "words": colds[0]["words"] if colds else None,
+        "forms": colds[0]["forms"] if colds else None,
+        "failures": failures,
     }
 
     if args.json:
-        print(json.dumps(souhrn, indent=2))
-        return 1 if chyby else 0
+        print(json.dumps(summary, indent=2))
+        return 1 if failures else 0
 
     print()
-    print(f"  cold    {souhrn['cold_ms']:.0f} ms median,"
-          f" peak {mb(souhrn['cold_peak_b']).strip()}")
-    print(f"  warm    {souhrn['warm_ms']:.0f} ms median,"
-          f" peak {mb(souhrn['warm_peak_b']).strip()}")
-    print(f"  cache   {souhrn['cache_b']:,} B on disk")
-    if souhrn["tvary"]:
-        print(f"  words   {souhrn['slova']:,} base words -> {souhrn['tvary']:,} forms"
+    print(f"  cold    {summary['cold_ms']:.0f} ms median,"
+          f" peak {mb(summary['cold_peak_b']).strip()}")
+    print(f"  warm    {summary['warm_ms']:.0f} ms median,"
+          f" peak {mb(summary['warm_peak_b']).strip()}")
+    print(f"  cache   {summary['cache_b']:,} B on disk")
+    if summary["forms"]:
+        print(f"  words   {summary['words']:,} base words -> {summary['forms']:,} forms"
               f"  (MAX_POCET_VSECH_SLOV is 500,000)")
     print()
-    print("PASS -- every run reproduced test/golden/rozhovor.txt." if chyby == 0
-          else f"FAIL -- {chyby} run(s) did not reproduce the golden transcript.")
-    return 1 if chyby else 0
+    print("PASS -- every run reproduced test/golden/rozhovor.txt." if failures == 0
+          else f"FAIL -- {failures} run(s) did not reproduce the golden transcript.")
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

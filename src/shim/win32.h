@@ -43,12 +43,12 @@ typedef unsigned long DWORD;
 
 typedef void *HWND;
 
-int MessageBox(HWND okno, const char *text, const char *titulek, unsigned typ);
+int MessageBox(HWND window, const char *text, const char *title, unsigned type);
 void Sleep(unsigned long ms);
 
 /* OTEVRI_SOUBOR (Slovnik/SLOVNIK.FU) uses this to load the data files from the
    directory of the .exe rather than the cwd.  Only the IQPOKYDWINMFC==1 branch
    calls it; declared so the file compiles either way. */
-DWORD GetModuleFileName(void *modul, char *cesta, DWORD velikost);
+DWORD GetModuleFileName(void *module, char *path, DWORD size);
 
 #endif

@@ -17,8 +17,8 @@
        3. that the conversation is still the golden one, through the protocol,
           through the client, through CP1250 in both directions
 
-     Written by us, not ported.  ASCII only, like the rest of the non-engine
-     code, and no dependencies: it is loaded from a static file server.
+     Written by us, not ported.  English identifiers and ASCII only, like the
+     rest of the non-engine code, and no dependencies: it is loaded from a static file server.
 -->
 <html lang="en">
 <head>
@@ -33,17 +33,17 @@ import { PokydClient } from "/src/web/client.ts";
 import { POKYD_PHASE_INFLECTING } from "/src/web/protocol.ts";
 
 /* The settings the golden conversation was recorded with -- test/golden/README.md. */
-const SEMENO = 20050415;
-const CHARAKTER = 3;            /* prumerny */
-const NALADA = 3;               /* normalni */
-const POHLAVI_CLOVEKA = 1;      /* muz -- NASTAVEN.PR:26 */
-const POHLAVI_POCITACE = 1;
+const SEED = 20050415;
+const CHARACTER = 3;       /* prumerny -- average */
+const MOOD = 3;            /* normalni -- normal */
+const HUMAN_GENDER = 1;    /* muz -- male; NASTAVEN.PR:26 */
+const COMPUTER_GENDER = 1;
 
-const zaznam = document.getElementById("log");
-const radky = [];
-function pis(text) {
-  radky.push(text);
-  zaznam.textContent = radky.join("\n");
+const logEl = document.getElementById("log");
+const lines = [];
+function log(text) {
+  lines.push(text);
+  logEl.textContent = lines.join("\n");
 }
 
 /* ------------------------------------------------- the responsiveness probe */
@@ -53,50 +53,50 @@ function pis(text) {
    the whole load; in a worker it should not show up at all.  requestAnimationFrame
    is counted beside it because a frame that never renders is what a visitor
    actually sees. */
-function sonda() {
-  let posledni = performance.now();
-  let mezera = 0;
-  let tiku = 0;
-  let snimku = 0;
-  const casovac = setInterval(() => {
-    const ted = performance.now();
-    mezera = Math.max(mezera, ted - posledni);
-    posledni = ted;
-    tiku++;
+function probe() {
+  let last = performance.now();
+  let gap = 0;
+  let ticks = 0;
+  let frames = 0;
+  const timer = setInterval(() => {
+    const now = performance.now();
+    gap = Math.max(gap, now - last);
+    last = now;
+    ticks++;
   }, 10);
-  let bezi = true;
-  const snimek = () => {
-    if (!bezi) return;
-    snimku++;
-    requestAnimationFrame(snimek);
+  let running = true;
+  const frame = () => {
+    if (!running) return;
+    frames++;
+    requestAnimationFrame(frame);
   };
-  requestAnimationFrame(snimek);
+  requestAnimationFrame(frame);
   return {
-    konec() {
-      bezi = false;
-      clearInterval(casovac);
-      return { maxPauzaMs: mezera, tiku, snimku };
+    stop() {
+      running = false;
+      clearInterval(timer);
+      return { maxStallMs: gap, ticks, frames };
     },
   };
 }
 
 /* --------------------------------------------------------------------- a run */
 
-async function jedenRozhovor(vety, { cache, druh }) {
-  const vystup = { pocet: 0, behemNacitani: 0, procenta: 0, ukazky: [] };
-  let nacita = false;
+async function oneConversation(sentences, { cache, kind }) {
+  const output = { count: 0, duringLoad: 0, percentages: 0, samples: [] };
+  let loading = false;
 
-  const klient = new PokydClient({
+  const client = new PokydClient({
     workerUrl: "/src/web/worker.ts",
     moduleUrl: "/build/wasm/pokyd.mjs",
-    onOutput(text, postup) {
-      vystup.pocet++;
-      if (!nacita) return;
-      vystup.behemNacitani++;
-      if (/^\d+\.\d%\s*$/.test(text)) vystup.procenta++;
-      if (vystup.ukazky.length < 6
-          || (postup.phase === POKYD_PHASE_INFLECTING && vystup.ukazky.length < 12)) {
-        vystup.ukazky.push(text.slice(0, 40) + " [faze " + postup.phase + "]");
+    onOutput(text, progress) {
+      output.count++;
+      if (!loading) return;
+      output.duringLoad++;
+      if (/^\d+\.\d%\s*$/.test(text)) output.percentages++;
+      if (output.samples.length < 6
+          || (progress.phase === POKYD_PHASE_INFLECTING && output.samples.length < 12)) {
+        output.samples.push(text.slice(0, 40) + " [phase " + progress.phase + "]");
       }
     },
   });
@@ -104,40 +104,40 @@ async function jedenRozhovor(vety, { cache, druh }) {
   /* Settings through the protocol rather than through start(), so that
      getSettings/setSettings are exercised over the wire the way a real page
      would use them. */
-  await klient.init();
-  const nastaveni = await klient.getSettings();
-  nastaveni.pohlavicloveka = POHLAVI_CLOVEKA;
-  nastaveni.pohlavipocitace = POHLAVI_POCITACE;
-  nastaveni.charakter = CHARAKTER;
-  await klient.setSettings(nastaveni);
-  await klient.setMood(NALADA);
-  if (cache) await klient.importCache(cache);
+  await client.init();
+  const settings = await client.getSettings();
+  settings.humanGender = HUMAN_GENDER;
+  settings.computerGender = COMPUTER_GENDER;
+  settings.character = CHARACTER;
+  await client.setSettings(settings);
+  await client.setMood(MOOD);
+  if (cache) await client.importCache(cache);
 
-  const merak = sonda();
-  nacita = true;
+  const probeHandle = probe();
+  loading = true;
   const t0 = performance.now();
-  await klient.load();
-  const nacitani_ms = performance.now() - t0;
-  nacita = false;
-  const responzivita = merak.konec();
+  await client.load();
+  const load_ms = performance.now() - t0;
+  loading = false;
+  const responsiveness = probeHandle.stop();
 
-  await klient.seed(SEMENO);
+  await client.seed(SEED);
 
-  let prepis = "";
+  let transcript = "";
   const t1 = performance.now();
-  for (const veta of vety) {
-    prepis += "> " + veta + "\r\n< " + (await klient.say(veta)) + "\r\n";
+  for (const sentence of sentences) {
+    transcript += "> " + sentence + "\r\n< " + (await client.say(sentence)) + "\r\n";
   }
-  const odpovedi_ms = performance.now() - t1;
+  const answers_ms = performance.now() - t1;
 
-  const poctvet = await klient.sentenceCount();
-  const vyvezena = cache ? null : await klient.exportCache();
-  const neuvolneno = await klient.close();
+  const sentence_count = await client.sentenceCount();
+  const exported = cache ? null : await client.exportCache();
+  const unfreed = await client.close();
 
   return {
-    druh, nacitani_ms, odpovedi_ms, poctvet, neuvolneno, vystup, responzivita,
-    prepis: Array.from(encodeCp1250(prepis)),
-    cache: vyvezena,
+    kind, load_ms, answers_ms, sentence_count, unfreed, output, responsiveness,
+    transcript: Array.from(encodeCp1250(transcript)),
+    cache: exported,
   };
 }
 
@@ -145,94 +145,94 @@ async function jedenRozhovor(vety, { cache, druh }) {
 
 /* Two things that are protocol behaviour rather than engine behaviour, and that
    only exist once there is a worker to get them wrong. */
-async function zkouskyProtokolu() {
-  const ven = {};
+async function protocolTests() {
+  const out = {};
 
   /* A request that arrives before init comes back as a rejection carrying the
      worker's own message, not as a hang. */
   {
-    const klient = new PokydClient({
+    const client = new PokydClient({
       workerUrl: "/src/web/worker.ts",
       moduleUrl: "/build/wasm/pokyd.mjs",
     });
     try {
-      await klient.say("ahoj");
-      ven.predInit = "(it resolved)";
+      await client.say("ahoj");
+      out.beforeInit = "(it resolved)";
     } catch (e) {
-      ven.predInit = e.message;
+      out.beforeInit = e.message;
     }
-    klient.terminate();
+    client.terminate();
   }
 
   /* Ids do not get crossed: four requests in flight at once, each of which
      knows a different answer, resolved out of any order the worker likes. */
   {
-    const klient = new PokydClient({
+    const client = new PokydClient({
       workerUrl: "/src/web/worker.ts",
       moduleUrl: "/build/wasm/pokyd.mjs",
     });
-    await klient.init();
-    await klient.setMood(2);
+    await client.init();
+    await client.setMood(2);
     const [a, b, c, d] = await Promise.all([
-      klient.getSettings(), klient.progress(), klient.sentenceCount(),
-      klient.getSettings(),
+      client.getSettings(), client.progress(), client.sentenceCount(),
+      client.getSettings(),
     ]);
-    ven.soubezne = {
-      nalada: a.nalada, faze: b.phase, vet: c, stejne: a.nalada === d.nalada,
+    out.concurrent = {
+      mood: a.mood, phase: b.phase, count: c, same: a.mood === d.mood,
     };
-    klient.terminate();
+    client.terminate();
   }
 
-  return ven;
+  return out;
 }
 
 /* --------------------------------------------------------------------- driver */
 
 async function main() {
-  const vstup = await (await fetch("/test/golden/rozhovor.in")).arrayBuffer();
+  const input = await (await fetch("/test/golden/rozhovor.in")).arrayBuffer();
   /* Exactly what the driver's loop does: strip the CR, drop empty lines
      (mfcDlg.cpp:556). */
-  const vety = decodeCp1250(new Uint8Array(vstup))
+  const sentences = decodeCp1250(new Uint8Array(input))
     .split("\n").map((r) => r.replace(/\r+$/, "")).filter((r) => r.length > 0);
-  pis("input   " + vety.length + " sentences");
+  log("input   " + sentences.length + " sentences");
 
-  const behy = [];
+  const runs = [];
 
-  pis("cold    loading (an empty MEMFS, so the dictionary gets inflected)...");
-  const studeny = await jedenRozhovor(vety, { cache: null, druh: "cold" });
-  pis("cold    " + (studeny.nacitani_ms / 1000).toFixed(2) + " s, main thread"
-    + " stalled at most " + studeny.responzivita.maxPauzaMs.toFixed(0) + " ms");
-  const blob = studeny.cache;
-  behy.push({ ...studeny, cache: undefined, cacheDelka: blob ? blob.length : 0 });
+  log("cold    loading (an empty MEMFS, so the dictionary gets inflected)...");
+  const cold = await oneConversation(sentences, { cache: null, kind: "cold" });
+  log("cold    " + (cold.load_ms / 1000).toFixed(2) + " s, main thread"
+    + " stalled at most " + cold.responsiveness.maxStallMs.toFixed(0) + " ms");
+  const blob = cold.cache;
+  runs.push({ ...cold, cache: undefined, cacheLength: blob ? blob.length : 0 });
 
   if (blob) {
-    pis("warm    loading (the cache imported first)...");
-    const teply = await jedenRozhovor(vety, { cache: blob, druh: "warm" });
-    pis("warm    " + (teply.nacitani_ms / 1000).toFixed(2) + " s");
-    behy.push({ ...teply, cache: undefined, cacheDelka: 0 });
+    log("warm    loading (the cache imported first)...");
+    const warm = await oneConversation(sentences, { cache: blob, kind: "warm" });
+    log("warm    " + (warm.load_ms / 1000).toFixed(2) + " s");
+    runs.push({ ...warm, cache: undefined, cacheLength: 0 });
   }
 
-  pis("protocol...");
-  const protokol = await zkouskyProtokolu();
+  log("protocol...");
+  const protocol = await protocolTests();
 
   return {
-    kde: navigator.userAgent,
+    where: navigator.userAgent,
     isolated: self.crossOriginIsolated === true,
-    behy, protokol,
+    runs, protocol,
   };
 }
 
-let vysledek;
+let result;
 try {
-  vysledek = await main();
+  result = await main();
 } catch (e) {
-  vysledek = { chyba: (e && e.stack) ? e.stack : String(e) };
-  pis("FAILED: " + vysledek.chyba);
+  result = { error: (e && e.stack) ? e.stack : String(e) };
+  log("FAILED: " + result.error);
 }
-await fetch("/vysledek", {
+await fetch("/result", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(vysledek),
+  body: JSON.stringify(result),
 });
 </script>
 </body>

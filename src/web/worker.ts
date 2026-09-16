@@ -38,13 +38,13 @@ import type { PokydCall, PokydRequest } from "./protocol.ts";
    src/web/client.ts needs.  Two members is a cheaper price than a second
    tsconfig. */
 interface WorkerScope {
-  onmessage: ((udalost: { data: unknown }) => void) | null;
-  postMessage(zprava: unknown, prevod?: unknown[]): void;
+  onmessage: ((event: { data: unknown }) => void) | null;
+  postMessage(message: unknown, transfer?: unknown[]): void;
 }
 
-const kontext = globalThis as unknown as WorkerScope;
+const ctx = globalThis as unknown as WorkerScope;
 
-let motor: PokydEngine | null = null;
+let engine: PokydEngine | null = null;
 
 /* -------------------------------------------------------------- the output */
 
@@ -54,36 +54,36 @@ let motor: PokydEngine | null = null;
    and a progress bar that moves more often than the screen refreshes is only
    postMessage traffic.  Whatever was dropped is sent once the request that was
    running finishes, so the last thing the engine said is never lost. */
-const ODSTUP_MS = 60;
+const THROTTLE_MS = 60;
 
-let posledniVystup = 0;
-let zadrzeno: string | null = null;
+let lastOutputAt = 0;
+let held: string | null = null;
 
-function posliVystup(text: string): void {
-  const ted = Date.now();
-  if (ted - posledniVystup < ODSTUP_MS) {
-    zadrzeno = text;
+function sendOutput(text: string): void {
+  const now = Date.now();
+  if (now - lastOutputAt < THROTTLE_MS) {
+    held = text;
     return;
   }
-  posledniVystup = ted;
-  zadrzeno = null;
+  lastOutputAt = now;
+  held = null;
   /* Read the counters at the same instant as the text: during a load this runs
      on this thread from inside pokyd_load_dictionaries(), so they are as current
      as they will ever be. */
-  const stav = motor === null ? { phase: 0, percent: 0 } : motor.progress();
-  kontext.postMessage({
-    kind: "output", text, phase: stav.phase, percent: stav.percent,
+  const state = engine === null ? { phase: 0, percent: 0 } : engine.progress();
+  ctx.postMessage({
+    kind: "output", text, phase: state.phase, percent: state.percent,
   });
 }
 
-function dorovnejVystup(): void {
-  if (zadrzeno === null) return;
-  const text = zadrzeno;
-  zadrzeno = null;
-  posledniVystup = Date.now();
-  const stav = motor === null ? { phase: 0, percent: 0 } : motor.progress();
-  kontext.postMessage({
-    kind: "output", text, phase: stav.phase, percent: stav.percent,
+function flushOutput(): void {
+  if (held === null) return;
+  const text = held;
+  held = null;
+  lastOutputAt = Date.now();
+  const state = engine === null ? { phase: 0, percent: 0 } : engine.progress();
+  ctx.postMessage({
+    kind: "output", text, phase: state.phase, percent: state.percent,
   });
 }
 
@@ -94,34 +94,34 @@ function dorovnejVystup(): void {
    side has just finished with it, and a structured clone of it is a second 18 MB
    that exists for no reason.  3.4 counted three simultaneous copies on a naive
    warm start and phase 4.4 has to live within that. */
-async function vyrid(pozadavek: PokydRequest): Promise<[unknown, unknown[]]> {
-  if (pozadavek.type === "init") {
-    if (motor !== null) throw new Error("init: the engine is already running");
+async function handle(request: PokydRequest): Promise<[unknown, unknown[]]> {
+  if (request.type === "init") {
+    if (engine !== null) throw new Error("init: the engine is already running");
     /* A runtime URL, so bundlers must leave it alone; Vite is told explicitly. */
-    const modul = await import(/* @vite-ignore */ pozadavek.moduleUrl) as
+    const mod = await import(/* @vite-ignore */ request.moduleUrl) as
       { default: PokydModuleFactory };
-    motor = await PokydEngine.create(modul.default, {
-      dataDir: pozadavek.dataDir,
-      onOutput: posliVystup,
+    engine = await PokydEngine.create(mod.default, {
+      dataDir: request.dataDir,
+      onOutput: sendOutput,
     });
     return [null, []];
   }
 
-  const M = motor;
+  const M = engine;
   if (M === null) {
-    throw new Error(pozadavek.type + ": the worker has not been initialised"
+    throw new Error(request.type + ": the worker has not been initialised"
       + " -- send init first");
   }
 
-  switch (pozadavek.type) {
-    case "importCache": M.importCache(pozadavek.blob); return [null, []];
+  switch (request.type) {
+    case "importCache": M.importCache(request.blob); return [null, []];
     case "load":        M.load();                      return [null, []];
-    case "seed":        M.seed(pozadavek.value);       return [null, []];
-    case "say":         return [M.say(pozadavek.text), []];
+    case "seed":        M.seed(request.value);       return [null, []];
+    case "say":         return [M.say(request.text), []];
     case "sentenceCount": return [M.sentenceCount(), []];
     case "getSettings": return [M.getSettings(), []];
-    case "setSettings": M.setSettings(pozadavek.settings); return [null, []];
-    case "setMood":     M.setMood(pozadavek.mood);     return [null, []];
+    case "setSettings": M.setSettings(request.settings); return [null, []];
+    case "setMood":     M.setMood(request.mood);     return [null, []];
     case "progress":    return [M.progress(), []];
     case "dictionaryHash": return [M.dictionaryHash(), []];
     case "exportCache": {
@@ -129,43 +129,43 @@ async function vyrid(pozadavek: PokydRequest): Promise<[unknown, unknown[]]> {
       return blob === null ? [null, []] : [blob, [blob.buffer]];
     }
     case "shutdown": {
-      const neuvolneno = M.shutdown();
-      motor = null;
-      return [neuvolneno, []];
+      const unfreed = M.shutdown();
+      engine = null;
+      return [unfreed, []];
     }
     default: {
       /* Exhaustiveness: if PokydRequest grows a member and this switch does not,
-         `zbylo` stops being assignable to never and the build fails. */
-      const zbylo: never = pozadavek;
-      throw new Error("unknown request: " + JSON.stringify(zbylo));
+         `rest` stops being assignable to never and the build fails. */
+      const rest: never = request;
+      throw new Error("unknown request: " + JSON.stringify(rest));
     }
   }
 }
 
-function popisChyby(e: unknown): string {
+function describeError(e: unknown): string {
   if (e instanceof Error) return e.message;
   return String(e);
 }
 
-async function zpracuj(volani: PokydCall): Promise<void> {
+async function handleCall(call: PokydCall): Promise<void> {
   try {
-    const [vysledek, prevod] = await vyrid(volani.request);
-    kontext.postMessage({ kind: "ok", id: volani.id, result: vysledek }, prevod);
+    const [result, transfer] = await handle(call.request);
+    ctx.postMessage({ kind: "ok", id: call.id, result: result }, transfer);
   } catch (e) {
-    kontext.postMessage({ kind: "error", id: volani.id, message: popisChyby(e) });
+    ctx.postMessage({ kind: "error", id: call.id, message: describeError(e) });
   } finally {
     /* Whatever the throttle swallowed while this request was running -- for a
        load, that is the engine's last word on it. */
-    dorovnejVystup();
+    flushOutput();
   }
 }
 
 /* Strict FIFO.  Messages queue on the event loop anyway while a synchronous load
    holds the thread, but the dispatcher is async and without this chain a request
    whose handler awaits would let the next one start underneath it. */
-let fronta: Promise<void> = Promise.resolve();
+let queue: Promise<void> = Promise.resolve();
 
-kontext.onmessage = (udalost: { data: unknown }): void => {
-  const volani = udalost.data as PokydCall;
-  fronta = fronta.then(() => zpracuj(volani));
+ctx.onmessage = (event: { data: unknown }): void => {
+  const call = event.data as PokydCall;
+  queue = queue.then(() => handleCall(call));
 };

@@ -103,7 +103,7 @@ CXX = "g++"
 #
 # Order of search: POKYD_EMCC, then $EMSDK, then the usual install roots, then
 # PATH as a last resort for whoever does have it activated.
-EMSDK_KORENY = [
+EMSDK_ROOTS = [
     Path("C:/Program Files/emsdk"),
     Path("C:/emsdk"),
     Path.home() / "emsdk",
@@ -121,7 +121,7 @@ WASM = ROOT / "build" / "wasm"
 # The 15 of pokyd_api.h, plus the allocator: the CP1250 boundary in phase 4.1 has
 # to put bytes into the heap itself, because there is no UTF-8 helper that will do
 # it for a code page.  The leading underscore is the C symbol as the linker sees it.
-EXPORTY = [
+EXPORTS = [
     "_pokyd_init", "_pokyd_load_dictionaries", "_pokyd_shutdown", "_pokyd_error",
     "_pokyd_say", "_pokyd_sentence_count", "_pokyd_seed",
     "_pokyd_get_settings", "_pokyd_set_settings", "_pokyd_set_mood",
@@ -142,7 +142,7 @@ WASM_LINK = [
     "-sEXPORT_NAME=PokydModule",
     "-sALLOW_MEMORY_GROWTH=1",
     "-sINVOKE_RUN=0",
-    "-sEXPORTED_FUNCTIONS=" + ",".join(EXPORTY),
+    "-sEXPORTED_FUNCTIONS=" + ",".join(EXPORTS),
     "-sEXPORTED_RUNTIME_METHODS=ccall,cwrap,FS,HEAPU8",
 ]
 
@@ -169,38 +169,38 @@ int main(void) {
 """
 
 
-def najdi_emcc():
+def find_emcc():
     """Locate emcc without requiring it on PATH.  Returns (Path, None) or (None, why)."""
-    prepis = os.environ.get("POKYD_EMCC")
-    if prepis:
-        kandidat = Path(prepis)
-        if kandidat.is_file():
-            return kandidat, None
-        return None, f"POKYD_EMCC is set to {kandidat}, which is not a file"
+    override = os.environ.get("POKYD_EMCC")
+    if override:
+        candidate = Path(override)
+        if candidate.is_file():
+            return candidate, None
+        return None, f"POKYD_EMCC is set to {candidate}, which is not a file"
 
-    koreny = []
+    roots = []
     if os.environ.get("EMSDK"):
-        koreny.append(Path(os.environ["EMSDK"]))
-    koreny += EMSDK_KORENY
-    for koren in koreny:
-        for jmeno in ("emcc.exe", "emcc.bat", "emcc"):
-            kandidat = koren / "upstream" / "emscripten" / jmeno
-            if kandidat.is_file():
-                return kandidat, None
+        roots.append(Path(os.environ["EMSDK"]))
+    roots += EMSDK_ROOTS
+    for root in roots:
+        for name in ("emcc.exe", "emcc.bat", "emcc"):
+            candidate = root / "upstream" / "emscripten" / name
+            if candidate.is_file():
+                return candidate, None
 
-    nalezene = shutil.which("emcc")
-    if nalezene:
-        return Path(nalezene), None
+    found = shutil.which("emcc")
+    if found:
+        return Path(found), None
 
     return None, ("no emcc.  Looked at POKYD_EMCC, $EMSDK, "
-                  + ", ".join(str(k) for k in EMSDK_KORENY) + ", and PATH.\n"
+                  + ", ".join(str(k) for k in EMSDK_ROOTS) + ", and PATH.\n"
                   "Install it with:  git clone https://github.com/emscripten-core/emsdk\n"
                   "then emsdk install latest && emsdk activate latest.  Activating is\n"
                   "enough; it does not have to go on PATH.  Or point POKYD_EMCC straight\n"
                   "at the emcc executable.")
 
 
-def em_prostredi(emcc, verbose):
+def em_environment(emcc, verbose):
     """The environment emcc runs in.  Two variables, both about staying out of the way.
 
     EM_CONFIG pins the .emscripten next to the install rather than whatever a
@@ -211,31 +211,31 @@ def em_prostredi(emcc, verbose):
 
     Both are setdefault, so an activated emsdk keeps its own answers.
     """
-    prostredi = dict(os.environ)
-    koren = emcc.parent.parent.parent          # <emsdk>/upstream/emscripten/emcc
+    env = dict(os.environ)
+    root = emcc.parent.parent.parent          # <emsdk>/upstream/emscripten/emcc
 
-    config = koren / ".emscripten"
+    config = root / ".emscripten"
     if config.is_file():
-        prostredi.setdefault("EM_CONFIG", str(config))
+        env.setdefault("EM_CONFIG", str(config))
 
-    zasoba = emcc.parent / "cache"
+    cache_dir = emcc.parent / "cache"
     try:
-        zkouska = zasoba / ".pokyd-write-test"
-        zkouska.touch()
-        zkouska.unlink()
-        zapisovatelna = True
+        probe = cache_dir / ".pokyd-write-test"
+        probe.touch()
+        probe.unlink()
+        writable = True
     except OSError:
-        zapisovatelna = False
-    if not zapisovatelna:
+        writable = False
+    if not writable:
         EM_CACHE.mkdir(parents=True, exist_ok=True)
-        prostredi.setdefault("EM_CACHE", str(EM_CACHE))
+        env.setdefault("EM_CACHE", str(EM_CACHE))
         if verbose:
-            print(f"  {zasoba} is not writable, EM_CACHE -> {EM_CACHE}")
+            print(f"  {cache_dir} is not writable, EM_CACHE -> {EM_CACHE}")
 
-    return prostredi
+    return env
 
 
-def prelozit_wasm(args):
+def build_wasm(args):
     """Phase 3.2.  Engine + shim + api to a MODULARIZE'd wasm module.
 
     The compile flags are the native ones unchanged: the hazard set is not a g++
@@ -243,16 +243,16 @@ def prelozit_wasm(args):
     x86 g++ defaults to signed and wasm clang does not, so this is the build
     where dropping it silently changes the dictionary checksums (hazard 1).
     """
-    emcc, potiz = najdi_emcc()
+    emcc, why = find_emcc()
     if emcc is None:
-        print(potiz)
+        print(why)
         return 1
     print(f"emcc    {emcc}")
-    prostredi = em_prostredi(emcc, args.verbose)
+    env = em_environment(emcc, args.verbose)
 
     # The preloaded files come from build/run/, under the bare names KONSTANT.K
     # expects.  Same layout the native driver is run in.
-    if priprav_run_adresar():
+    if prepare_run_dir():
         return 1
 
     WASM.mkdir(parents=True, exist_ok=True)
@@ -262,7 +262,7 @@ def prelozit_wasm(args):
     for src in sources:
         obj = WASM / (src.stem + ".o")
         print(f"compiling {src.relative_to(ROOT)}")
-        if run([emcc] + CXXFLAGS + ["-c", src, "-o", obj], args.verbose, prostredi):
+        if run([emcc] + CXXFLAGS + ["-c", src, "-o", obj], args.verbose, env):
             return 1
         objects.append(obj)
 
@@ -283,22 +283,22 @@ def prelozit_wasm(args):
     #
     # Relative names, and the link runs with build/run/ as the working directory,
     # so nothing about this machine's checkout ends up in the output.
-    vlozit = []
-    for jmeno in DATA:
-        vlozit += ["--embed-file", f"{jmeno}@/pokyd/{jmeno}"]
+    embed = []
+    for name in DATA:
+        embed += ["--embed-file", f"{name}@/pokyd/{name}"]
 
-    vystup = WASM / "pokyd.mjs"
-    print(f"linking {vystup.relative_to(ROOT)}  (module PokydModule)")
-    if run([emcc] + objects + HAZARDS + WASM_LINK + vlozit + ["-o", vystup],
-           args.verbose, prostredi, cwd=RUN):
+    out_path = WASM / "pokyd.mjs"
+    print(f"linking {out_path.relative_to(ROOT)}  (module PokydModule)")
+    if run([emcc] + objects + HAZARDS + WASM_LINK + embed + ["-o", out_path],
+           args.verbose, env, cwd=RUN):
         return 1
 
-    print(f"ok -> {vystup}")
+    print(f"ok -> {out_path}")
     print('     data embedded at /pokyd/ -- the module wants pokyd_init("/pokyd")')
     return 0
 
 
-def priprav_run_adresar():
+def prepare_run_dir():
     """Lay out build/run/ -- the working directory the driver is run in.
 
     The engine opens its data files by bare name in the current directory, so
@@ -314,16 +314,16 @@ def priprav_run_adresar():
     same reason.)
     """
     RUN.mkdir(parents=True, exist_ok=True)
-    for jmeno, zdroj in DATA.items():
-        cil = RUN / jmeno
-        if not zdroj.is_file():
-            print(f"missing {zdroj.relative_to(ROOT)}")
+    for name, source in DATA.items():
+        dest = RUN / name
+        if not source.is_file():
+            print(f"missing {source.relative_to(ROOT)}")
             return 1
-        if cil.is_file() and cil.read_bytes() == zdroj.read_bytes():
+        if dest.is_file() and dest.read_bytes() == source.read_bytes():
             continue
-        cil.write_bytes(zdroj.read_bytes())
-        print(f"data    {cil.relative_to(ROOT)}  <- {zdroj.relative_to(ROOT)}")
-        if jmeno == "SLOVNIK.IQP" and (RUN / CACHE).is_file():
+        dest.write_bytes(source.read_bytes())
+        print(f"data    {dest.relative_to(ROOT)}  <- {source.relative_to(ROOT)}")
+        if name == "SLOVNIK.IQP" and (RUN / CACHE).is_file():
             (RUN / CACHE).unlink()
             print(f"        dropped {CACHE}, it was built from the old dictionary")
     return 0
@@ -357,7 +357,7 @@ def main() -> int:
         return 1
 
     if args.wasm:
-        return prelozit_wasm(args)
+        return build_wasm(args)
 
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -387,11 +387,11 @@ def main() -> int:
     print(f"ok -> {exe}")
 
     if entry == "driver":
-        if priprav_run_adresar():
+        if prepare_run_dir():
             return 1
-        prvni = not (RUN / CACHE).is_file()
+        first_run = not (RUN / CACHE).is_file()
         print(f"\nrun it with:  {exe.relative_to(ROOT)} --data {RUN.relative_to(ROOT)}")
-        if prvni:
+        if first_run:
             print("the first run inflects the whole dictionary -- ~5 s, 11,207 words into\n"
                   f"402,252 forms -- and after that {CACHE} makes startup instant")
     return 0

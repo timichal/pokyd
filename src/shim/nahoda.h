@@ -31,7 +31,9 @@
    corpus ever grew one, would be left alone.
 
    This is our code, not the engine's: no engine byte changes, so nothing here
-   belongs in PATCHES.md.  ASCII only, like the rest of src/shim.
+   belongs in PATCHES.md.  English identifiers and ASCII only, like the rest of
+   src/shim -- the file keeps its Czech name because it is where !Prostre/ put
+   this, and the two trees are read side by side.
 */
 
 #ifndef POKYD_SHIM_NAHODA_H
@@ -43,8 +45,8 @@
 extern "C" {
 #endif
 
-void POKYD_ZASEJ(unsigned semeno);
-int POKYD_NAHODA(void);
+void pokyd_srand(unsigned seed);
+int pokyd_rand(void);
 
 #ifdef __cplusplus
 }
@@ -53,7 +55,7 @@ int POKYD_NAHODA(void);
 #undef RAND_MAX
 #define RAND_MAX 0x7fff
 
-#define srand(semeno) POKYD_ZASEJ((unsigned)(semeno))
-#define rand()        POKYD_NAHODA()
+#define srand(seed) pokyd_srand((unsigned)(seed))
+#define rand()        pokyd_rand()
 
 #endif

@@ -52,7 +52,7 @@ import { POKYD_PHASE_DONE } from "./protocol.ts";
 
 /* ------------------------------------------------------- the module as it is */
 
-/* What tools/build.py exports, and nothing more -- the EXPORTY list in that file
+/* What tools/build.py exports, and nothing more -- the EXPORTS list in that file
    is the other half of this interface.  The leading underscore is the C symbol
    as the linker sees it. */
 export interface PokydWasm {
@@ -60,29 +60,29 @@ export interface PokydWasm {
   /* Emscripten's MEMFS, in EXPORTED_RUNTIME_METHODS because tools/build.py
      --embed-file puts the data files in it.  Only dictionaryHash() uses it, and
      only to read; the engine reaches its own files through libc. */
-  FS: { readFile(cesta: string): Uint8Array };
-  _malloc(bajtu: number): number;
-  _free(ukazatel: number): void;
+  FS: { readFile(path: string): Uint8Array };
+  _malloc(n: number): number;
+  _free(ptr: number): void;
 
-  _pokyd_init(adresar: number): number;
+  _pokyd_init(dataDir: number): number;
   _pokyd_load_dictionaries(): number;
   _pokyd_shutdown(): number;
   _pokyd_error(): number;
 
-  _pokyd_say(veta: number): number;
+  _pokyd_say(sentence: number): number;
   _pokyd_sentence_count(): number;
-  _pokyd_seed(semeno: number): void;
+  _pokyd_seed(seed: number): void;
 
-  _pokyd_get_settings(ven: number): void;
-  _pokyd_set_settings(sem: number): void;
-  _pokyd_set_mood(nalada: number): void;
+  _pokyd_get_settings(out: number): void;
+  _pokyd_set_settings(src: number): void;
+  _pokyd_set_mood(mood: number): void;
 
   _pokyd_progress(): number;
   _pokyd_phase(): number;
 
-  _pokyd_export_cache(delka: number): number;
-  _pokyd_import_cache(data: number, delka: number): number;
-  _pokyd_free(blok: number): void;
+  _pokyd_export_cache(len: number): number;
+  _pokyd_import_cache(data: number, len: number): number;
+  _pokyd_free(block: number): void;
 }
 
 /* The default export of build/wasm/pokyd.mjs -- MODULARIZE=1, EXPORT_NAME
@@ -90,7 +90,7 @@ export interface PokydWasm {
    `stdout` and `stderr`, per-character callbacks that Emscripten invokes
    synchronously from inside whatever C call is doing the writing. */
 export type PokydModuleFactory =
-  (volby?: Record<string, unknown>) => Promise<PokydWasm>;
+  (options?: Record<string, unknown>) => Promise<PokydWasm>;
 
 /* ------------------------------------------------------- the settings struct */
 
@@ -98,23 +98,23 @@ export type PokydModuleFactory =
    array of char, so the layout is a running sum: no padding anywhere and no
    alignment to reason about.  Typed against PokydSettings so a misspelled field
    is a compile error rather than a silently wrong offset. */
-const POLE_NASTAVENI: ReadonlyArray<readonly [keyof PokydSettings, number]> = [
-  ["pohlavicloveka", 1], ["pohlavipocitace", 1],
-  ["jmenocloveka", 101], ["jmenopocitace", 101],
-  ["charakter", 1], ["nalada", 1], ["naladabody", 1],
-  ["ukladatrozhovor", 1], ["pouzivatzvuky", 1], ["pouzivatefekty", 1],
-  ["spisovnacestina", 1], ["zobrazovatpopisky", 1],
-  ["debug_rychleukoncovani", 1], ["debug_tolerancepravopisu", 1],
-  ["debug_pravopisnarekurze", 1],
-  ["emulovatklavesnici", 1], ["klavesniceqwerty", 1], ["standardnikurzor", 1],
-  ["prikaz_readonlymod", 1], ["prikaz_nezobrazovatpozadi", 1],
+const SETTINGS_LAYOUT: ReadonlyArray<readonly [keyof PokydSettings, number]> = [
+  ["humanGender", 1], ["computerGender", 1],
+  ["humanName", 101], ["computerName", 101],
+  ["character", 1], ["mood", 1], ["moodPoints", 1],
+  ["saveConversation", 1], ["useSounds", 1], ["useEffects", 1],
+  ["formalCzech", 1], ["showLabels", 1],
+  ["debugFastExit", 1], ["debugSpellingTolerance", 1],
+  ["debugSpellingRecursion", 1],
+  ["emulateKeyboard", 1], ["keyboardQwerty", 1], ["standardCursor", 1],
+  ["cmdReadOnly", 1], ["cmdNoBackground", 1],
 ];
 
-const POSUN: Partial<Record<keyof PokydSettings, number>> = {};
-let VELIKOST_NASTAVENI = 0;
-for (const [jmeno, sirka] of POLE_NASTAVENI) {
-  POSUN[jmeno] = VELIKOST_NASTAVENI;
-  VELIKOST_NASTAVENI += sirka;
+const OFFSET: Partial<Record<keyof PokydSettings, number>> = {};
+let layoutSize = 0;
+for (const [name, width] of SETTINGS_LAYOUT) {
+  OFFSET[name] = layoutSize;
+  layoutSize += width;
 }
 
 /* Two numbers written down rather than derived, so that adding a field to the
@@ -122,10 +122,10 @@ for (const [jmeno, sirka] of POLE_NASTAVENI) {
    module from loading instead of corrupting every setting at once. */
 export const POKYD_SETTINGS_FIELDS = 20;
 export const POKYD_SETTINGS_SIZE = 220;
-if (POLE_NASTAVENI.length !== POKYD_SETTINGS_FIELDS
-    || VELIKOST_NASTAVENI !== POKYD_SETTINGS_SIZE) {
+if (SETTINGS_LAYOUT.length !== POKYD_SETTINGS_FIELDS
+    || layoutSize !== POKYD_SETTINGS_SIZE) {
   throw new Error("src/web/engine.ts: the settings table is "
-    + POLE_NASTAVENI.length + " fields and " + VELIKOST_NASTAVENI
+    + SETTINGS_LAYOUT.length + " fields and " + layoutSize
     + " bytes, but struct pokyd_settings is " + POKYD_SETTINGS_FIELDS
     + " and " + POKYD_SETTINGS_SIZE);
 }
@@ -134,13 +134,13 @@ if (POLE_NASTAVENI.length !== POKYD_SETTINGS_FIELDS
    offsets above immediately after pokyd_init, this is a real check of the
    layout against the engine that produced it -- and the one thing that could
    corrupt every setting at once without any other symptom. */
-const STANDARDNE: ReadonlyArray<readonly [keyof PokydSettings, number]> = [
-  ["pohlavicloveka", 1], ["pohlavipocitace", 1], ["charakter", 3], ["nalada", 3],
-  ["ukladatrozhovor", 1], ["pouzivatzvuky", 1], ["pouzivatefekty", 0],
-  ["spisovnacestina", 0], ["zobrazovatpopisky", 1],
-  ["debug_rychleukoncovani", 0], ["debug_tolerancepravopisu", 1],
-  ["debug_pravopisnarekurze", 11], ["emulovatklavesnici", 0],
-  ["klavesniceqwerty", 1], ["standardnikurzor", 0],
+const DEFAULTS: ReadonlyArray<readonly [keyof PokydSettings, number]> = [
+  ["humanGender", 1], ["computerGender", 1], ["character", 3], ["mood", 3],
+  ["saveConversation", 1], ["useSounds", 1], ["useEffects", 0],
+  ["formalCzech", 0], ["showLabels", 1],
+  ["debugFastExit", 0], ["debugSpellingTolerance", 1],
+  ["debugSpellingRecursion", 11], ["emulateKeyboard", 0],
+  ["keyboardQwerty", 1], ["standardCursor", 0],
 ];
 
 /* --------------------------------------------------------------- the options */
@@ -159,32 +159,32 @@ export interface PokydEngineOptions {
   onOutput?: (text: string) => void;
 }
 
-const VYCHOZI_ADRESAR = "/pokyd";
+const DEFAULT_DATA_DIR = "/pokyd";
 
 /* How much the engine may write between carriage returns before the segment is
    handed over anyway.  Nothing it prints comes close; this exists so that a
    runaway printf cannot grow a buffer without bound. */
-const DELKA_SEGMENTU = 1024;
+const SEGMENT_LIMIT = 1024;
 
 /* --------------------------------------------------------------- the engine */
 
 /* JMENO_ZAKLADNIHO_SLOVNIKU (src/engine/konstant.k:24) -- the base dictionary,
    the file dictionaryHash() identifies the cache by. */
-const JMENO_SLOVNIKU = "SLOVNIK.IQP";
+const DICTIONARY_FILE = "SLOVNIK.IQP";
 
 export class PokydEngine {
   private readonly M: PokydWasm;
-  private readonly drzakVystupu: { fn: ((text: string) => void) | null };
-  private readonly adresar: string;
-  private hashSlovniku: string | null = null;
-  private nacteno = false;
-  private ukonceno = false;
+  private readonly outputHook: { fn: ((text: string) => void) | null };
+  private readonly dataDir: string;
+  private cachedHash: string | null = null;
+  private loaded = false;
+  private closed = false;
 
-  private constructor(M: PokydWasm, drzak: { fn: ((text: string) => void) | null },
-                      adresar: string) {
+  private constructor(M: PokydWasm, hook: { fn: ((text: string) => void) | null },
+                      dataDir: string) {
     this.M = M;
-    this.drzakVystupu = drzak;
-    this.adresar = adresar;
+    this.outputHook = hook;
+    this.dataDir = dataDir;
   }
 
   /* Instantiate the module, install the output hook, run pokyd_init and check
@@ -193,34 +193,34 @@ export class PokydEngine {
      about where the build lives -- node passes a file: URL import, the worker
      passes whatever the page told it. */
   static async create(factory: PokydModuleFactory,
-                      volby: PokydEngineOptions = {}): Promise<PokydEngine> {
-    const drzak: { fn: ((text: string) => void) | null } =
-      { fn: volby.onOutput ?? null };
+                      options: PokydEngineOptions = {}): Promise<PokydEngine> {
+    const hook: { fn: ((text: string) => void) | null } =
+      { fn: options.onOutput ?? null };
 
     /* Segmentation.  CR, LF and BS all mean the same thing here -- the engine is
        about to overwrite the line it just wrote -- so each of them ends a
        segment, and none of them appears in one.  Empty segments are dropped, so
        the five backspaces the base-dictionary reader emits before every
        percentage cost nothing. */
-    const zasobnik = new Uint8Array(DELKA_SEGMENTU);
-    let delka = 0;
-    const vyprazdni = (): void => {
-      if (delka === 0) return;
-      const text = decodeCp1250(zasobnik.subarray(0, delka));
-      delka = 0;
-      const fn = drzak.fn;
+    const buffer = new Uint8Array(SEGMENT_LIMIT);
+    let len = 0;
+    const flush = (): void => {
+      if (len === 0) return;
+      const text = decodeCp1250(buffer.subarray(0, len));
+      len = 0;
+      const fn = hook.fn;
       if (fn) fn(text);
     };
-    const znak = (c: number | null): void => {
+    const putChar = (c: number | null): void => {
       /* 2.7 million calls over a cold load, so the cheapest possible early-out
          when nobody is listening. */
-      if (drzak.fn === null) return;
+      if (hook.fn === null) return;
       if (c === null || c === 0 || c === 13 || c === 10 || c === 8) {
-        vyprazdni();
+        flush();
         return;
       }
-      if (delka === zasobnik.length) vyprazdni();
-      zasobnik[delka++] = c & 0xff;
+      if (len === buffer.length) flush();
+      buffer[len++] = c & 0xff;
     };
 
     /* print/printErr as well as stdout/stderr: the first pair is Emscripten's
@@ -228,24 +228,24 @@ export class PokydEngine {
        writes no newlines for fourteen seconds, but silencing it means an
        unhooked engine cannot flood a console by accident. */
     const M = await factory({
-      stdout: znak, stderr: znak,
+      stdout: putChar, stderr: putChar,
       print: () => { /* superseded by stdout */ },
       printErr: () => { /* superseded by stderr */ },
     });
 
-    const adresar = volby.dataDir ?? VYCHOZI_ADRESAR;
-    const motor = new PokydEngine(M, drzak, adresar);
-    const p = motor.uloz(encodeCp1250Z(adresar));
+    const dataDir = options.dataDir ?? DEFAULT_DATA_DIR;
+    const engine = new PokydEngine(M, hook, dataDir);
+    const p = engine.store(encodeCp1250Z(dataDir));
     try {
       if (M._pokyd_init(p) !== 0) {
-        throw new Error("pokyd_init(" + JSON.stringify(adresar) + "): "
-          + motor.chyba());
+        throw new Error("pokyd_init(" + JSON.stringify(dataDir) + "): "
+          + engine.errorText());
       }
     } finally {
       M._free(p);
     }
-    motor.zkontrolujRozlozeni();
-    return motor;
+    engine.checkLayout();
+    return engine;
   }
 
   /* The module itself, for a test that needs MEMFS or a memory reading.  Nothing
@@ -257,16 +257,16 @@ export class PokydEngine {
      listener, so an engine nobody is watching decodes nothing at all -- which
      matters, because vstup.fu:801-809 prints every base form it recognises on
      every sentence. */
-  set onOutput(fn: ((text: string) => void) | null) { this.drzakVystupu.fn = fn; }
-  get onOutput(): ((text: string) => void) | null { return this.drzakVystupu.fn; }
+  set onOutput(fn: ((text: string) => void) | null) { this.outputHook.fn = fn; }
+  get onOutput(): ((text: string) => void) | null { return this.outputHook.fn; }
 
   /* ------------------------------------------------------------ life cycle */
 
   /* SLOVNIK.TMP, installed before the load looks for it.  After load() this
      would write 18 MB that nothing will ever read, so it throws instead. */
   importCache(blob: Uint8Array): void {
-    this.vyzadujZivy("importCache");
-    this.vyzaduj(!this.nacteno,
+    this.requireAlive("importCache");
+    this.require(!this.loaded,
       "importCache: the dictionary is already loaded, so the cache would not be read");
     if (blob.length === 0) throw new Error("importCache: the blob is empty");
     const p = this.M._malloc(blob.length);
@@ -275,7 +275,7 @@ export class PokydEngine {
     try {
       this.M.HEAPU8.set(blob, p);
       if (this.M._pokyd_import_cache(p, blob.length) !== 0) {
-        throw new Error("pokyd_import_cache: " + this.chyba());
+        throw new Error("pokyd_import_cache: " + this.errorText());
       }
     } finally {
       this.M._free(p);
@@ -283,17 +283,17 @@ export class PokydEngine {
   }
 
   load(): void {
-    this.vyzadujZivy("load");
-    this.vyzaduj(!this.nacteno, "load: already loaded");
+    this.requireAlive("load");
+    this.require(!this.loaded, "load: already loaded");
     if (this.M._pokyd_load_dictionaries() !== 0) {
-      throw new Error("pokyd_load_dictionaries: " + this.chyba());
+      throw new Error("pokyd_load_dictionaries: " + this.errorText());
     }
-    const faze = this.M._pokyd_phase();
-    if (faze !== POKYD_PHASE_DONE) {
+    const phase = this.M._pokyd_phase();
+    if (phase !== POKYD_PHASE_DONE) {
       throw new Error("pokyd_load_dictionaries succeeded but pokyd_phase() is "
-        + faze + ", expected " + POKYD_PHASE_DONE);
+        + phase + ", expected " + POKYD_PHASE_DONE);
     }
-    this.nacteno = true;
+    this.loaded = true;
   }
 
   /* Blocks the engine did not account for; it should be 0.  Nothing works after
@@ -308,18 +308,18 @@ export class PokydEngine {
      the call aborts the whole wasm module.  A load that never happened has
      nothing to tear down anyway: drop the instance, or terminate the worker. */
   shutdown(): number {
-    this.vyzadujZivy("shutdown");
-    this.vyzaduj(this.nacteno,
+    this.requireAlive("shutdown");
+    this.require(this.loaded,
       "shutdown: the dictionary was never loaded, and tearing down a half-built"
       + " engine aborts it (UVOLNI_X(NULL) is fatal -- SKLONOV.FU:1348)."
       + "  Drop the instance instead, or terminate the worker.");
-    this.ukonceno = true;
-    this.nacteno = false;
-    this.drzakVystupu.fn = null;
+    this.closed = true;
+    this.loaded = false;
+    this.outputHook.fn = null;
     return this.M._pokyd_shutdown() >>> 0;
   }
 
-  get isLoaded(): boolean { return this.nacteno; }
+  get isLoaded(): boolean { return this.loaded; }
 
   /* --------------------------------------------------------- conversation */
 
@@ -327,13 +327,13 @@ export class PokydEngine {
      the way out, and the codec is the only thing between the two -- which is
      what test/web/engine.test.ts proves against the golden transcript. */
   say(text: string): string {
-    this.vyzadujZivy("say");
-    this.vyzaduj(this.nacteno, "say: the dictionary is not loaded");
-    const p = this.uloz(encodeCp1250Z(text));
+    this.requireAlive("say");
+    this.require(this.loaded, "say: the dictionary is not loaded");
+    const p = this.store(encodeCp1250Z(text));
     try {
       const q = this.M._pokyd_say(p);
-      if (q === 0) throw new Error("pokyd_say returned NULL: " + this.chyba());
-      return decodeCp1250(this.nactiBajty(q));
+      if (q === 0) throw new Error("pokyd_say returned NULL: " + this.errorText());
+      return decodeCp1250(this.readBytes(q));
     } finally {
       this.M._free(p);
     }
@@ -342,7 +342,7 @@ export class PokydEngine {
   /* g_pocetrecenychvet.  Rules test it, so it is conversation state and not a
      statistic. */
   sentenceCount(): number {
-    this.vyzadujZivy("sentenceCount");
+    this.requireAlive("sentenceCount");
     return this.M._pokyd_sentence_count() >>> 0;
   }
 
@@ -351,8 +351,8 @@ export class PokydEngine {
      Same seed, same conversation, on any toolchain -- src/shim/nahoda.h is what
      makes that true, and test/golden/ is what checks it. */
   seed(value: number): void {
-    this.vyzadujZivy("seed");
-    this.vyzaduj(this.nacteno,
+    this.requireAlive("seed");
+    this.require(this.loaded,
       "seed: seeding before load() does not survive a cold start (SLOVNIK.FU:1732)");
     this.M._pokyd_seed(value >>> 0);
   }
@@ -360,40 +360,40 @@ export class PokydEngine {
   /* ------------------------------------------------------------- settings */
 
   getSettings(): PokydSettings {
-    this.vyzadujZivy("getSettings");
+    this.requireAlive("getSettings");
     const p = this.M._malloc(POKYD_SETTINGS_SIZE);
     if (p === 0) throw new Error("getSettings: out of wasm memory");
     try {
       this.M._pokyd_get_settings(p);
-      return this.prectiNastaveni(p);
+      return this.readSettings(p);
     } finally {
       this.M._free(p);
     }
   }
 
-  /* Copies every field verbatim, naladabody included.  To change the mood rather
-     than restore a saved one, use setMood: nalada is recomputed from naladabody
+  /* Copies every field verbatim, moodPoints included.  To change the mood rather
+     than restore a saved one, use setMood: mood is recomputed from moodPoints
      after every sentence (INTELIG.FU:1047), so writing it here alone is undone. */
-  setSettings(nastaveni: PokydSettings): void {
-    this.vyzadujZivy("setSettings");
+  setSettings(settings: PokydSettings): void {
+    this.requireAlive("setSettings");
     const p = this.M._malloc(POKYD_SETTINGS_SIZE);
     if (p === 0) throw new Error("setSettings: out of wasm memory");
     try {
-      this.zapisNastaveni(p, nastaveni);
+      this.writeSettings(p, settings);
       this.M._pokyd_set_settings(p);
     } finally {
       this.M._free(p);
     }
   }
 
-  /* nalada 1..5, with naladabody recomputed from it -- Nastaveni.cpp:167.  The
+  /* mood 1..5, with moodPoints recomputed from it -- Nastaveni.cpp:167.  The
      engine ignores anything outside 1..5; this says so instead. */
-  setMood(nalada: number): void {
-    this.vyzadujZivy("setMood");
-    if (!Number.isInteger(nalada) || nalada < 1 || nalada > 5) {
-      throw new RangeError("setMood: nalada is 1..5, got " + nalada);
+  setMood(mood: number): void {
+    this.requireAlive("setMood");
+    if (!Number.isInteger(mood) || mood < 1 || mood > 5) {
+      throw new RangeError("setMood: mood is 1..5, got " + mood);
     }
-    this.M._pokyd_set_mood(nalada);
+    this.M._pokyd_set_mood(mood);
   }
 
   /* ------------------------------------------------------------- progress */
@@ -402,34 +402,34 @@ export class PokydEngine {
      callback if you want it during a load -- see PROGRESS in protocol.ts for
      why the percentage is flat through the step that takes the time. */
   progress(): PokydProgress {
-    this.vyzadujZivy("progress");
+    this.requireAlive("progress");
     return { phase: this.M._pokyd_phase(), percent: this.M._pokyd_progress() };
   }
 
   /* ---------------------------------------------------------------- cache */
 
   /* SLOVNIK.TMP as bytes, or null when there is none -- which is normal before a
-     cold load has written one, and always under prikaz_readonlymod.  The copy
+     cold load has written one, and always under cmdReadOnly.  The copy
      handed back is ours; the engine's is freed here. */
   exportCache(): Uint8Array | null {
-    this.vyzadujZivy("exportCache");
-    const pDelka = this.M._malloc(4);
-    if (pDelka === 0) throw new Error("exportCache: out of wasm memory");
+    this.requireAlive("exportCache");
+    const pLen = this.M._malloc(4);
+    if (pLen === 0) throw new Error("exportCache: out of wasm memory");
     try {
-      const blok = this.M._pokyd_export_cache(pDelka);
-      if (blok === 0) return null;
+      const block = this.M._pokyd_export_cache(pLen);
+      if (block === 0) return null;
       try {
         /* unsigned long * is 32 bits little endian on wasm32.  Read off HEAPU8
            rather than HEAPU32 so the module needs only the one view exported. */
         const h = this.M.HEAPU8;
-        const kolik = h[pDelka] | (h[pDelka + 1] << 8) | (h[pDelka + 2] << 16)
-          | (h[pDelka + 3] * 0x1000000);
-        return this.M.HEAPU8.slice(blok, blok + kolik);
+        const n = h[pLen] | (h[pLen + 1] << 8) | (h[pLen + 2] << 16)
+          | (h[pLen + 3] * 0x1000000);
+        return this.M.HEAPU8.slice(block, block + n);
       } finally {
-        this.M._pokyd_free(blok);
+        this.M._pokyd_free(block);
       }
     } finally {
-      this.M._free(pDelka);
+      this.M._free(pLen);
     }
   }
 
@@ -447,91 +447,91 @@ export class PokydEngine {
      the module resolves -- and the answer is cached because it cannot change
      while the module lives. */
   dictionaryHash(): string {
-    this.vyzadujZivy("dictionaryHash");
-    if (this.hashSlovniku !== null) return this.hashSlovniku;
-    const cesta = this.adresar.replace(/\/+$/, "") + "/" + JMENO_SLOVNIKU;
-    let bajty: Uint8Array;
+    this.requireAlive("dictionaryHash");
+    if (this.cachedHash !== null) return this.cachedHash;
+    const path = this.dataDir.replace(/\/+$/, "") + "/" + DICTIONARY_FILE;
+    let bytes: Uint8Array;
     try {
-      bajty = this.M.FS.readFile(cesta);
+      bytes = this.M.FS.readFile(path);
     } catch (e) {
-      throw new Error("dictionaryHash: cannot read " + cesta + " out of MEMFS ("
+      throw new Error("dictionaryHash: cannot read " + path + " out of MEMFS ("
         + (e instanceof Error ? e.message : String(e))
         + ") -- tools/build.py embeds it there with --embed-file");
     }
-    if (bajty.length === 0) {
-      throw new Error("dictionaryHash: " + cesta + " is empty");
+    if (bytes.length === 0) {
+      throw new Error("dictionaryHash: " + path + " is empty");
     }
-    this.hashSlovniku = fnv1a64(bajty);
-    return this.hashSlovniku;
+    this.cachedHash = fnv1a64(bytes);
+    return this.cachedHash;
   }
 
   /* ------------------------------------------------------------- internals */
 
-  private uloz(bajty: Uint8Array): number {
-    const p = this.M._malloc(bajty.length);
-    if (p === 0) throw new Error("out of wasm memory for " + bajty.length + " bytes");
-    this.M.HEAPU8.set(bajty, p);
+  private store(bytes: Uint8Array): number {
+    const p = this.M._malloc(bytes.length);
+    if (p === 0) throw new Error("out of wasm memory for " + bytes.length + " bytes");
+    this.M.HEAPU8.set(bytes, p);
     return p;
   }
 
   /* A NUL-terminated string out of the heap, copied: the engine's own buffer is
      overwritten by the next call, and the heap underneath it can move. */
-  private nactiBajty(p: number): Uint8Array {
-    const halda = this.M.HEAPU8;
-    let konec = p;
-    while (halda[konec] !== 0) konec++;
-    return halda.slice(p, konec);
+  private readBytes(p: number): Uint8Array {
+    const heap = this.M.HEAPU8;
+    let end = p;
+    while (heap[end] !== 0) end++;
+    return heap.slice(p, end);
   }
 
-  private chyba(): string {
+  private errorText(): string {
     const p = this.M._pokyd_error();
-    return p === 0 ? "(no message)" : decodeCp1250(this.nactiBajty(p));
+    return p === 0 ? "(no message)" : decodeCp1250(this.readBytes(p));
   }
 
-  private vyzaduj(podminka: boolean, zprava: string): void {
-    if (!podminka) throw new Error(zprava);
+  private require(cond: boolean, message: string): void {
+    if (!cond) throw new Error(message);
   }
 
-  private vyzadujZivy(co: string): void {
-    if (this.ukonceno) {
-      throw new Error(co + ": the engine has been shut down");
+  private requireAlive(what: string): void {
+    if (this.closed) {
+      throw new Error(what + ": the engine has been shut down");
     }
   }
 
-  private prectiNastaveni(p: number): PokydSettings {
+  private readSettings(p: number): PokydSettings {
     const h = this.M.HEAPU8;
-    const ven: Record<string, number | string> = {};
-    for (const [jmeno, sirka] of POLE_NASTAVENI) {
-      const kde = p + (POSUN[jmeno] as number);
-      ven[jmeno] = sirka === 1 ? h[kde] : decodeCp1250(this.nactiBajty(kde));
+    const out: Record<string, number | string> = {};
+    for (const [name, width] of SETTINGS_LAYOUT) {
+      const at = p + (OFFSET[name] as number);
+      out[name] = width === 1 ? h[at] : decodeCp1250(this.readBytes(at));
     }
-    return ven as unknown as PokydSettings;
+    return out as unknown as PokydSettings;
   }
 
-  private zapisNastaveni(p: number, nastaveni: PokydSettings): void {
+  private writeSettings(p: number, settings: PokydSettings): void {
     const h = this.M.HEAPU8;
     /* The whole struct, not just the fields that changed: pokyd_set_settings
        copies all 220 bytes, so anything left over from a previous malloc would
        go straight into the engine. */
     h.fill(0, p, p + POKYD_SETTINGS_SIZE);
-    for (const [jmeno, sirka] of POLE_NASTAVENI) {
-      const kde = p + (POSUN[jmeno] as number);
-      const hodnota = nastaveni[jmeno];
-      if (sirka === 1) {
-        h[kde] = (hodnota as number) & 0xff;
+    for (const [name, width] of SETTINGS_LAYOUT) {
+      const at = p + (OFFSET[name] as number);
+      const value = settings[name];
+      if (width === 1) {
+        h[at] = (value as number) & 0xff;
         continue;
       }
       /* char[101], so 100 bytes and a terminator.  Truncating on a byte count
          rather than a character count is the right thing for a C array, and
          CP1250 gives one byte per character, so the two agree anyway. */
-      const bajty = encodeCp1250(String(hodnota));
-      const kolik = Math.min(bajty.length, sirka - 1);
-      h.set(bajty.subarray(0, kolik), kde);
-      h[kde + kolik] = 0;
+      const bytes = encodeCp1250(String(value));
+      const n = Math.min(bytes.length, width - 1);
+      h.set(bytes.subarray(0, n), at);
+      h[at + n] = 0;
     }
   }
 
-  private zkontrolujRozlozeni(): void {
+  private checkLayout(): void {
     /* NASTAV_STANDARDNE has just run inside pokyd_init, so what it wrote is
        known.  Reading those defaults back through the offsets above is a real
        check of the table against the engine, and it costs one malloc. */
@@ -540,15 +540,15 @@ export class PokydEngine {
     try {
       this.M._pokyd_get_settings(p);
       const h = this.M.HEAPU8;
-      for (const [jmeno, ocekavano] of STANDARDNE) {
-        const mame = h[p + (POSUN[jmeno] as number)];
-        if (mame !== ocekavano) {
+      for (const [name, expected] of DEFAULTS) {
+        const got = h[p + (OFFSET[name] as number)];
+        if (got !== expected) {
           throw new Error("struct pokyd_settings does not match pokyd_api.h -- "
-            + jmeno + " reads " + mame + ", NASTAV_STANDARDNE wrote " + ocekavano);
+            + name + " reads " + got + ", NASTAV_STANDARDNE wrote " + expected);
         }
       }
-      if (h[p + (POSUN.jmenocloveka as number)] !== 0
-          || h[p + (POSUN.jmenopocitace as number)] !== 0) {
+      if (h[p + (OFFSET.humanName as number)] !== 0
+          || h[p + (OFFSET.computerName as number)] !== 0) {
         throw new Error("struct pokyd_settings: the name fields are not where"
           + " pokyd_api.h says they are");
       }

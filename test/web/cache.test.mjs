@@ -30,224 +30,225 @@
    temp directory every time (test/browser.mjs), so the first visit really is a
    first visit.  No package.json and no driver.
 
-   Written by us, not ported.  ASCII only, like the rest of the non-engine code.
+   Written by us, not ported.  English identifiers and ASCII only, like the rest
+   of the non-engine code.
 */
 
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { KOREN, spustStranku } from "../browser.mjs";
+import { ROOT, runPage } from "../browser.mjs";
 import { fnv1a64, pokydCacheKey, POKYD_CACHE_VERSION } from "../../src/web/cache.ts";
 
-const MODUL = join(KOREN, "build", "wasm", "pokyd.mjs");
-const NATIVNI_CACHE = join(KOREN, "build", "run", "SLOVNIK.TMP");
-const SLOVNIK = join(KOREN, "original", "slovnik.iqp");
+const MODULE_PATH = join(ROOT, "build", "wasm", "pokyd.mjs");
+const NATIVE_CACHE = join(ROOT, "build", "run", "SLOVNIK.TMP");
+const DICT_PATH = join(ROOT, "original", "slovnik.iqp");
 
 /* A warm load may take no longer than this.  It is a very loose bound -- 3.4
    measured 0.11 s and 4.2 measured 0.2 s -- because the point is that it is not
    fifteen seconds, not that it is any particular fraction of a second on a
    machine running a headless browser under a test. */
-const NEJDELSI_TEPLE_NACTENI_MS = 4000;
+const MAX_WARM_LOAD_MS = 4000;
 
 /* And it has to be decisively faster than the cold one, or the cache bought
    nothing.  The measured ratio is about 100x; this asks for 5. */
-const NEJMENSI_ZRYCHLENI = 5;
+const MIN_SPEEDUP = 5;
 
-let poctu = 0;
-let chyby = 0;
+let checks = 0;
+let failures = 0;
 
-function nadpis(text) { console.log("\n" + text); }
+function heading(text) { console.log("\n" + text); }
 
-function ok(co, podminka, detail = "") {
-  poctu++;
-  if (podminka) console.log("  ok    " + co);
+function ok(label, cond, detail = "") {
+  checks++;
+  if (cond) console.log("  ok    " + label);
   else {
-    chyby++;
-    console.log("  FAIL  " + co + (detail ? "\n        " + detail : ""));
+    failures++;
+    console.log("  FAIL  " + label + (detail ? "\n        " + detail : ""));
   }
 }
 
-function rovno(co, mame, ocekavame) {
-  ok(co, Object.is(mame, ocekavame),
-    "got " + JSON.stringify(mame) + ", expected " + JSON.stringify(ocekavame));
+function eq(label, got, expected) {
+  ok(label, Object.is(got, expected),
+    "got " + JSON.stringify(got) + ", expected " + JSON.stringify(expected));
 }
 
-function porovnejPrepis(co, bajty, zlate) {
-  poctu++;
-  const mame = Uint8Array.from(bajty);
+function compareTranscript(label, bytes, golden) {
+  checks++;
+  const got = Uint8Array.from(bytes);
   let i = 0;
-  while (i < mame.length && i < zlate.length && mame[i] === zlate[i]) i++;
-  if (i === mame.length && mame.length === zlate.length) {
-    console.log("  ok    " + co + ": " + mame.length + " bytes, identical");
+  while (i < got.length && i < golden.length && got[i] === golden[i]) i++;
+  if (i === got.length && got.length === golden.length) {
+    console.log("  ok    " + label + ": " + got.length + " bytes, identical");
     return;
   }
-  chyby++;
-  console.log("  FAIL  " + co + ": differs from the golden file");
-  console.log("        " + mame.length + " bytes here, " + zlate.length + " expected");
+  failures++;
+  console.log("  FAIL  " + label + ": differs from the golden file");
+  console.log("        " + got.length + " bytes here, " + golden.length + " expected");
   console.log("        first difference at byte " + i);
-  const nase = Buffer.from(mame).toString("latin1").split("\r\n");
-  const jejich = Buffer.from(zlate).toString("latin1").split("\r\n");
-  const radek = Buffer.from(zlate.subarray(0, i)).toString("latin1").split("\r\n").length;
-  for (let r = Math.max(0, radek - 2); r < Math.min(jejich.length, radek + 1); r++) {
-    if (nase[r] !== jejich[r]) {
-      console.log("        line " + (r + 1) + " golden:  " + JSON.stringify(jejich[r]));
-      console.log("        line " + (r + 1) + " browser: " + JSON.stringify(nase[r]));
+  const ours = Buffer.from(got).toString("latin1").split("\r\n");
+  const theirs = Buffer.from(golden).toString("latin1").split("\r\n");
+  const line = Buffer.from(golden.subarray(0, i)).toString("latin1").split("\r\n").length;
+  for (let r = Math.max(0, line - 2); r < Math.min(theirs.length, line + 1); r++) {
+    if (ours[r] !== theirs[r]) {
+      console.log("        line " + (r + 1) + " golden:  " + JSON.stringify(theirs[r]));
+      console.log("        line " + (r + 1) + " browser: " + JSON.stringify(ours[r]));
     }
   }
 }
 
 /* What every visit has to be true of, cache or no cache.  If these move, the
    cache is not what went wrong. */
-function zkontrolujNavstevu(beh, zlate, vet) {
-  porovnejPrepis(beh.druh + " transcript, through IndexedDB and back", beh.prepis, zlate);
-  rovno(beh.druh + ": pokyd_sentence_count()", beh.poctvet, vet);
-  rovno(beh.druh + ": unfreed blocks", beh.neuvolneno, 0);
-  rovno(beh.druh + ": no storage trouble was reported", beh.zprava.error, null);
+function checkVisit(run, golden, count) {
+  compareTranscript(run.kind + " transcript, through IndexedDB and back", run.transcript, golden);
+  eq(run.kind + ": pokyd_sentence_count()", run.sentence_count, count);
+  eq(run.kind + ": unfreed blocks", run.unfreed, 0);
+  eq(run.kind + ": no storage trouble was reported", run.report.error, null);
   /* The three defaults the golden file was recorded under -- NASTAV_STANDARDNE's
      own, so this is a check on the engine and not on the page. */
-  rovno(beh.druh + ": charakter is still 3 (prumerny) by default",
-    beh.nastaveni.charakter, 3);
-  rovno(beh.druh + ": nalada is 3 (normalni) after setMood",
-    beh.nastaveni.nalada, 3);
-  ok(beh.druh + ": both genders are still 1 by default",
-    beh.nastaveni.pohlavicloveka === 1 && beh.nastaveni.pohlavipocitace === 1,
-    "human " + beh.nastaveni.pohlavicloveka
-    + ", computer " + beh.nastaveni.pohlavipocitace);
+  eq(run.kind + ": character is still 3 (prumerny) by default",
+    run.settings.character, 3);
+  eq(run.kind + ": mood is 3 (normalni) after setMood",
+    run.settings.mood, 3);
+  ok(run.kind + ": both genders are still 1 by default",
+    run.settings.humanGender === 1 && run.settings.computerGender === 1,
+    "human " + run.settings.humanGender
+    + ", computer " + run.settings.computerGender);
 }
 
 async function main() {
-  let viditelne = false;
-  for (const prepinac of process.argv.slice(2)) {
-    if (prepinac === "--head") viditelne = true;
+  let visible = false;
+  for (const arg of process.argv.slice(2)) {
+    if (arg === "--head") visible = true;
     else {
-      console.error("cache.test: unknown option \"" + prepinac + "\"");
+      console.error("cache.test: unknown option \"" + arg + "\"");
       console.error("usage: node test/web/cache.test.mjs [--head]");
       return 2;
     }
   }
 
-  if (!existsSync(MODUL)) {
-    console.error("cache.test: no " + MODUL
+  if (!existsSync(MODULE_PATH)) {
+    console.error("cache.test: no " + MODULE_PATH
       + "\n            build it with: python3 tools/build.py --wasm");
     return 1;
   }
 
-  const zlate = new Uint8Array(
-    readFileSync(join(KOREN, "test", "golden", "rozhovor.txt")));
+  const golden = new Uint8Array(
+    readFileSync(join(ROOT, "test", "golden", "rozhovor.txt")));
 
   /* The key the page must arrive at, computed here from the file on disk.  If
      the browser reports a different one, the engine is not carrying the
      dictionary this checkout holds. */
-  const hashNaDisku = fnv1a64(new Uint8Array(readFileSync(SLOVNIK)));
-  const klicNaDisku = pokydCacheKey(hashNaDisku);
+  const hashOnDisk = fnv1a64(new Uint8Array(readFileSync(DICT_PATH)));
+  const keyOnDisk = pokydCacheKey(hashOnDisk);
 
   /* And what the blob is supposed to be, if there is a native one to ask. */
-  let nativniHash = null;
-  let nativniDelka = 0;
-  if (existsSync(NATIVNI_CACHE)) {
-    const nativni = new Uint8Array(readFileSync(NATIVNI_CACHE));
-    nativniDelka = nativni.length;
-    nativniHash = fnv1a64(nativni);
+  let nativeHash = null;
+  let nativeLength = 0;
+  if (existsSync(NATIVE_CACHE)) {
+    const native = new Uint8Array(readFileSync(NATIVE_CACHE));
+    nativeLength = native.length;
+    nativeHash = fnv1a64(native);
   }
 
-  const { data, url } = await spustStranku({
-    stranka: "test/web/cache.html", viditelne, casovyLimitMs: 240000,
+  const { data, url } = await runPage({
+    page: "test/web/cache.html", visible, timeoutMs: 240000,
   });
-  if (data.chyba) {
-    console.error("\nthe page failed:\n" + data.chyba);
+  if (data.error) {
+    console.error("\nthe page failed:\n" + data.error);
     return 1;
   }
 
-  console.log("where   " + data.kde);
+  console.log("where   " + data.where);
   console.log("page    " + url.replace(/^http:\/\/127\.0\.0\.1:\d+/, ""));
-  console.log("key     " + klicNaDisku);
+  console.log("key     " + keyOnDisk);
 
-  nadpis("the first visit");
+  heading("the first visit");
   ok("the database started empty, so this was a real first visit",
-    data.naZacatku.length === 0,
-    "it already held: " + JSON.stringify(data.naZacatku));
-  rovno("nothing was found", data.cold.zprava.hit, false);
-  rovno("so it inflected the dictionary and saved the result",
-    data.cold.zprava.saved, true);
-  rovno("under the key derived from the dictionary on disk",
-    data.cold.zprava.key, klicNaDisku);
-  rovno("and that is the only record now",
-    JSON.stringify(data.poStudenem), JSON.stringify([klicNaDisku]));
-  console.log("        load " + (data.cold.zprava.loadMs / 1000).toFixed(2)
-    + " s, " + data.cold.zprava.bytes + " bytes stored");
-  zkontrolujNavstevu(data.cold, zlate, data.vety);
+    data.atStart.length === 0,
+    "it already held: " + JSON.stringify(data.atStart));
+  eq("nothing was found", data.cold.report.hit, false);
+  eq("so it inflected the dictionary and saved the result",
+    data.cold.report.saved, true);
+  eq("under the key derived from the dictionary on disk",
+    data.cold.report.key, keyOnDisk);
+  eq("and that is the only record now",
+    JSON.stringify(data.afterCold), JSON.stringify([keyOnDisk]));
+  console.log("        load " + (data.cold.report.loadMs / 1000).toFixed(2)
+    + " s, " + data.cold.report.bytes + " bytes stored");
+  checkVisit(data.cold, golden, data.sentences);
 
-  nadpis("what is in the store");
-  rovno("a new connection sees the same one record",
-    JSON.stringify(data.klicePriDruhemOtevreni), JSON.stringify([klicNaDisku]));
-  ok("the blob came back", data.ulozeny !== null,
-    "get() returned null for " + klicNaDisku);
-  if (data.ulozeny) {
-    if (nativniHash !== null) {
-      rovno("it is the same length as the native SLOVNIK.TMP",
-        data.ulozeny.delka, nativniDelka);
-      rovno("and byte for byte the same file -- fnv1a64 through IndexedDB",
-        data.ulozeny.hash, nativniHash);
+  heading("what is in the store");
+  eq("a new connection sees the same one record",
+    JSON.stringify(data.keysOnReopen), JSON.stringify([keyOnDisk]));
+  ok("the blob came back", data.stored !== null,
+    "get() returned null for " + keyOnDisk);
+  if (data.stored) {
+    if (nativeHash !== null) {
+      eq("it is the same length as the native SLOVNIK.TMP",
+        data.stored.length, nativeLength);
+      eq("and byte for byte the same file -- fnv1a64 through IndexedDB",
+        data.stored.hash, nativeHash);
     } else {
-      ok("it is " + data.ulozeny.delka + " bytes", data.ulozeny.delka > 0);
+      ok("it is " + data.stored.length + " bytes", data.stored.length > 0);
       console.log("        no build/run/SLOVNIK.TMP to compare it against;"
         + " run python3 tools/build.py to make one");
     }
   }
-  rovno("the dictionary hash in the key is the one node computes",
-    data.hashSlovniku, hashNaDisku);
+  eq("the dictionary hash in the key is the one node computes",
+    data.dictHash, hashOnDisk);
 
-  nadpis("the misses");
+  heading("the misses");
   ok("a cache inflected from a different dictionary is not found",
-    data.minulo.jinySlovnik);
+    data.misses.otherDictionary);
   ok("nor one made by a different engine version -- what "
     + "POKYD_CACHE_VERSION=" + JSON.stringify(POKYD_CACHE_VERSION) + " is for",
-    data.minulo.jinaVerze);
+    data.misses.otherVersion);
 
-  nadpis("the return visit");
-  rovno("the stored blob was found and imported", data.warm.zprava.hit, true);
-  rovno("nothing was written a second time", data.warm.zprava.saved, false);
-  rovno("it restored the whole blob", data.warm.zprava.bytes,
-    data.ulozeny ? data.ulozeny.delka : -1);
-  zkontrolujNavstevu(data.warm, zlate, data.vety);
+  heading("the return visit");
+  eq("the stored blob was found and imported", data.warm.report.hit, true);
+  eq("nothing was written a second time", data.warm.report.saved, false);
+  eq("it restored the whole blob", data.warm.report.bytes,
+    data.stored ? data.stored.length : -1);
+  checkVisit(data.warm, golden, data.sentences);
 
   /* The measurement the phase exists for. */
-  const studene = data.cold.zprava.loadMs;
-  const teple = data.warm.zprava.loadMs;
-  console.log("        cold " + (studene / 1000).toFixed(2) + " s -> warm "
-    + (teple / 1000).toFixed(2) + " s  (" + (studene / teple).toFixed(0) + "x)");
-  ok("the warm load took " + teple.toFixed(0) + " ms, which is a page that opens"
-    + " rather than one that thinks", teple < NEJDELSI_TEPLE_NACTENI_MS,
-    "it took " + teple.toFixed(0) + " ms, more than the "
-    + NEJDELSI_TEPLE_NACTENI_MS + " ms this test allows");
-  ok("and it is " + (studene / teple).toFixed(0) + "x faster than inflecting"
-    + " from scratch", studene / teple >= NEJMENSI_ZRYCHLENI,
-    "only " + (studene / teple).toFixed(1) + "x");
+  const coldMs = data.cold.report.loadMs;
+  const warmMs = data.warm.report.loadMs;
+  console.log("        cold " + (coldMs / 1000).toFixed(2) + " s -> warm "
+    + (warmMs / 1000).toFixed(2) + " s  (" + (coldMs / warmMs).toFixed(0) + "x)");
+  ok("the warm load took " + warmMs.toFixed(0) + " ms, which is a page that opens"
+    + " rather than one that thinks", warmMs < MAX_WARM_LOAD_MS,
+    "it took " + warmMs.toFixed(0) + " ms, more than the "
+    + MAX_WARM_LOAD_MS + " ms this test allows");
+  ok("and it is " + (coldMs / warmMs).toFixed(0) + "x faster than inflecting"
+    + " from scratch", coldMs / warmMs >= MIN_SPEEDUP,
+    "only " + (coldMs / warmMs).toFixed(1) + "x");
 
-  nadpis("housekeeping");
-  rovno("a stale key and the live one were both there", data.prorez.pred.length, 2);
-  rovno("pruning dropped the stale one", data.prorez.smazano, 1);
-  rovno("and left the live one alone",
-    JSON.stringify(data.prorez.po), JSON.stringify([klicNaDisku]));
-  rovno("which is still the whole blob", data.prorez.zustalo,
-    data.ulozeny ? data.ulozeny.delka : -1);
+  heading("housekeeping");
+  eq("a stale key and the live one were both there", data.pruning.before.length, 2);
+  eq("pruning dropped the stale one", data.pruning.deleted, 1);
+  eq("and left the live one alone",
+    JSON.stringify(data.pruning.after), JSON.stringify([keyOnDisk]));
+  eq("which is still the whole blob", data.pruning.kept,
+    data.stored ? data.stored.length : -1);
 
   ok("a record whose blob does not match its recorded length was written",
-    data.poskozeny.bylTam);
-  rovno("get() refuses it rather than handing it to the engine",
-    data.poskozeny.vratil, null);
+    data.damaged.wasThere);
+  eq("get() refuses it rather than handing it to the engine",
+    data.damaged.returned, null);
   ok("and throws it away, so the next visit re-inflects instead of looping",
-    data.poskozeny.zbylTam === false);
+    data.damaged.stillThere === false);
 
-  rovno("clear() empties the store", data.poVycisteni.length, 0);
+  eq("clear() empties the store", data.afterClear.length, 0);
   ok("the page was cross-origin isolated, as test/browser.mjs intends",
     data.isolated === true);
 
-  console.log(chyby === 0
-    ? "\nPASS -- " + poctu + " checks.  The second visit costs "
-      + (teple / 1000).toFixed(2) + " s and says the same things as the first."
-    : "\nFAIL -- " + chyby + " of " + poctu + " checks did not hold.");
-  return chyby === 0 ? 0 : 1;
+  console.log(failures === 0
+    ? "\nPASS -- " + checks + " checks.  The second visit costs "
+      + (warmMs / 1000).toFixed(2) + " s and says the same things as the first."
+    : "\nFAIL -- " + failures + " of " + checks + " checks did not hold.");
+  return failures === 0 ? 0 : 1;
 }
 
 process.exit(await main());

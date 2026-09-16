@@ -41,8 +41,11 @@ lands, and every such difference belongs in `PATCHES.md`.
   and `PREVED_Z_WINDOWS_1250_NA_LATIN_2`. The author's "Latin 2" is CP852, the DOS
   codepage, not ISO-8859-2. Those bytes are values from a foreign codepage, not
   characters — leave them escaped. Everything else in the tree is plain readable Czech.
-- **Comments and identifiers stay Czech**, matching the original, so the two trees can
-  be diffed by eye.
+- **Comments and identifiers stay Czech here**, matching the original, so the two
+  trees can be diffed by eye. That rule belongs to this directory alone. Everything
+  else in the repository — `src/shim/`, `src/api/`, `src/driver/`, `src/web/`,
+  `tools/`, `test/` — is ours and is written in English; where one of our names
+  mirrors something of the author's, his name for it is the comment beside it.
 
 ## `src/shim/` — the Win32/MFC surface, replaced
 
@@ -113,10 +116,12 @@ argued in the file's header: text CP1250 cannot hold becomes `?`, which the engi
 NFC-normalized first so decomposed Czech from an Apple keyboard does not silently lose
 its diacritics.
 
-Same house rules as the rest of our code: **ASCII only**, which is why the table is
-spelled in `\uXXXX` escapes and the tests name Czech letters by code point. Exported
-names are English, matching `pokyd_api.h` on the other side of the boundary; local
-names stay Czech like everywhere else.
+Same house rules as the rest of our code: **English identifiers and ASCII only**,
+which is why the table is spelled in `\uXXXX` escapes and the tests name Czech
+letters by code point. `PokydSettings` mirrors `struct pokyd_settings` field for
+field and in the same order — snake_case there because it is C, camelCase here
+because it is TypeScript — with the author's own Czech name in a comment on every
+line, so the two can still be read against each other.
 
 ## `src/api/` — the exported surface
 
@@ -152,9 +157,10 @@ boundary, where the message can say why:
   `SLOVNIK.TMP`, so the file has to be on disk by then. Until phase 3.3 this was
   hazard 10's requirement as well — the two reads had to stay adjacent — and
   `PATCHES.md` 2 retired that argument without changing the rule.
-- **`nalada` is derived, `naladabody` is the state.** Writing `nalada` through
-  `pokyd_set_settings` is undone after the next sentence (`INTELIG.FU:1047`);
-  `pokyd_set_mood` is what the original's own dialog does.
+- **`mood` is derived, `mood_points` is the state.** (`nalada` and `naladabody`
+  in the author's names, which the struct carries in comments.) Writing `mood`
+  through `pokyd_set_settings` is undone after the next sentence
+  (`INTELIG.FU:1047`); `pokyd_set_mood` is what the original's own dialog does.
 - **Shut down only after a load that succeeded.** Found at phase 4.2, the first
   caller to try it any other way. `UVOLNI_VESKEROU_DYNAMICKOU_PAMET` walks
   `g_vetacloveka` calling `Typ_slova::VYMAZ_OBSAH` (`INTELIG.FT:54`), which frees

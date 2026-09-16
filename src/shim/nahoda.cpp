@@ -14,13 +14,13 @@
    PROSTRED.FU's obfuscator and SLOVNIK.FU:1579 both srand() before drawing, but
    a driver that forgets to should still be reproducible rather than merely
    undefined. */
-static unsigned nahodne_semeno = 1;
+static unsigned random_seed = 1;
 
-void POKYD_ZASEJ(unsigned semeno) {
-  nahodne_semeno = semeno;
+void pokyd_srand(unsigned seed) {
+  random_seed = seed;
  }
 
-int POKYD_NAHODA(void) {
-  nahodne_semeno = nahodne_semeno*214013u + 2531011u;
-  return (int)((nahodne_semeno >> 16) & 0x7fff);
+int pokyd_rand(void) {
+  random_seed = random_seed*214013u + 2531011u;
+  return (int)((random_seed >> 16) & 0x7fff);
  }

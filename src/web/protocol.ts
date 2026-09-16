@@ -37,45 +37,48 @@
 
 /* ------------------------------------------------------------------ settings */
 
-/* struct pokyd_settings (src/api/pokyd_api.h), field for field and in the
-   author's own names, so the two can be diffed by eye.  The two char[101] arrays
-   are strings here and CP1250 bytes on the other side of src/web/engine.ts.
+/* struct pokyd_settings (src/api/pokyd_api.h), field for field and in the same
+   order, so the two can still be diffed by eye: snake_case there because it is
+   C, camelCase here because it is TypeScript, and the author's own Czech name
+   in a comment on every line that has one.  The two char[101] arrays are
+   strings here and CP1250 bytes on the other side of src/web/engine.ts.
 
-   nalada and naladabody are both here and they are not redundant: naladabody
-   (0..90) is the state that drifts, nalada (1..5) is recomputed from it after
-   every sentence.  Writing nalada through setSettings does nothing lasting --
+   mood and moodPoints are both here and they are not redundant: moodPoints
+   (0..90) is the state that drifts, mood (1..5) is recomputed from it after
+   every sentence.  Writing mood through setSettings does nothing lasting --
    use setMood, which is what the original's own settings dialog does. */
 export interface PokydSettings {
-  pohlavicloveka: number;              /* 0...muz, 1...zena */
-  pohlavipocitace: number;
-  jmenocloveka: string;                /* at most 100 CP1250 bytes */
-  jmenopocitace: string;
-  charakter: number;                   /* 0 stroj .. 6 vybusny */
-  nalada: number;                      /* 1 vyborna .. 5 hrozna; derived */
-  naladabody: number;                  /* 0..90, the state that drifts */
+  humanGender: number;                 /* pohlavicloveka: 0 male, 1 female */
+  computerGender: number;              /* pohlavipocitace */
+  humanName: string;                   /* jmenocloveka; at most 100 CP1250 bytes */
+  computerName: string;                /* jmenopocitace */
+  character: number;                   /* charakter: 0 machine .. 6 volatile */
+  mood: number;                        /* nalada: 1 best .. 5 worst; derived */
+  moodPoints: number;                  /* naladabody: 0..90, the state that drifts */
 
-  ukladatrozhovor: number;
-  pouzivatzvuky: number;
-  pouzivatefekty: number;
-  spisovnacestina: number;
-  zobrazovatpopisky: number;
+  saveConversation: number;            /* ukladatrozhovor */
+  useSounds: number;                   /* pouzivatzvuky */
+  useEffects: number;                  /* pouzivatefekty */
+  formalCzech: number;                 /* spisovnacestina */
+  showLabels: number;                  /* zobrazovatpopisky */
 
-  debug_rychleukoncovani: number;
-  debug_tolerancepravopisu: number;
-  debug_pravopisnarekurze: number;
+  debugFastExit: number;               /* debug_rychleukoncovani */
+  debugSpellingTolerance: number;      /* debug_tolerancepravopisu */
+  debugSpellingRecursion: number;      /* debug_pravopisnarekurze */
 
-  emulovatklavesnici: number;          /* 0 none, 1 ceska, 2 slovenska */
-  klavesniceqwerty: number;
-  standardnikurzor: number;
+  emulateKeyboard: number;             /* emulovatklavesnici: 0 none, 1 Czech,
+                                          2 Slovak */
+  keyboardQwerty: number;              /* klavesniceqwerty */
+  standardCursor: number;              /* standardnikurzor */
 
-  prikaz_readonlymod: number;          /* 1 = write no files at all */
-  prikaz_nezobrazovatpozadi: number;
+  cmdReadOnly: number;                 /* prikaz_readonlymod: 1 = write no files */
+  cmdNoBackground: number;             /* prikaz_nezobrazovatpozadi */
 }
 
 /* ---------------------------------------------------------------- load phases */
 
 /* The five captions VLAKNO__NACITEJ_JAK_DIVEJ put in the loading window, plus
-   the two states either side of them -- pokyd_api.h's POKYD_FAZE_*, repeated
+   the two states either side of them -- pokyd_api.h's POKYD_PHASE_*, repeated
    here because a page cannot include a C header.
 
    Worth knowing before phase 4.3 draws anything: in a BEZ_PROSTREDI build the
@@ -136,7 +139,7 @@ export interface PokydResultMap {
   setMood: null;
   progress: PokydProgress;
   /* null is not an error: there is no SLOVNIK.TMP before a cold load has
-     finished writing one, and none at all under prikaz_readonlymod. */
+     finished writing one, and none at all when cmdReadOnly is set. */
   exportCache: Uint8Array | null;
   /* Sixteen hex digits, src/web/cache.ts's fnv1a64 over the bytes of
      SLOVNIK.IQP as the engine's MEMFS holds them.  Available from init onwards

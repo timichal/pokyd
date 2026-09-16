@@ -32,7 +32,8 @@
    between the base-dictionary read and the cache read; PATCHES.md 2 removed that,
    and the shape of the API is unchanged by it.
 
-   Written by us, not ported.  ASCII only, like the rest of the non-engine code.
+   Written by us, not ported.  English identifiers and ASCII only, like the rest
+   of the non-engine code.
 */
 
 #ifndef POKYD_API_H
@@ -47,42 +48,50 @@ extern "C" {
 /* A flat mirror of class Nastaveni (src/shim/tridy.h, verbatim from
    !Prostre/IQPokyd.h).  Flat because the class has member functions and a caller
    on the far side of a wasm boundary should not be reading a C++ layout; the
-   field names and comments are the author's so the two can be diffed by eye.
+   fields are the author's, one for one and in his order, so the two can still be
+   diffed by eye.
 
-   nalada and naladabody are both here on purpose and they are not redundant.
-   naladabody (0..90) is the state that actually drifts -- every matched rule
-   nudges it (INTELIG.FU:1046) -- and nalada (1..5) is recomputed from it after
-   every sentence (INTELIG.FU:1047).  So reading both is right, but writing nalada
+   mood and mood_points are both here on purpose and they are not redundant.
+   mood_points (0..90) is the state that actually drifts -- every matched rule
+   nudges it (INTELIG.FU:1046) -- and mood (1..5) is recomputed from it after
+   every sentence (INTELIG.FU:1047).  So reading both is right, but writing mood
    alone does nothing: use pokyd_set_mood, which is what the original's own
-   settings dialog does (!Prostre/Nastaveni.cpp:167). */
+   settings dialog does (!Prostre/Nastaveni.cpp:167).
+
+   The names are ours and English, like everything outside src/engine/; the
+   author's own name for each field is the comment beside it, so the struct and
+   class Nastaveni can still be read against each other line by line. */
 typedef struct pokyd_settings {
-  unsigned char pohlavicloveka;        /* 0...muz, 1...zena */
-  unsigned char pohlavipocitace;
-  char jmenocloveka[101];
-  char jmenopocitace[101];
-  unsigned char charakter;             /* 0 stroj, 1 naivni, 2 klidny, 3 prumerny,
-                                          4 neduverivy, 5 naladovy, 6 vybusny */
-  unsigned char nalada;                /* 1 vyborna .. 5 hrozna; derived, and in
-                                          practice read-only -- see above */
-  unsigned char naladabody;            /* 0..90, the state that drifts */
+  unsigned char human_gender;          /* pohlavicloveka: 0 male, 1 female */
+  unsigned char computer_gender;       /* pohlavipocitace */
+  char human_name[101];                /* jmenocloveka */
+  char computer_name[101];             /* jmenopocitace */
+  unsigned char character;             /* charakter: 0 machine, 1 naive, 2 calm,
+                                          3 average, 4 suspicious, 5 moody,
+                                          6 volatile */
+  unsigned char mood;                  /* nalada: 1 excellent .. 5 awful; derived,
+                                          and in practice read-only -- see above */
+  unsigned char mood_points;           /* naladabody: 0..90, the state that drifts */
 
-  unsigned char ukladatrozhovor;       /* 0...ne, 1...ano */
-  unsigned char pouzivatzvuky;
-  unsigned char pouzivatefekty;
-  unsigned char spisovnacestina;
-  unsigned char zobrazovatpopisky;
+  unsigned char save_conversation;     /* ukladatrozhovor: 0 no, 1 yes */
+  unsigned char use_sounds;            /* pouzivatzvuky */
+  unsigned char use_effects;           /* pouzivatefekty */
+  unsigned char formal_czech;          /* spisovnacestina */
+  unsigned char show_labels;           /* zobrazovatpopisky */
 
-  unsigned char debug_rychleukoncovani;
-  unsigned char debug_tolerancepravopisu;
-  unsigned char debug_pravopisnarekurze;
+  unsigned char debug_fast_exit;             /* debug_rychleukoncovani */
+  unsigned char debug_spelling_tolerance;    /* debug_tolerancepravopisu */
+  unsigned char debug_spelling_recursion;    /* debug_pravopisnarekurze */
 
-  unsigned char emulovatklavesnici;    /* 0...neemulovat, 1...ceskou, 2...slovenskou */
-  unsigned char klavesniceqwerty;
-  unsigned char standardnikurzor;
+  unsigned char emulate_keyboard;      /* emulovatklavesnici: 0 none, 1 Czech,
+                                          2 Slovak */
+  unsigned char keyboard_qwerty;       /* klavesniceqwerty */
+  unsigned char standard_cursor;       /* standardnikurzor */
 
-  unsigned char prikaz_readonlymod;    /* 1 = write no files at all: no SLOVNIK.TMP
-                                          (SLOVNIK.FU:1557), no PROFIL.IQP (:1841) */
-  unsigned char prikaz_nezobrazovatpozadi;
+  unsigned char cmd_read_only;         /* prikaz_readonlymod: 1 = write no files at
+                                          all: no SLOVNIK.TMP (SLOVNIK.FU:1557),
+                                          no PROFIL.IQP (:1841) */
+  unsigned char cmd_no_background;     /* prikaz_nezobrazovatpozadi */
  } pokyd_settings;
 
 /* --------------------------------------------------------------- loading state */
@@ -100,31 +109,31 @@ typedef struct pokyd_settings {
    Phase 4.2 measured what that actually leaves, and it is worse than this
    comment used to predict.  There is no 0..100 three times over: sampled a few
    hundred times across a real cold load, g_procentanacitani takes the values 0
-   and 100 during POKYD_FAZE_SKLONOVANI and nothing in between.  The assignment
+   and 100 during POKYD_PHASE_INFLECTING and nothing in between.  The assignment
    that would give the fourteen-second inflection loop a gradient is
    SLOVNIK.FU:3318, behind the same guard.  What the author put in the #else
    branch instead is a printf of the percentage, so the progress signal in this
    build is the engine's console output and not this counter -- see PROGRESS in
    src/web/protocol.ts. */
-#define POKYD_FAZE_NECINNY       0   /* not loading */
-#define POKYD_FAZE_ZAKLADNI      1   /* "Nacitam zakladni slovnik..."  SLOVNIK.IQP */
-#define POKYD_FAZE_SLOVNI_ZASOBA 2   /* "Nacitam slovni zasobu..."     SLOVNIK.TMP */
-#define POKYD_FAZE_SKLONOVANI    3   /* "Vytvarim slovni zasobu..."    the 4.5 s one */
-#define POKYD_FAZE_INTELIGENCE   4   /* "Nacitam inteligenci..."       IQPOKYD.IQP */
-#define POKYD_FAZE_EXTERNI       5   /* "Nacitam externi data..."      PROFIL.IQP */
-#define POKYD_FAZE_HOTOVO        6   /* loaded */
+#define POKYD_PHASE_IDLE            0   /* not loading */
+#define POKYD_PHASE_BASE_DICTIONARY 1   /* "Nacitam zakladni slovnik..." SLOVNIK.IQP */
+#define POKYD_PHASE_VOCABULARY      2   /* "Nacitam slovni zasobu..."    SLOVNIK.TMP */
+#define POKYD_PHASE_INFLECTING      3   /* "Vytvarim slovni zasobu..."   the 4.5 s one */
+#define POKYD_PHASE_INTELLIGENCE    4   /* "Nacitam inteligenci..."      IQPOKYD.IQP */
+#define POKYD_PHASE_EXTERNAL        5   /* "Nacitam externi data..."     PROFIL.IQP */
+#define POKYD_PHASE_DONE            6   /* loaded */
 
 /* ----------------------------------------------------------------- life cycle */
 
 /* Allocate the globals the engine assumes exist, apply NASTAV_STANDARDNE, and
-   enter `adresar`.  The directory is not a nicety: OTEVRI_SOUBOR opens every data
+   enter `datadir`.  The directory is not a nicety: OTEVRI_SOUBOR opens every data
    file by bare name in the current directory (SLOVNIK.FU:195, the IQPOKYDWINMFC
    != 1 branch), and it has to be writable, because the 17 MB SLOVNIK.TMP is
    written next to them.  NULL means "stay where you are".
 
    Returns 0, or -1 if the directory cannot be entered.  Calling it twice is an
    error and returns -1: the engine's globals are not re-entrant. */
-int pokyd_init(const char *adresar);
+int pokyd_init(const char *datadir);
 
 /* The loading sequence, which is VLAKNO__NACITEJ_JAK_DIVEJ minus the window.
    Returns 0 on success, -1 on failure (pokyd_error() says what).  About 4.5 s and
@@ -172,7 +181,7 @@ const char *pokyd_error(void);
 
    Returns NULL if it is called before pokyd_load_dictionaries succeeded.  A NULL
    sentence is a no-op that hands back the current answer unchanged. */
-const char *pokyd_say(const char *veta_cp1250);
+const char *pokyd_say(const char *sentence_cp1250);
 
 /* g_pocetrecenychvet -- how many sentences have been said to it.  Rules test it,
    so it is conversation state, not a statistic. */
@@ -188,20 +197,20 @@ unsigned long pokyd_sentence_count(void);
    what nudges the mood (:532), so the conversation is a function of this number --
    and, since src/shim/nahoda.h, of nothing else.  Same seed, same conversation, on
    any toolchain.  That is what test/golden/ is for and what 3.3 checks. */
-void pokyd_seed(unsigned long semeno);
+void pokyd_seed(unsigned long seed);
 
 /* ------------------------------------------------------------------- settings */
 
-void pokyd_get_settings(pokyd_settings *ven);
+void pokyd_get_settings(pokyd_settings *out);
 
-/* Copies every field verbatim, naladabody included.  If you are changing the mood
+/* Copies every field verbatim, mood_points included.  If you are changing the mood
    rather than restoring a saved one, call pokyd_set_mood instead, or the change
    will be undone after the next sentence. */
-void pokyd_set_settings(const pokyd_settings *sem);
+void pokyd_set_settings(const pokyd_settings *in);
 
-/* nalada 1..5, and recompute naladabody from it -- Nastaveni.cpp:167.  Values
+/* mood 1..5, and recompute mood_points from it -- Nastaveni.cpp:167.  Values
    outside 1..5 are ignored. */
-void pokyd_set_mood(unsigned char nalada);
+void pokyd_set_mood(unsigned char mood);
 
 /* -------------------------------------------------------------------- progress */
 
@@ -217,9 +226,9 @@ int pokyd_phase(void);
 /* SLOVNIK.TMP, the inflected dictionary, moved in and out as bytes so that phase
    4.4 can keep it in IndexedDB and skip the 4.5 s cold start.
 
-   Export returns a malloc'd copy and writes its length through `delka`; free it
+   Export returns a malloc'd copy and writes its length through `length`; free it
    with pokyd_free.  NULL means there is no cache file -- which is normal before a
-   cold load has finished writing one, and after any run with prikaz_readonlymod.
+   cold load has finished writing one, and after any run with cmd_read_only set.
 
    Import writes the blob to SLOVNIK.TMP.  It must be called after pokyd_init and
    *before* pokyd_load_dictionaries -- not during, and not as an argument to it.
@@ -239,9 +248,9 @@ int pokyd_phase(void);
    version string for the half a dictionary hash cannot see, which is that this
    blob is what the *engine* made of that dictionary.  See POKYD_CACHE_VERSION
    there. */
-unsigned char *pokyd_export_cache(unsigned long *delka);
-int pokyd_import_cache(const unsigned char *data, unsigned long delka);
-void pokyd_free(void *blok);
+unsigned char *pokyd_export_cache(unsigned long *length);
+int pokyd_import_cache(const unsigned char *data, unsigned long length);
+void pokyd_free(void *block);
 
 #ifdef __cplusplus
 }

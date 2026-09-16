@@ -259,8 +259,17 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
 - Line endings are CRLF everywhere and `.gitattributes` pins them. The byte-exactness
   proof in `transcode.py --check` compares files on disk, so a clone that checked out LF
   would fail it.
-- Comments and identifiers in ported/shim code stay in the original's Czech where they
-  mirror original names, so the two can be diffed by eye.
+- **Everything we write is in English** — identifiers, comments, test labels, the lot.
+  The Czech naming of 2005 belongs to `src/engine/`, which is a byte-exact mirror of the
+  original and keeps it; nothing on our side of the line inherits it. Where one of our
+  names does mirror the author's — a `pokyd_settings` field, a `POKYD_PHASE_*` constant —
+  it gets an English name and carries his in a comment on the same line, which is what
+  keeps the two diffable by eye. Two deliberate exceptions, both because they *are* the
+  author's code and not ours: `PRIPRAV_GLOBALY` and `IQ_POKYDE_ODPOVEZ` in
+  `src/api/pokyd_api.cpp`, transplanted verbatim out of the files `BEZ_PROSTREDI` removes,
+  and the `src/shim/` filenames (`nahoda.h`, `prostredi.h`, `tridy.h`), which are where
+  `!Prostre/` put the things they replace. Our own C functions are lower case, so a
+  SHOUTING name in our code is always a call into the engine.
 - **Two commands say whether the engine still answers the way it did.** The native one is
   in `test/golden/README.md`; the wasm one is `node test/wasm/smoke.mjs`, which needs
   `python3 tools/build.py --wasm` first and exits non-zero if anything moved. Run both
@@ -934,7 +943,7 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       `pokyd_export_cache` / `pokyd_import_cache` — plus six that earned their place:
       `pokyd_shutdown` (returns the unfreed-block count, which is the only leak detector
       this code has), `pokyd_error`, `pokyd_seed` (hazard 11, and it has to be callable
-      *after* loading), `pokyd_set_mood` (`nalada` is derived from `naladabody`, so
+      *after* loading), `pokyd_set_mood` (`mood` is derived from `mood_points`, so
       writing it through the settings struct alone is undone after the next sentence —
       `INTELIG.FU:1047`), `pokyd_sentence_count` (rules test `g_pocetrecenychvet`, so it
       is state), `pokyd_phase`, and `pokyd_free`.
@@ -957,7 +966,7 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       it: the author's 0–50 / 50–100 subdivision of the inflection step is
       `g_praveprovadenaakce` 2/3/4 at `SLOVNIK.FU:3260`, `:3329`, `:3340`, all three
       inside `#if IQPOKYDWINMFC == 1`, so in a `BEZ_PROSTREDI` build `g_procentanacitani`
-      runs 0→100 three times over during `POKYD_FAZE_SKLONOVANI`. **4.2 measured that and
+      runs 0→100 three times over during `POKYD_PHASE_INFLECTING`. **4.2 measured that and
       it is worse than predicted** — there is no ramp at all, only 0 and 100 — because
       `SLOVNIK.FU:3318` is behind the same guard. See 4.3.
 - [x] 3.2 **Emscripten build — `python3 tools/build.py --wasm`.** Same script as the native
@@ -1003,7 +1012,7 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       own account anyway.
 
       `src/driver/` is left out of this build: it has a `main()` and this is a library,
-      hence `--no-entry` and `-sINVOKE_RUN=0`. `EXPORTY` is the fifteen of `pokyd_api.h`
+      hence `--no-entry` and `-sINVOKE_RUN=0`. `EXPORTS` is the fifteen of `pokyd_api.h`
       plus `_malloc` and `_free`, which 4.1 needs because no UTF-8 helper will write CP1250
       bytes into the heap on its behalf. The link runs with `build/run/` as its working
       directory so that nothing about this machine's checkout reaches the output — checked,
@@ -1012,7 +1021,7 @@ we learn it now and cheaply. Also gives us a reference binary to diff the wasm b
       Verified in node v24.20.0, imported from the repo root rather than from `build/wasm/`:
       all 17 exports present, `/pokyd/` holds `SLOVNIK.IQP` (90,289 B) and `IQPOKYD.IQP`
       (71,287 B), `pokyd_init("/pokyd")` returns 0 and `pokyd_phase()` reads
-      `POKYD_FAZE_NECINNY`. **No sentence has been said yet** — the module has never been
+      `POKYD_PHASE_IDLE`. **No sentence has been said yet** — the module has never been
       past loading, and `pokyd_load_dictionaries()` has never been called in wasm. That is
       3.3, and until it passes, nothing here is evidence about the engine's answers.
 - [x] 3.3 **Node smoke test — `node test/wasm/smoke.mjs`, and it passes.** The wasm build
@@ -1318,7 +1327,7 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
   — phase 4.2, and `src/README.md` has the table. Read `PROGRESS` at the foot of
   `protocol.ts` before designing anything that shows a loading bar.
 - Running a page in a browser: `test/browser.mjs` serves the repo over loopback, launches
-  headless Chrome or Edge at it, and takes the results back on `POST /vysledek`. It
+  headless Chrome or Edge at it, and takes the results back on `POST /result`. It
   strips the types out of `.ts` on the way through, so a browser imports `src/web/*.ts`
   unbundled at the same specifiers node uses. No driver, no puppeteer, no `package.json`.
 - Engine entry point: `IQ_POKYDE_ODPOVEZ` — `Aplikace/Prostred/PROSTRED.FU:212`, and it is

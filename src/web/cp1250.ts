@@ -34,20 +34,20 @@
      - encodeCp1250(decodeCp1250(b)) === b for every byte sequence
 
    What encode does with text CP1250 cannot hold is a decision, not a fact, and
-   it is ours -- see NEPREVEDITELNE below.
+   it is ours -- see BEST_FIT below.
 
-   Written by us, not ported.  ASCII only, like the rest of the non-engine code;
-   the table is spelled in \u escapes for that reason.  Names on the exported
-   surface are English, matching pokyd_api.h, which is the other half of this
-   boundary.
+   Written by us, not ported.  English identifiers and ASCII only, like the rest
+   of the non-engine code; the table is spelled in \u escapes for that reason.
+   The Czech naming of the 2005 original belongs to src/engine/, which is a
+   byte-exact mirror of it -- nothing on this side of the boundary inherits it.
 */
 
 /* ------------------------------------------------------------------- table */
 
 /* Bytes 0x00-0x7F are US-ASCII and map to themselves; only the top half needs
    spelling out.  Row comments are the byte the row starts at.  For the letters
-   this project actually cares about see CESKA_ABECEDA below, which names them. */
-const HORNI_PULKA =
+   this project actually cares about see CZECH_ALPHABET below, which names them. */
+const UPPER_HALF =
   /* 0x80 */ "\u20ac\u0081\u201a\u0083\u201e\u2026\u2020\u2021" +
   /* 0x88 */ "\u0088\u2030\u0160\u2039\u015a\u0164\u017d\u0179" +
   /* 0x90 */ "\u0090\u2018\u2019\u201c\u201d\u2022\u2013\u2014" +
@@ -67,31 +67,31 @@ const HORNI_PULKA =
 
 /* The whole codepage as one 256-character string, index = byte.  Everything
    else in this file is derived from it. */
-const TABULKA = (() => {
+const TABLE = (() => {
   let s = "";
   for (let b = 0; b < 0x80; b++) s += String.fromCharCode(b);
-  return s + HORNI_PULKA;
+  return s + UPPER_HALF;
 })();
 
 /* Byte -> Unicode code point.  Exported because it is the artifact: anything
    that wants to check our work, or to build its own table, should read this and
    not re-derive it. */
 export const CP1250_TO_UNICODE: readonly number[] =
-  Object.freeze(Array.from(TABULKA, (znak) => znak.charCodeAt(0)));
+  Object.freeze(Array.from(TABLE, (ch) => ch.charCodeAt(0)));
 
 /* Unicode code point -> byte.  A bijection, so this has 256 entries too. */
-const ZPET = new Map<number, number>();
-for (let b = 0; b < 256; b++) ZPET.set(CP1250_TO_UNICODE[b], b);
+const TO_BYTE = new Map<number, number>();
+for (let b = 0; b < 256; b++) TO_BYTE.set(CP1250_TO_UNICODE[b], b);
 
 /* Single-character strings, so decode can build its output without a second
    lookup per byte. */
-const ZNAKY = Array.from(TABULKA);
+const CHARS = Array.from(TABLE);
 
 /* The fifteen accented letters of Czech and their capitals, named rather than
    drawn so this file stays ASCII.  Not used by the codec -- it is documentation
    with a test attached (test/web/cp1250.test.ts re-derives these by hand from
    the alphabet and asserts the table agrees). */
-export const CESKA_ABECEDA: ReadonlyArray<readonly [string, number]> = Object.freeze([
+export const CZECH_ALPHABET: ReadonlyArray<readonly [string, number]> = Object.freeze([
   ["a-acute", 0xe1], ["c-caron", 0xe8], ["d-caron", 0xef], ["e-acute", 0xe9],
   ["e-caron", 0xec], ["i-acute", 0xed], ["n-caron", 0xf2], ["o-acute", 0xf3],
   ["r-caron", 0xf8], ["s-caron", 0x9a], ["t-caron", 0x9d], ["u-acute", 0xfa],
@@ -104,7 +104,7 @@ export const CESKA_ABECEDA: ReadonlyArray<readonly [string, number]> = Object.fr
 
 /* ------------------------------------------------------------------ decode */
 
-const DAVKA = 8192;
+const CHUNK = 8192;
 
 /* CP1250 bytes -> string.  Total: every one of the 256 values has a character,
    so this cannot fail and cannot lose anything.  Accepts a Uint8Array (what the
@@ -113,22 +113,22 @@ const DAVKA = 8192;
 export function decodeCp1250(bytes: Uint8Array | ArrayLike<number>): string {
   const n = bytes.length;
   if (n === 0) return "";
-  if (n <= DAVKA) {
+  if (n <= CHUNK) {
     let out = "";
-    for (let i = 0; i < n; i++) out += ZNAKY[bytes[i] & 0xff];
+    for (let i = 0; i < n; i++) out += CHARS[bytes[i] & 0xff];
     return out;
   }
   /* Chunked for the long ones -- KYDY.TXT (phase 8.1) is the only thing here
      likely to get big, but a transcript grows without bound and string += in a
      tight loop over megabytes is the one way this function could be slow. */
-  const kusy: string[] = [];
-  for (let zacatek = 0; zacatek < n; zacatek += DAVKA) {
-    const konec = Math.min(zacatek + DAVKA, n);
-    let kus = "";
-    for (let i = zacatek; i < konec; i++) kus += ZNAKY[bytes[i] & 0xff];
-    kusy.push(kus);
+  const chunks: string[] = [];
+  for (let start = 0; start < n; start += CHUNK) {
+    const end = Math.min(start + CHUNK, n);
+    let chunk = "";
+    for (let i = start; i < end; i++) chunk += CHARS[bytes[i] & 0xff];
+    chunks.push(chunk);
   }
-  return kusy.join("");
+  return chunks.join("");
 }
 
 /* ------------------------------------------------------------------ encode */
@@ -147,7 +147,7 @@ export const REPLACEMENT_BYTE = 0x3f;
    in 2005 when the user pasted something the codepage did not have -- so this
    is not only the kinder behaviour, it is closer to the original's.  Small on
    purpose: everything else becomes REPLACEMENT_BYTE. */
-const NEPREVEDITELNE = new Map<number, string>([
+const BEST_FIT = new Map<number, string>([
   [0x00f8, "o"],   /* o-slash        */ [0x00d8, "O"],
   [0x00e6, "ae"],  /* ae ligature    */ [0x00c6, "AE"],
   [0x0153, "oe"],  /* oe ligature    */ [0x0152, "OE"],
@@ -167,7 +167,7 @@ export interface EncodeOptions {
    *  single character, and CP1250 has no combining caron.  Without this a
    *  perfectly ordinary word arrives at the engine cut in half. */
   normalize?: boolean;
-  /** Fall back to the unaccented base letter (and to NEPREVEDITELNE) before
+  /** Fall back to the unaccented base letter (and to BEST_FIT) before
    *  giving up on a character.  Default true.  A combining mark that arrives on
    *  its own is all mark and nothing else, so this drops it rather than
    *  substituting -- which is why decomposed text encoded with normalize:false
@@ -182,67 +182,67 @@ export interface EncodeOptions {
 /* Strip the combining marks off one character and see what is left.  "a" with a
    macron becomes "a"; a Greek letter or an emoji becomes nothing, and the caller
    falls through to the replacement byte. */
-function bezZnamenek(znak: string): string {
-  return znak.normalize("NFD").replace(/\p{M}/gu, "");
+function stripMarks(ch: string): string {
+  return ch.normalize("NFD").replace(/\p{M}/gu, "");
 }
 
 /* string -> CP1250 bytes.  Iterates by code point, not by code unit, so an
    emoji outside the BMP costs one replacement byte and not two. */
 export function encodeCp1250(text: string, options?: EncodeOptions): Uint8Array {
-  const normalizuj = options?.normalize !== false;
-  const nejlepsi = options?.bestFit !== false;
-  const nahrada = options?.replacement ?? REPLACEMENT_BYTE;
+  const doNormalize = options?.normalize !== false;
+  const doBestFit = options?.bestFit !== false;
+  const replacementByte = options?.replacement ?? REPLACEMENT_BYTE;
   const fatal = options?.fatal === true;
 
-  const vstup = normalizuj ? text.normalize("NFC") : text;
+  const input = doNormalize ? text.normalize("NFC") : text;
 
   /* Upper bound: one code unit yields at most two bytes (a surrogate pair is
      two code units and yields at most two, so the bound holds there too). */
-  const ven = new Uint8Array(vstup.length * 2);
-  let delka = 0;
-  let pozice = 0;
+  const out = new Uint8Array(input.length * 2);
+  let len = 0;
+  let index = 0;
 
-  for (const znak of vstup) {
-    const bod = znak.codePointAt(0) as number;
-    const primo = ZPET.get(bod);
-    if (primo !== undefined) {
-      ven[delka++] = primo;
-      pozice += znak.length;
+  for (const ch of input) {
+    const cp = ch.codePointAt(0) as number;
+    const direct = TO_BYTE.get(cp);
+    if (direct !== undefined) {
+      out[len++] = direct;
+      index += ch.length;
       continue;
     }
 
-    let hotovo = false;
-    if (nejlepsi) {
-      const nahradni = NEPREVEDITELNE.get(bod) ?? bezZnamenek(znak);
-      if (nahradni !== znak) {
+    let done = false;
+    if (doBestFit) {
+      const substitute = BEST_FIT.get(cp) ?? stripMarks(ch);
+      if (substitute !== ch) {
         /* Only if the whole of it fits -- a half-converted character is worse
            than a clean separator. */
-        const bajty: number[] = [];
-        let lze = true;
-        for (const z of nahradni) {
-          const b = ZPET.get(z.codePointAt(0) as number);
-          if (b === undefined) { lze = false; break; }
-          bajty.push(b);
+        const bytes: number[] = [];
+        let fits = true;
+        for (const z of substitute) {
+          const b = TO_BYTE.get(z.codePointAt(0) as number);
+          if (b === undefined) { fits = false; break; }
+          bytes.push(b);
         }
-        if (lze) {
-          for (const b of bajty) ven[delka++] = b;
-          hotovo = true;
+        if (fits) {
+          for (const b of bytes) out[len++] = b;
+          done = true;
         }
       }
     }
 
-    if (!hotovo) {
+    if (!done) {
       if (fatal) {
         throw new RangeError(
-          "encodeCp1250: U+" + bod.toString(16).toUpperCase().padStart(4, "0") +
-          " at index " + pozice + " has no CP1250 representation");
+          "encodeCp1250: U+" + cp.toString(16).toUpperCase().padStart(4, "0") +
+          " at index " + index + " has no CP1250 representation");
       }
-      ven[delka++] = nahrada & 0xff;
+      out[len++] = replacementByte & 0xff;
     }
-    pozice += znak.length;
+    index += ch.length;
   }
 
-  return ven.subarray(0, delka);
+  return out.subarray(0, len);
 }
 
 /* ----------------------------------------------------------------- helpers */
@@ -250,11 +250,11 @@ export function encodeCp1250(text: string, options?: EncodeOptions): Uint8Array 
 /* Whether a single character survives the trip without substitution.  Takes a
    character rather than a code point because that is what a caller validating
    an input field has. */
-export function canEncode(znak: string): boolean {
-  if (znak.length === 0) return false;
-  const bod = znak.codePointAt(0) as number;
-  if (String.fromCodePoint(bod) !== znak) return false;   /* more than one char */
-  return ZPET.has(bod);
+export function canEncode(ch: string): boolean {
+  if (ch.length === 0) return false;
+  const cp = ch.codePointAt(0) as number;
+  if (String.fromCodePoint(cp) !== ch) return false;   /* more than one char */
+  return TO_BYTE.has(cp);
 }
 
 /* The same question for a whole string, NFC and all: does encoding it lose
@@ -273,9 +273,9 @@ export function isEncodable(text: string, options?: EncodeOptions): boolean {
    straight into wasm memory.  Kept here rather than there so there is exactly
    one place that knows how a sentence becomes bytes. */
 export function encodeCp1250Z(text: string, options?: EncodeOptions): Uint8Array {
-  const telo = encodeCp1250(text, options);
-  const ven = new Uint8Array(telo.length + 1);
-  ven.set(telo);
-  ven[telo.length] = 0;
-  return ven;
+  const body = encodeCp1250(text, options);
+  const out = new Uint8Array(body.length + 1);
+  out.set(body);
+  out[body.length] = 0;
+  return out;
 }

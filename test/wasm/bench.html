@@ -18,7 +18,8 @@
   isolation the bench server sends and which is the only per-tab figure a browser
   will hand over.
 
-  Written by us, not ported.  ASCII only, like the rest of the non-engine code.
+  Written by us, not ported.  English identifiers and ASCII only, like the
+  rest of the non-engine code.
 -->
 <style>
   body { background: #111; color: #ddd; font: 14px/1.5 Consolas, monospace;
@@ -29,48 +30,48 @@
   th:first-child, td:first-child { text-align: left; }
   th { color: #888; font-weight: normal; border-bottom: 1px solid #333; }
   .ok { color: #9c9; } .fail { color: #c99; }
-  #stav { color: #cc9; }
+  #statusEl { color: #cc9; }
 </style>
 
 <h1>IQ Pokyd 0.15 &mdash; WebAssembly start-up cost (PLAN.md 3.4)</h1>
-<p id="stav">starting...</p>
-<div id="tabulka"></div>
+<p id="statusEl">starting...</p>
+<div id="tableEl"></div>
 
 <script type="module">
-import { zmer } from "./bench-core.mjs";
+import { measure } from "./bench-core.mjs";
 
-const parametry = new URLSearchParams(location.search);
-const OPAKOVANI = parseInt(parametry.get("n") || "1", 10);
-const HLUK = parametry.get("noise") === "1";
+const params = new URLSearchParams(location.search);
+const REPEATS = parseInt(params.get("n") || "1", 10);
+const NOISE = params.get("noise") === "1";
 
-const stav = document.getElementById("stav");
-function rekni(text) { stav.textContent = text; }
+const statusEl = document.getElementById("statusEl");
+function say(text) { statusEl.textContent = text; }
 
 function mb(b) { return b === null || b === undefined ? "--" : (b / 1048576).toFixed(1) + " MB"; }
 
-async function bajty(cesta) {
-  const odpoved = await fetch(cesta, { cache: "no-store" });
-  if (!odpoved.ok) throw new Error(cesta + ": " + odpoved.status);
-  return new Uint8Array(await odpoved.arrayBuffer());
+async function fetchBytes(path) {
+  const response = await fetch(path, { cache: "no-store" });
+  if (!response.ok) throw new Error(path + ": " + response.status);
+  return new Uint8Array(await response.arrayBuffer());
 }
 
-function na_vety(vstup) {
+function toSentences(input) {
   /* The driver's own loop: strip the CR, drop empty lines (mfcDlg.cpp:556),
      keep every other byte as it lies.  CP1250 in, CP1250 out, no decoding. */
-  const vety = [];
-  let zacatek = 0;
-  for (let i = 0; i <= vstup.length; i++) {
-    if (i === vstup.length || vstup[i] === 0x0a) {
-      let konec = i;
-      while (konec > zacatek && vstup[konec - 1] === 0x0d) konec--;
-      if (konec > zacatek) vety.push(vstup.slice(zacatek, konec));
-      zacatek = i + 1;
+  const sentences = [];
+  let start = 0;
+  for (let i = 0; i <= input.length; i++) {
+    if (i === input.length || input[i] === 0x0a) {
+      let end = i;
+      while (end > start && input[end - 1] === 0x0d) end--;
+      if (end > start) sentences.push(input.slice(start, end));
+      start = i + 1;
     }
   }
-  return vety;
+  return sentences;
 }
 
-async function pamet_tabu() {
+async function tabMemory() {
   /* Chrome only, and only when crossOriginIsolated -- which is what the bench
      server's Cross-Origin-Opener/Embedder-Policy headers are for.  It may take
      a few seconds: the browser waits for a garbage collection before it
@@ -85,92 +86,92 @@ async function pamet_tabu() {
 }
 
 async function main() {
-  rekni("fetching the module and the golden conversation...");
+  say("fetching the module and the golden conversation...");
   const { default: PokydModule } = await import("../../build/wasm/pokyd.mjs");
-  const vety = na_vety(await bajty("../golden/rozhovor.in"));
-  const zlate = await bajty("../golden/rozhovor.txt");
+  const sentences = toSentences(await fetchBytes("../golden/rozhovor.in"));
+  const golden = await fetchBytes("../golden/rozhovor.txt");
 
-  const behy = [];
+  const runs = [];
   let blob = null;
 
-  for (const studeny of [true, false]) {
-    for (let i = 0; i < OPAKOVANI; i++) {
-      if (!studeny && blob === null) break;
-      rekni((studeny ? "cold" : "warm") + " run " + (i + 1) + " of " + OPAKOVANI
-        + (studeny ? " -- inflecting 11,207 words, this is the 14 s one..." : "..."));
+  for (const cold of [true, false]) {
+    for (let i = 0; i < REPEATS; i++) {
+      if (!cold && blob === null) break;
+      say((cold ? "cold" : "warm") + " run " + (i + 1) + " of " + REPEATS
+        + (cold ? " -- inflecting 11,207 words, this is the 14 s one..." : "..."));
       /* A turn of the event loop first, so the status above is painted before a
          synchronous load freezes the tab -- which it does, and phase 4.2's
          worker is the answer to that. */
       await new Promise((a) => setTimeout(a, 50));
 
-      const beh = await zmer(PokydModule, {
-        vety, zlate, hluk: HLUK,
-        cache: studeny ? null : blob,
-        vyvez: studeny && blob === null,
-        /* At the peak, not after the run: by the time zmer returns, the module
+      const run = await measure(PokydModule, {
+        sentences, golden, noise: NOISE,
+        cache: cold ? null : blob,
+        want_cache: cold && blob === null,
+        /* At the peak, not after the run: by the time measure returns, the module
            is shut down and what it measures is the residue.  This is the whole
            tab with the dictionary loaded, which is what the plan is asking. */
-        sonda: async () => ({
-          tab: await pamet_tabu(),
+        probe: async () => ({
+          tab: await tabMemory(),
           js: performance.memory ? performance.memory.usedJSHeapSize : null,
         }),
       });
-      if (beh.cache) blob = beh.cache;
-      behy.push({
-        druh: studeny ? "cold" : "warm",
-        host: beh.host && beh.host.tab !== null ? beh.host.tab
-              : (beh.host ? beh.host.js : null),
-        tab: beh.host ? beh.host.tab : null,
-        js: beh.host ? beh.host.js : null,
-        nacitani_ms: beh.nacitani_ms, odpovedi_ms: beh.odpovedi_ms,
-        cas_modulu: beh.cas_modulu, cas_importu: beh.cas_importu,
-        cas_exportu: beh.cas_exportu, pamet: beh.pamet, memfs: beh.memfs,
-        neuvolneno: beh.neuvolneno, poctvet: beh.poctvet,
-        prepis_sedi: beh.prepis_sedi,
+      if (run.cache) blob = run.cache;
+      runs.push({
+        kind: cold ? "cold" : "warm",
+        host: run.host && run.host.tab !== null ? run.host.tab
+              : (run.host ? run.host.js : null),
+        tab: run.host ? run.host.tab : null,
+        js: run.host ? run.host.js : null,
+        load_ms: run.load_ms, answers_ms: run.answers_ms,
+        module_ms: run.module_ms, import_ms: run.import_ms,
+        export_ms: run.export_ms, memory: run.memory, memfs: run.memfs,
+        unfreed: run.unfreed, sentence_count: run.sentence_count,
+        transcript_matches: run.transcript_matches,
       });
-      vykresli(behy);
+      render(runs);
     }
   }
 
   /* The headline tab figure is the cold run's, taken while it was loaded. */
-  const tab = behy.length ? behy[0].tab : null;
-  vykresli(behy, tab);
+  const tab = runs.length ? runs[0].tab : null;
+  render(runs, tab);
 
-  const chyby = behy.filter((b) => b.prepis_sedi === false || b.neuvolneno !== 0).length;
-  rekni(chyby === 0
+  const failures = runs.filter((b) => b.transcript_matches === false || b.unfreed !== 0).length;
+  say(failures === 0
     ? "done -- every run reproduced test/golden/rozhovor.txt and freed every block."
-    : "done -- " + chyby + " run(s) did not reproduce the golden transcript.");
+    : "done -- " + failures + " run(s) did not reproduce the golden transcript.");
 
   /* Back to node, which is what launched this and what prints the table that
      goes in PLAN.md.  Failing to report is not fatal: the page is readable. */
   try {
-    await fetch("/vysledek", {
+    await fetch("/result", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ behy, tab, kde: navigator.userAgent }),
+      body: JSON.stringify({ runs, tab, where: navigator.userAgent }),
     });
   } catch (e) { /* opened by hand, with nobody listening */ }
 }
 
-function vykresli(behy, tab) {
-  const radky = behy.map((b) => `<tr>
-    <td>${b.druh}</td>
-    <td>${b.nacitani_ms.toFixed(0)}</td>
-    <td>${b.odpovedi_ms.toFixed(1)}</td>
-    <td>${mb(b.pamet.po_nacteni)}</td>
+function render(runs, tab) {
+  const rows = runs.map((b) => `<tr>
+    <td>${b.kind}</td>
+    <td>${b.load_ms.toFixed(0)}</td>
+    <td>${b.answers_ms.toFixed(1)}</td>
+    <td>${mb(b.memory.after_load)}</td>
     <td>${mb(b.memfs)}</td>
     <td>${mb(b.js)}</td>
     <td>${mb(b.tab)}</td>
-    <td class="${b.prepis_sedi && b.neuvolneno === 0 ? "ok" : "fail"}">${
-      b.prepis_sedi === false ? "DIFFERS"
-        : b.neuvolneno !== 0 ? "leaked " + b.neuvolneno : "identical"}</td>
+    <td class="${b.transcript_matches && b.unfreed === 0 ? "ok" : "fail"}">${
+      b.transcript_matches === false ? "DIFFERS"
+        : b.unfreed !== 0 ? "leaked " + b.unfreed : "identical"}</td>
   </tr>`).join("");
 
-  document.getElementById("tabulka").innerHTML = `
+  document.getElementById("tableEl").innerHTML = `
     <table>
       <tr><th>run</th><th>load ms</th><th>answers ms</th><th>wasm heap</th>
           <th>memfs</th><th>js heap</th><th>tab</th><th>transcript</th></tr>
-      ${radky}
+      ${rows}
     </table>
     ${tab ? "<p>tab total, per measureUserAgentSpecificMemory(): <b>" + mb(tab)
             + "</b></p>" : ""}
@@ -179,11 +180,11 @@ function vykresli(behy, tab) {
 }
 
 main().catch((e) => {
-  rekni("FAILED: " + (e && e.message ? e.message : e));
+  say("FAILED: " + (e && e.message ? e.message : e));
   console.error(e);
-  fetch("/vysledek", {
+  fetch("/result", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chyba: String(e && e.stack || e) }),
+    body: JSON.stringify({ error: String(e && e.stack || e) }),
   }).catch(() => {});
 });
 </script>

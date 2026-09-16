@@ -46,38 +46,38 @@ import {
 import { PokydEngine } from "../../src/web/engine.ts";
 import type { PokydModuleFactory } from "../../src/web/engine.ts";
 
-const KOREN = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const MODUL = join(KOREN, "build", "wasm", "pokyd.mjs");
-const SLOVNIK = join(KOREN, "original", "slovnik.iqp");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const MODULE_PATH = join(ROOT, "build", "wasm", "pokyd.mjs");
+const DICT_PATH = join(ROOT, "original", "slovnik.iqp");
 
 /* ------------------------------------------------------------- the scoreboard */
 
-let poctu = 0;
-let chyby = 0;
+let checks = 0;
+let failures = 0;
 
-function nadpis(text: string): void {
+function heading(text: string): void {
   console.log("\n" + text);
 }
 
-function ok(co: string, podminka: boolean, detail = ""): void {
-  poctu++;
-  if (podminka) {
-    console.log("  ok    " + co);
+function ok(what: string, cond: boolean, detail = ""): void {
+  checks++;
+  if (cond) {
+    console.log("  ok    " + what);
   } else {
-    chyby++;
-    console.log("  FAIL  " + co + (detail ? "\n        " + detail : ""));
+    failures++;
+    console.log("  FAIL  " + what + (detail ? "\n        " + detail : ""));
   }
 }
 
-function rovno(co: string, mame: unknown, ocekavame: unknown): void {
-  ok(co, Object.is(mame, ocekavame),
-    "got " + JSON.stringify(mame) + ", expected " + JSON.stringify(ocekavame));
+function eq(what: string, got: unknown, expected: unknown): void {
+  ok(what, Object.is(got, expected),
+    "got " + JSON.stringify(got) + ", expected " + JSON.stringify(expected));
 }
 
-function bajty(text: string): Uint8Array {
-  const ven = new Uint8Array(text.length);
-  for (let i = 0; i < text.length; i++) ven[i] = text.charCodeAt(i) & 0xff;
-  return ven;
+function bytesOf(text: string): Uint8Array {
+  const out = new Uint8Array(text.length);
+  for (let i = 0; i < text.length; i++) out[i] = text.charCodeAt(i) & 0xff;
+  return out;
 }
 
 /* ------------------------------------------------------------------ the hash */
@@ -93,7 +93,7 @@ function bajty(text: string): Uint8Array {
    that carries wrong once in a while cannot survive it -- and every other check
    in this file and the browser's would still pass if it did, because they all
    ask the same broken function. */
-const VEKTORY: ReadonlyArray<readonly [string, string]> = [
+const VECTORS: ReadonlyArray<readonly [string, string]> = [
   ["", "cbf29ce484222325"],
   ["a", "af63dc4c8601ec8c"],
   ["b", "af63df4c8601f1a5"],
@@ -102,94 +102,94 @@ const VEKTORY: ReadonlyArray<readonly [string, string]> = [
   ["hello world", "779a65e7023cd2e7"],
 ];
 
-const HASH_SLOVNIKU = "a620640e93e20cf3";
+const DICT_HASH = "a620640e93e20cf3";
 
-function zkouskyHashe(): void {
-  nadpis("fnv1a64");
-  for (const [vstup, cekano] of VEKTORY) {
-    rovno("FNV-1a 64 of " + JSON.stringify(vstup), fnv1a64(bajty(vstup)), cekano);
+function hashTests(): void {
+  heading("fnv1a64");
+  for (const [input, expected] of VECTORS) {
+    eq("FNV-1a 64 of " + JSON.stringify(input), fnv1a64(bytesOf(input)), expected);
   }
 
   /* Every byte value, so no lane of the hand-split multiply goes unexercised by
      a high bit.  Computed the same way as the vectors above. */
-  const vsech256 = new Uint8Array(256);
-  for (let i = 0; i < 256; i++) vsech256[i] = i;
-  rovno("FNV-1a 64 of all 256 byte values in order",
-    fnv1a64(vsech256), "4242dc5249c33625");
+  const allBytes = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) allBytes[i] = i;
+  eq("FNV-1a 64 of all 256 byte values in order",
+    fnv1a64(allBytes), "4242dc5249c33625");
 
   ok("the digest is always sixteen hex digits",
-    VEKTORY.every(([v]) => /^[0-9a-f]{16}$/.test(fnv1a64(bajty(v)))));
+    VECTORS.every(([v]) => /^[0-9a-f]{16}$/.test(fnv1a64(bytesOf(v)))));
 
-  const slovnik = new Uint8Array(readFileSync(SLOVNIK));
-  rovno("original/slovnik.iqp is still " + slovnik.length + " bytes",
-    slovnik.length, 90289);
-  rovno("FNV-1a 64 of original/slovnik.iqp, against Python's own arithmetic",
-    fnv1a64(slovnik), HASH_SLOVNIKU);
+  const dict = new Uint8Array(readFileSync(DICT_PATH));
+  eq("original/slovnik.iqp is still " + dict.length + " bytes",
+    dict.length, 90289);
+  eq("FNV-1a 64 of original/slovnik.iqp, against Python's own arithmetic",
+    fnv1a64(dict), DICT_HASH);
 
   /* One byte different is a different key -- which is the only property the
      whole scheme rests on. */
-  const zmeneny = slovnik.slice();
-  zmeneny[Math.floor(zmeneny.length / 2)] ^= 0x01;
+  const flipped = dict.slice();
+  flipped[Math.floor(flipped.length / 2)] ^= 0x01;
   ok("one flipped bit anywhere in the dictionary changes the hash",
-    fnv1a64(zmeneny) !== fnv1a64(slovnik),
-    "both hashed to " + fnv1a64(slovnik));
+    fnv1a64(flipped) !== fnv1a64(dict),
+    "both hashed to " + fnv1a64(dict));
 
   /* A view into a larger buffer must hash as itself.  engine.ts hands over
      whatever MEMFS gives it, and Emscripten's FS.readFile has handed back a
      subarray of a larger allocation before now. */
-  const podklad = new Uint8Array(64);
-  podklad.set(bajty("hello world"), 16);
-  rovno("a subarray hashes as its own bytes, not its buffer's",
-    fnv1a64(podklad.subarray(16, 27)), "779a65e7023cd2e7");
+  const backing = new Uint8Array(64);
+  backing.set(bytesOf("hello world"), 16);
+  eq("a subarray hashes as its own bytes, not its buffer's",
+    fnv1a64(backing.subarray(16, 27)), "779a65e7023cd2e7");
 }
 
 /* ------------------------------------------------------------------- the key */
 
-function zkouskyKlice(): void {
-  nadpis("the cache key");
+function keyTests(): void {
+  heading("the cache key");
 
-  rovno("it is format, version and dictionary, in that order",
-    pokydCacheKey(HASH_SLOVNIKU, "1"), "pokyd/1/" + HASH_SLOVNIKU);
-  rovno("the version defaults to POKYD_CACHE_VERSION",
-    pokydCacheKey(HASH_SLOVNIKU), "pokyd/" + POKYD_CACHE_VERSION + "/" + HASH_SLOVNIKU);
+  eq("it is format, version and dictionary, in that order",
+    pokydCacheKey(DICT_HASH, "1"), "pokyd/1/" + DICT_HASH);
+  eq("the version defaults to POKYD_CACHE_VERSION",
+    pokydCacheKey(DICT_HASH), "pokyd/" + POKYD_CACHE_VERSION + "/" + DICT_HASH);
 
   ok("a different dictionary is a different key",
-    pokydCacheKey(HASH_SLOVNIKU) !== pokydCacheKey("0000000000000000"));
+    pokydCacheKey(DICT_HASH) !== pokydCacheKey("0000000000000000"));
   ok("a different engine version is a different key -- what the dictionary hash"
     + " cannot see",
-    pokydCacheKey(HASH_SLOVNIKU, "1") !== pokydCacheKey(HASH_SLOVNIKU, "2"));
+    pokydCacheKey(DICT_HASH, "1") !== pokydCacheKey(DICT_HASH, "2"));
 }
 
 /* ----------------------------------------------------------------- the store */
 
-async function zkouskySkladu(): Promise<void> {
-  nadpis("the store where there is no IndexedDB");
+async function storeTests(): Promise<void> {
+  heading("the store where there is no IndexedDB");
 
-  rovno("node 24 really has no indexedDB, so this is the case being tested",
+  eq("node 24 really has no indexedDB, so this is the case being tested",
     typeof (globalThis as { indexedDB?: unknown }).indexedDB, "undefined");
 
-  const sklad = new PokydCacheStore();
-  let zprava = "(it resolved)";
+  const store = new PokydCacheStore();
+  let message = "(it resolved)";
   try {
-    await sklad.open();
+    await store.open();
   } catch (e) {
-    zprava = e instanceof Error ? e.message : String(e);
+    message = e instanceof Error ? e.message : String(e);
   }
   ok("open() rejects with an Error that says what is missing",
-    zprava.indexOf("IndexedDB") >= 0, "it said: " + JSON.stringify(zprava));
+    message.indexOf("IndexedDB") >= 0, "it said: " + JSON.stringify(message));
 
   /* And it must keep saying so.  A remembered failed promise would turn one
      unavailable database into a permanently poisoned store. */
-  let podruhe = "(it resolved)";
+  let again = "(it resolved)";
   try {
-    await sklad.get("pokyd/1/whatever");
+    await store.get("pokyd/1/whatever");
   } catch (e) {
-    podruhe = e instanceof Error ? e.message : String(e);
+    again = e instanceof Error ? e.message : String(e);
   }
-  rovno("and again on the next call, rather than a stale rejected promise",
-    podruhe, zprava);
+  eq("and again on the next call, rather than a stale rejected promise",
+    again, message);
 
-  rovno("the database it would have opened", POKYD_CACHE_DB, "iq-pokyd");
+  eq("the database it would have opened", POKYD_CACHE_DB, "iq-pokyd");
 }
 
 /* ------------------------------------------------------------- the sequence */
@@ -197,7 +197,7 @@ async function zkouskySkladu(): Promise<void> {
 /* startCached() is orchestration -- six calls in an order pokyd_api.h fixes, a
    lookup, and two try/catch blocks -- and every interesting thing about it is a
    branch that a real run does not take.  Quota exhaustion, a database that will
-   not open, prikaz_readonlymod, ignoreStored: taking those through a real engine
+   not open, cmdReadOnly, ignoreStored: taking those through a real engine
    costs a fifteen-second cold load each, and the engine is not what is being
    asked about.
 
@@ -207,138 +207,138 @@ async function zkouskySkladu(): Promise<void> {
    test/web/cache.test.mjs, in Chrome.  Neither of these two is worth much
    without the other. */
 
-interface Hovor { co: string; s?: unknown }
+interface Call { what: string; s?: unknown }
 
-function nahradniKlient(volby: { cache?: Uint8Array | null } = {}) {
-  const hovory: Hovor[] = [];
-  const klient = {
-    init: async () => { hovory.push({ co: "init" }); return null; },
-    setSettings: async (s: unknown) => { hovory.push({ co: "setSettings", s }); return null; },
-    setMood: async (m: number) => { hovory.push({ co: "setMood", s: m }); return null; },
-    dictionaryHash: async () => { hovory.push({ co: "dictionaryHash" }); return HASH_SLOVNIKU; },
+function fakeClient(options: { cache?: Uint8Array | null } = {}) {
+  const calls: Call[] = [];
+  const client = {
+    init: async () => { calls.push({ what: "init" }); return null; },
+    setSettings: async (s: unknown) => { calls.push({ what: "setSettings", s }); return null; },
+    setMood: async (m: number) => { calls.push({ what: "setMood", s: m }); return null; },
+    dictionaryHash: async () => { calls.push({ what: "dictionaryHash" }); return DICT_HASH; },
     importCache: async (b: Uint8Array, t?: boolean) => {
-      hovory.push({ co: "importCache", s: { delka: b.length, transfer: t } });
+      calls.push({ what: "importCache", s: { length: b.length, transfer: t } });
       return null;
     },
-    load: async () => { hovory.push({ co: "load" }); return null; },
-    seed: async (n: number) => { hovory.push({ co: "seed", s: n }); return null; },
+    load: async () => { calls.push({ what: "load" }); return null; },
+    seed: async (n: number) => { calls.push({ what: "seed", s: n }); return null; },
     exportCache: async () => {
-      hovory.push({ co: "exportCache" });
-      return volby.cache === undefined ? new Uint8Array(8) : volby.cache;
+      calls.push({ what: "exportCache" });
+      return options.cache === undefined ? new Uint8Array(8) : options.cache;
     },
   };
-  return { klient, hovory };
+  return { client, calls };
 }
 
-function nahradniSklad(volby: { ulozeny?: Uint8Array | null;
-                                selzeCteni?: boolean;
-                                selzeZapis?: boolean } = {}) {
-  const hovory: Hovor[] = [];
-  const sklad = {
+function fakeStore(options: { stored?: Uint8Array | null;
+                                failRead?: boolean;
+                                failWrite?: boolean } = {}) {
+  const calls: Call[] = [];
+  const store = {
     get: async (k: string) => {
-      hovory.push({ co: "get", s: k });
-      if (volby.selzeCteni) throw new Error("the database would not open");
-      return volby.ulozeny ?? null;
+      calls.push({ what: "get", s: k });
+      if (options.failRead) throw new Error("the database would not open");
+      return options.stored ?? null;
     },
     put: async (k: string, b: Uint8Array) => {
-      hovory.push({ co: "put", s: { k, delka: b.length } });
-      if (volby.selzeZapis) throw new Error("QuotaExceededError");
+      calls.push({ what: "put", s: { k, length: b.length } });
+      if (options.failWrite) throw new Error("QuotaExceededError");
     },
-    pruneExcept: async (k: string) => { hovory.push({ co: "pruneExcept", s: k }); return 2; },
+    pruneExcept: async (k: string) => { calls.push({ what: "pruneExcept", s: k }); return 2; },
   };
-  return { sklad, hovory };
+  return { store, calls };
 }
 
-async function zkouskyPoradi(): Promise<void> {
+async function sequenceTests(): Promise<void> {
   const { startCached } = await import("../../src/web/cache.ts");
   /* The two stubs stand in for a PokydClient and a PokydCacheStore; neither is
      structurally assignable, because both real classes have private state. */
-  const jako = (x: unknown) => x as never;
+  const castTo = (x: unknown) => x as never;
 
-  nadpis("startCached: a cold visit");
+  heading("startCached: a cold visit");
   {
-    const { klient, hovory } = nahradniKlient({ cache: new Uint8Array(1000) });
-    const { sklad, hovory: skladHovory } = nahradniSklad();
-    const z = await startCached(jako(klient),
-      jako({ store: sklad, mood: 3, seed: 20050415 }));
+    const { client, calls } = fakeClient({ cache: new Uint8Array(1000) });
+    const { store, calls: storeCalls } = fakeStore();
+    const report = await startCached(castTo(client),
+      castTo({ store: store, mood: 3, seed: 20050415 }));
 
-    rovno("the calls, in pokyd_api.h's order",
-      hovory.map((h) => h.co).join(" "),
+    eq("the calls, in pokyd_api.h's order",
+      calls.map((h) => h.what).join(" "),
       "init setMood dictionaryHash load seed exportCache");
     ok("the cache was looked for before the load",
-      skladHovory[0].co === "get");
-    rovno("nothing was found, so it was a miss", z.hit, false);
-    rovno("and what came out was written for next time", z.saved, true);
-    rovno("under the dictionary's own key", z.key,
-      "pokyd/" + POKYD_CACHE_VERSION + "/" + HASH_SLOVNIKU);
-    rovno("older keys were pruned", z.pruned, 2);
-    rovno("no storage trouble to report", z.error, null);
+      storeCalls[0].what === "get");
+    eq("nothing was found, so it was a miss", report.hit, false);
+    eq("and what came out was written for next time", report.saved, true);
+    eq("under the dictionary's own key", report.key,
+      "pokyd/" + POKYD_CACHE_VERSION + "/" + DICT_HASH);
+    eq("older keys were pruned", report.pruned, 2);
+    eq("no storage trouble to report", report.error, null);
   }
 
-  nadpis("startCached: a return visit");
+  heading("startCached: a return visit");
   {
-    const ulozeny = new Uint8Array(4096);
-    const { klient, hovory } = nahradniKlient();
-    const { sklad } = nahradniSklad({ ulozeny });
-    const z = await startCached(jako(klient), jako({ store: sklad, seed: 1 }));
+    const stored = new Uint8Array(4096);
+    const { client, calls } = fakeClient();
+    const { store } = fakeStore({ stored });
+    const report = await startCached(castTo(client), castTo({ store: store, seed: 1 }));
 
-    rovno("the stored blob is imported before the load, never after",
-      hovory.map((h) => h.co).join(" "),
+    eq("the stored blob is imported before the load, never after",
+      calls.map((h) => h.what).join(" "),
       "init dictionaryHash importCache load seed");
-    rovno("it is transferred rather than cloned -- 18 MB not copied",
-      JSON.stringify(hovory[2].s), JSON.stringify({ delka: 4096, transfer: true }));
-    rovno("a hit", z.hit, true);
-    rovno("and nothing is written back", z.saved, false);
-    rovno("the size it restored", z.bytes, 4096);
+    eq("it is transferred rather than cloned -- 18 MB not copied",
+      JSON.stringify(calls[2].s), JSON.stringify({ length: 4096, transfer: true }));
+    eq("a hit", report.hit, true);
+    eq("and nothing is written back", report.saved, false);
+    eq("the size it restored", report.bytes, 4096);
   }
 
-  nadpis("startCached: when the storage will not cooperate");
+  heading("startCached: when the storage will not cooperate");
   {
-    const { klient, hovory } = nahradniKlient({ cache: new Uint8Array(64) });
-    const { sklad } = nahradniSklad({ selzeCteni: true });
-    const z = await startCached(jako(klient), jako({ store: sklad }));
+    const { client, calls } = fakeClient({ cache: new Uint8Array(64) });
+    const { store } = fakeStore({ failRead: true });
+    const report = await startCached(castTo(client), castTo({ store: store }));
     ok("a database that will not open still lets the engine load",
-      hovory.some((h) => h.co === "load"));
-    rovno("it is simply a miss", z.hit, false);
+      calls.some((h) => h.what === "load"));
+    eq("it is simply a miss", report.hit, false);
     ok("and the failure is reported rather than thrown",
-      z.error !== null && z.error.message.indexOf("would not open") >= 0,
-      "the report said: " + String(z.error));
+      report.error !== null && report.error.message.indexOf("would not open") >= 0,
+      "the report said: " + String(report.error));
   }
   {
-    const { klient } = nahradniKlient({ cache: new Uint8Array(64) });
-    const { sklad } = nahradniSklad({ selzeZapis: true });
-    const z = await startCached(jako(klient), jako({ store: sklad }));
-    rovno("a full quota does not fail the visit, it only slows the next one",
-      z.saved, false);
-    ok("and it says so", z.error !== null
-      && z.error.message.indexOf("Quota") >= 0,
-      "the report said: " + String(z.error));
+    const { client } = fakeClient({ cache: new Uint8Array(64) });
+    const { store } = fakeStore({ failWrite: true });
+    const report = await startCached(castTo(client), castTo({ store: store }));
+    eq("a full quota does not fail the visit, it only slows the next one",
+      report.saved, false);
+    ok("and it says so", report.error !== null
+      && report.error.message.indexOf("Quota") >= 0,
+      "the report said: " + String(report.error));
   }
   {
-    /* prikaz_readonlymod: the engine wrote no SLOVNIK.TMP, so there is nothing
+    /* cmdReadOnly: the engine wrote no SLOVNIK.TMP, so there is nothing
        to keep.  That is not a failure and must not be reported as one. */
-    const { klient } = nahradniKlient({ cache: null });
-    const { sklad, hovory } = nahradniSklad();
-    const z = await startCached(jako(klient), jako({ store: sklad }));
-    rovno("an engine that wrote no cache saves nothing", z.saved, false);
-    rovno("and that is not an error", z.error, null);
-    ok("nothing was written", !hovory.some((h) => h.co === "put"));
+    const { client } = fakeClient({ cache: null });
+    const { store, calls } = fakeStore();
+    const report = await startCached(castTo(client), castTo({ store: store }));
+    eq("an engine that wrote no cache saves nothing", report.saved, false);
+    eq("and that is not an error", report.error, null);
+    ok("nothing was written", !calls.some((h) => h.what === "put"));
   }
 
-  nadpis("startCached: the two switches");
+  heading("startCached: the two switches");
   {
-    const { klient } = nahradniKlient({ cache: new Uint8Array(32) });
-    const { sklad, hovory } = nahradniSklad({ ulozeny: new Uint8Array(99) });
-    const z = await startCached(jako(klient), jako({ store: sklad, ignoreStored: true }));
-    ok("ignoreStored does not even look", !hovory.some((h) => h.co === "get"));
-    rovno("but it still saves what it made", z.saved, true);
+    const { client } = fakeClient({ cache: new Uint8Array(32) });
+    const { store, calls } = fakeStore({ stored: new Uint8Array(99) });
+    const report = await startCached(castTo(client), castTo({ store: store, ignoreStored: true }));
+    ok("ignoreStored does not even look", !calls.some((h) => h.what === "get"));
+    eq("but it still saves what it made", report.saved, true);
   }
   {
-    const { klient } = nahradniKlient({ cache: new Uint8Array(32) });
-    const { sklad, hovory } = nahradniSklad();
-    const z = await startCached(jako(klient), jako({ store: sklad, doNotSave: true }));
-    ok("doNotSave leaves nothing behind", !hovory.some((h) => h.co === "put"));
-    rovno("and reports that it did not", z.saved, false);
+    const { client } = fakeClient({ cache: new Uint8Array(32) });
+    const { store, calls } = fakeStore();
+    const report = await startCached(castTo(client), castTo({ store: store, doNotSave: true }));
+    ok("doNotSave leaves nothing behind", !calls.some((h) => h.what === "put"));
+    eq("and reports that it did not", report.saved, false);
   }
 }
 
@@ -352,21 +352,21 @@ async function zkouskyPoradi(): Promise<void> {
    Note what is *not* done here: no pokyd_load_dictionaries, and therefore no
    pokyd_shutdown either, which would abort the module outright (engine.ts says
    why at shutdown()).  The instance is dropped instead. */
-async function zkouskyMotoru(): Promise<void> {
-  nadpis("the dictionary the engine is holding");
+async function engineTests(): Promise<void> {
+  heading("the dictionary the engine is holding");
 
   const { default: factory } =
-    await import(pathToFileURL(MODUL).href) as { default: PokydModuleFactory };
-  const motor = await PokydEngine.create(factory);
+    await import(pathToFileURL(MODULE_PATH).href) as { default: PokydModuleFactory };
+  const engine = await PokydEngine.create(factory);
 
-  const hash = motor.dictionaryHash();
-  rovno("PokydEngine.dictionaryHash() reads SLOVNIK.IQP out of MEMFS",
-    hash, HASH_SLOVNIKU);
+  const hash = engine.dictionaryHash();
+  eq("PokydEngine.dictionaryHash() reads SLOVNIK.IQP out of MEMFS",
+    hash, DICT_HASH);
   ok("which is the same file tools/build.py embedded from original/slovnik.iqp",
-    hash === fnv1a64(new Uint8Array(readFileSync(SLOVNIK))));
-  rovno("asking twice gives the same answer", motor.dictionaryHash(), hash);
-  rovno("and it is what the IndexedDB key will be built from",
-    pokydCacheKey(hash), "pokyd/" + POKYD_CACHE_VERSION + "/" + HASH_SLOVNIKU);
+    hash === fnv1a64(new Uint8Array(readFileSync(DICT_PATH))));
+  eq("asking twice gives the same answer", engine.dictionaryHash(), hash);
+  eq("and it is what the IndexedDB key will be built from",
+    pokydCacheKey(hash), "pokyd/" + POKYD_CACHE_VERSION + "/" + DICT_HASH);
 }
 
 /* ------------------------------------------------------------------- the run */
@@ -379,26 +379,26 @@ async function main(): Promise<number> {
   }
 
   console.log("node    " + process.version);
-  console.log("dict    " + SLOVNIK);
+  console.log("dict    " + DICT_PATH);
 
-  zkouskyHashe();
-  zkouskyKlice();
-  await zkouskySkladu();
-  await zkouskyPoradi();
+  hashTests();
+  keyTests();
+  await storeTests();
+  await sequenceTests();
 
-  if (existsSync(MODUL)) {
-    console.log("\nmodule  " + MODUL);
-    await zkouskyMotoru();
+  if (existsSync(MODULE_PATH)) {
+    console.log("\nmodule  " + MODULE_PATH);
+    await engineTests();
   } else {
-    console.log("\nno " + MODUL + " -- skipping the engine checks");
+    console.log("\nno " + MODULE_PATH + " -- skipping the engine checks");
     console.log("build it with: python3 tools/build.py --wasm");
   }
 
-  console.log(chyby === 0
-    ? "\nPASS -- " + poctu + " checks.  The key names the dictionary the engine"
+  console.log(failures === 0
+    ? "\nPASS -- " + checks + " checks.  The key names the dictionary the engine"
       + " is actually holding."
-    : "\nFAIL -- " + chyby + " of " + poctu + " checks did not hold.");
-  return chyby === 0 ? 0 : 1;
+    : "\nFAIL -- " + failures + " of " + checks + " checks did not hold.");
+  return failures === 0 ? 0 : 1;
 }
 
 process.exit(await main());

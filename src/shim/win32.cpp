@@ -7,8 +7,8 @@
 #include "win32.h"
 #include "conio.h"
 
-int MessageBox(HWND /*okno*/, const char *text, const char *titulek, unsigned /*typ*/) {
-  fprintf(stderr, "\n%s\n%s\n", titulek ? titulek : "", text ? text : "");
+int MessageBox(HWND /*window*/, const char *text, const char *title, unsigned /*type*/) {
+  fprintf(stderr, "\n%s\n%s\n", title ? title : "", text ? text : "");
   fflush(stderr);
   return IDCANCEL;   /* see win32.h: nobody is here to press OK */
  }
@@ -16,8 +16,8 @@ int MessageBox(HWND /*okno*/, const char *text, const char *titulek, unsigned /*
 void Sleep(unsigned long /*ms*/) {
  }
 
-DWORD GetModuleFileName(void * /*modul*/, char *cesta, DWORD velikost) {
-  if (velikost > 0) cesta[0] = 0;
+DWORD GetModuleFileName(void * /*module*/, char *path, DWORD size) {
+  if (size > 0) path[0] = 0;
   return 0;
  }
 

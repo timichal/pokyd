@@ -26,13 +26,13 @@ I = ord('I')
 Q = ord('Q')
 
 
-def dekodovany_znak(c):
+def decoded_byte(c):
     """DEKODOVANY_ZNAK from Slovnik/SLOVNIK.PR."""
     return ((c ^ K) - K) & 0xFF
 
 
 class Checksums:
-    """Kontrolni soucet 1 and 2, per Specifik/Binarni/ZAKLSLOV.TXT."""
+    """KONTROLNI_SOUCET 1 and 2, per Specifik/Binarni/ZAKLSLOV.TXT."""
 
     def __init__(self):
         self.s1 = 0
@@ -49,23 +49,24 @@ def decode(data):
     header = data[:p].decode('cp1250')
     p += 1
 
-    # A run of random padding "pro zmateni hackera", length stored ^ 'I'.
-    pocetzbytecnosti = data[p] ^ I
-    p += 1 + pocetzbytecnosti
+    # A run of random padding (the author's "pro zmateni hackera" -- to confuse
+    # a cracker), its length stored ^ 'I'.  g_pocetzbytecnosti.
+    padding_len = data[p] ^ I
+    p += 1 + padding_len
 
-    klic = data[p] ^ I          # nahodnykodovaciklic
+    key = data[p] ^ I           # g_nahodnykodovaciklic
     p += 1
 
     h = bytearray(data[p:p + 10])
     p += 10
     for i in range(8):
-        h[i] = ((h[i] - klic) & 0xFF) ^ K
+        h[i] = ((h[i] - key) & 0xFF) ^ K
 
     meta = {
         'signature': h[0],      # must be 1 for a base dictionary
         'version': (h[1], h[2]),
         'data_version': h[3],
-        'kodovaci_znak': h[4],
+        'coding_byte': h[4],
         'count': (h[5] << 16) | (h[6] << 8) | h[7],
         'header_checksums': (h[8], h[9]),
     }
@@ -81,46 +82,46 @@ def decode(data):
         while True:
             c = data[p]
             p += 1
-            v = (((c ^ Q) - I) & 0xFF) ^ klic
+            v = (((c ^ Q) - I) & 0xFF) ^ key
             ck.feed(v)
             if v == 255:
                 p += 2          # embedded checkpoint checksums; skip and retry
                 continue
             break
-        stejnacast = v
+        shared = v          # g_stejnacast
 
         c = data[p]
         p += 1
-        delkaslova = (((c ^ Q) - I) & 0xFF) ^ klic
-        ck.feed(delkaslova)
+        word_len = (((c ^ Q) - I) & 0xFF) ^ key    # g_delkaslova
+        ck.feed(word_len)
 
-        buf = bytearray(prev[:stejnacast])
-        while len(buf) < stejnacast:
+        buf = bytearray(prev[:shared])
+        while len(buf) < shared:
             buf.append(0)
 
-        poz1, poz2 = 2, stejnacast
+        pos1, pos2 = 2, shared
         while True:
-            if poz2 == delkaslova:
+            if pos2 == word_len:
                 # The ':' separating word from info is implicit in the stream.
-                while len(buf) <= poz2:
+                while len(buf) <= pos2:
                     buf.append(0)
-                buf[poz2] = ((ord(':') + K) ^ K) & 0xFF
-                poz2 += 1
+                buf[pos2] = ((ord(':') + K) ^ K) & 0xFF
+                pos2 += 1
             c = data[p]
             p += 1
-            v = ((((((c ^ stejnacast) - poz1) & 0xFF) ^ Q) - I) & 0xFF) ^ klic
+            v = ((((((c ^ shared) - pos1) & 0xFF) ^ Q) - I) & 0xFF) ^ key
             ck.feed(v)
-            while len(buf) <= poz2:
+            while len(buf) <= pos2:
                 buf.append(0)
-            buf[poz2] = v
-            poz1 += 1
-            poz2 += 1
+            buf[pos2] = v
+            pos1 += 1
+            pos2 += 1
             if v == 0:
                 break
 
-        entry = bytes(buf[:poz2 - 1])
-        prev = entry[:delkaslova]
-        entries.append(bytes(dekodovany_znak(b) for b in entry))
+        entry = bytes(buf[:pos2 - 1])
+        prev = entry[:word_len]
+        entries.append(bytes(decoded_byte(b) for b in entry))
 
     meta['trailing_checksums'] = (data[p], data[p + 1])
     meta['checksums_ok'] = (data[p] == ck.s1 and data[p + 1] == ck.s2)

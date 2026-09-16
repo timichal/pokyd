@@ -47,7 +47,7 @@ The engine's, from `tools/build.py`, minus the C++ and MFC ones:
                         it does not compile as C++ at all.
 -fsigned-char           Hazard 1.  The whole back half of `main()` is `char`
                         arithmetic that wraps -- the obfuscator, the mood byte
-                        (`100+(radek[1]-'0')`), and `SPOCITEJ_KONTROLNI_SOUCET`.
+                        (`100+(line[1]-'0')`), and `SPOCITEJ_KONTROLNI_SOUCET`.
                         The checksums come out the same either way, but the flag is
                         set so this tool and the engine that reads its output are
                         never on opposite sides of hazard 1.
@@ -65,8 +65,8 @@ The engine's, from `tools/build.py`, minus the C++ and MFC ones:
                                                 into a `char[14]`: 15 bytes into 14.
                         The last one is a real out-of-bounds write and it is left
                         alone.  `prostoridslov` is a global declared in the middle of
-                        `char hlavicka[5000],prostoridslov[14],znak;`, so the stray
-                        NUL lands on `znak` or on padding, and `znak` is not read
+                        `char header[5000],prostoridslov[14],ch;`, so the stray
+                        NUL lands on `ch` or on padding, and `ch` is not read
                         until after the final `strcpy` has run for the last time.
                         Harmless in 2005, harmless here, and provably so: the output
                         is byte-identical to the file the author shipped.
@@ -86,7 +86,7 @@ out.  It costs the reader nothing, because the key is stored in the header and a
 reader decodes the body regardless; what it would cost is a rule base that churns on
 every `tools/build.py`, which phase 2.5 chose to make the shipping artefact.
 
-So the rebuild is conditional instead.  `build/gramatik/otisk.txt` holds a SHA-256 of
+So the rebuild is conditional instead.  `build/gramatik/fingerprint.txt` holds a SHA-256 of
 everything the output depends on -- both archive files, the `nahoda` shim, the
 compilers and the flags -- and the compile and run are skipped while it matches.  The
 bytes are derived from source, and they stay put until the source moves.  `--force`
@@ -109,13 +109,13 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ARCHIV = ROOT / "original" / "IQ Pokyd" / "Data" / "Intelig"
+ARCHIVE = ROOT / "original" / "IQ Pokyd" / "Data" / "Intelig"
 SHIM = ROOT / "src" / "shim"
 OUT = ROOT / "build" / "gramatik"
 
-ZDROJ = "gramatik.c"          # lower case: see the docstring
-VSTUP = "gramatik.iqz"        # lower case: main() fopen()s this exact name
-VYSTUP = "IQPOKYD.IQP"        # upper case: main() fopen()s this exact name
+SOURCE = "gramatik.c"          # lower case: see the docstring
+INPUT = "gramatik.iqz"        # lower case: main() fopen()s this exact name
+OUTPUT = "IQPOKYD.IQP"        # upper case: main() fopen()s this exact name
 
 CC = "gcc"
 CXX = "g++"
@@ -129,146 +129,147 @@ CFLAGS = [
 CXXFLAGS = ["-std=gnu++98", "-fsigned-char", "-fwrapv", "-fno-strict-aliasing", "-O1",
             "-Wall", "-I", str(SHIM)]
 
-# KODOVACI_ZNAK and the two macros around it, from Slovnik/SLOVNIK.PR:14-17.
-KODOVACI_ZNAK = ord("K")
-KLIC_HLAVICKY = ord("I")      # the second constant ZAPIS_HLAVICKU mixes in
+# CODING_BYTE and the two macros around it, from Slovnik/SLOVNIK.PR:14-17.
+# Named in English here like the rest of our code; the engine's own name is above.
+CODING_BYTE = ord("K")
+HEADER_KEY = ord("I")      # the second constant ZAPIS_HLAVICKU mixes in
 
 
-def zakoduj_znak(b: int) -> int:
-    return ((b + KODOVACI_ZNAK) & 0xFF) ^ KODOVACI_ZNAK
+def encode_byte(b: int) -> int:
+    return ((b + CODING_BYTE) & 0xFF) ^ CODING_BYTE
 
 
-def dekoduj_znak(b: int) -> int:
-    return ((b ^ KODOVACI_ZNAK) - KODOVACI_ZNAK) & 0xFF
+def decode_byte(b: int) -> int:
+    return ((b ^ CODING_BYTE) - CODING_BYTE) & 0xFF
 
 
-class ChybnySoubor(Exception):
+class BadFile(Exception):
     pass
 
 
-def kontrolni_soucty(bajty) -> tuple[int, int]:
+def checksums(data) -> tuple[int, int]:
     """SPOCITEJ_KONTROLNI_SOUCET, the engine's pair of one-byte checksums."""
     s1 = s2 = 0
-    for b in bajty:
+    for b in data:
         s1 = (s1 + b) & 0xFF
         s2 = ((s2 ^ b) + b) & 0xFF
     return s1, s2
 
 
-def precti_iqp(cesta: Path) -> dict:
+def read_iqp(path: Path) -> dict:
     r"""Decode an `IQPOKYD.IQP` exactly as `PRECTI_INTELIGENCI_ZE_SOUBORU` does.
 
     `Slovnik/SLOVNIK.FU:1348`.  Both checksums are verified, so a file that gets
-    through here is one the engine will accept.  The returned `retezce` are the
+    through here is one the engine will accept.  The returned `strings` are the
     1456 strings (182 conditions plus 7 answers each) still in the engine's own
     ZAKODOVANY_ZNAK form, which is how they live in `g_databazeiqpodminek`; the
     dump path is the only thing that un-applies it.
     """
-    d = cesta.read_bytes()
+    d = path.read_bytes()
 
-    konec = d.find(0)
-    if konec < 0 or konec > 500:
-        raise ChybnySoubor("no identification text")
-    poz = konec + 1
-    nadpis = d[:konec]
+    end = d.find(0)
+    if end < 0 or end > 500:
+        raise BadFile("no identification text")
+    pos = end + 1
+    banner = d[:end]
 
-    pocetzbytecnosti = d[poz] ^ KLIC_HLAVICKY
-    poz += 1 + pocetzbytecnosti
-    klic = d[poz] ^ KLIC_HLAVICKY
-    poz += 1
+    padding = d[pos] ^ HEADER_KEY
+    pos += 1 + padding
+    key = d[pos] ^ HEADER_KEY
+    pos += 1
 
-    hlavicka = d[poz:poz + 9]
-    if len(hlavicka) != 9:
-        raise ChybnySoubor("truncated header")
-    pole = [(((b - klic) & 0xFF) ^ KODOVACI_ZNAK) for b in hlavicka[:7]]
+    header = d[pos:pos + 9]
+    if len(header) != 9:
+        raise BadFile("truncated header")
+    fields = [(((b - key) & 0xFF) ^ CODING_BYTE) for b in header[:7]]
 
     # The checksum covers everything up to and including the 7 decoded bytes, with
     # the key counted in its decoded form -- that is what the reader has in
-    # `hlavicka[]` at that point.
-    s1, s2 = kontrolni_soucty(list(d[:poz - 1]) + [klic] + pole)
-    if (s1, s2) != (hlavicka[7], hlavicka[8]):
-        raise ChybnySoubor(f"header checksum {s1:#04x},{s2:#04x} != "
-                           f"{hlavicka[7]:#04x},{hlavicka[8]:#04x}")
-    if pole[0] != 3:
-        raise ChybnySoubor(f"signature {pole[0]}, expected 3")
-    if (pole[1], pole[2], pole[3]) != (0, 15, 0):
-        raise ChybnySoubor(f"version {pole[1]}.{pole[2]} data {pole[3]}, expected 0.15 / 0")
-    if pole[4] != KODOVACI_ZNAK:
-        raise ChybnySoubor(f"KODOVACI_ZNAK {pole[4]:#04x}, expected {KODOVACI_ZNAK:#04x}")
+    # `header[]` at that point.
+    s1, s2 = checksums(list(d[:pos - 1]) + [key] + fields)
+    if (s1, s2) != (header[7], header[8]):
+        raise BadFile(f"header checksum {s1:#04x},{s2:#04x} != "
+                           f"{header[7]:#04x},{header[8]:#04x}")
+    if fields[0] != 3:
+        raise BadFile(f"signature {fields[0]}, expected 3")
+    if (fields[1], fields[2], fields[3]) != (0, 15, 0):
+        raise BadFile(f"version {fields[1]}.{fields[2]} data {fields[3]}, expected 0.15 / 0")
+    if fields[4] != CODING_BYTE:
+        raise BadFile(f"CODING_BYTE {fields[4]:#04x}, expected {CODING_BYTE:#04x}")
 
-    pocetpodminek = (pole[5] << 8) | pole[6]
-    poz += 9
+    rules = (fields[5] << 8) | fields[6]
+    pos += 9
 
     # The body: 8 NUL-terminated strings per condition.  Each byte is undone with
     # its position *within its own string*, which resets at every terminator.
-    retezce = []
-    radek = bytearray()
-    pozicenaradku = 0
+    strings = []
+    line = bytearray()
+    col = 0
     s1 = s2 = 0
-    while len(retezce) < pocetpodminek * 8:
-        if poz >= len(d):
-            raise ChybnySoubor(f"truncated after {len(retezce)} strings")
-        znak = (d[poz] - klic) & 0xFF
-        znak ^= KLIC_HLAVICKY
-        znak = (znak + (pozicenaradku ^ KODOVACI_ZNAK)) & 0xFF
-        znak ^= klic
-        s1 = (s1 + znak) & 0xFF
-        s2 = ((s2 ^ znak) + znak) & 0xFF
-        poz += 1
-        pozicenaradku += 1
-        if znak == 0:
-            retezce.append(bytes(radek))
-            radek = bytearray()
-            pozicenaradku = 0
+    while len(strings) < rules * 8:
+        if pos >= len(d):
+            raise BadFile(f"truncated after {len(strings)} strings")
+        ch = (d[pos] - key) & 0xFF
+        ch ^= HEADER_KEY
+        ch = (ch + (col ^ CODING_BYTE)) & 0xFF
+        ch ^= key
+        s1 = (s1 + ch) & 0xFF
+        s2 = ((s2 ^ ch) + ch) & 0xFF
+        pos += 1
+        col += 1
+        if ch == 0:
+            strings.append(bytes(line))
+            line = bytearray()
+            col = 0
         else:
-            radek.append(znak)
+            line.append(ch)
 
-    if poz + 2 > len(d):
-        raise ChybnySoubor("missing trailing checksums")
-    if (s1, s2) != (d[poz], d[poz + 1]):
-        raise ChybnySoubor(f"body checksum {s1:#04x},{s2:#04x} != "
-                           f"{d[poz]:#04x},{d[poz + 1]:#04x}")
-    zbytek = len(d) - (poz + 2)
-    if zbytek:
-        raise ChybnySoubor(f"{zbytek} trailing byte(s) after the checksums")
+    if pos + 2 > len(d):
+        raise BadFile("missing trailing checksums")
+    if (s1, s2) != (d[pos], d[pos + 1]):
+        raise BadFile(f"body checksum {s1:#04x},{s2:#04x} != "
+                           f"{d[pos]:#04x},{d[pos + 1]:#04x}")
+    rest = len(d) - (pos + 2)
+    if rest:
+        raise BadFile(f"{rest} trailing byte(s) after the checksums")
 
     return {
-        "nadpis": nadpis,
-        "pocetzbytecnosti": pocetzbytecnosti,
-        "klic": klic,
-        "pocetpodminek": pocetpodminek,
-        "retezce": retezce,
-        "delkatela": poz + 2 - (konec + 1 + 1 + pocetzbytecnosti + 1 + 9),
-        "delka": len(d),
+        "banner": banner,
+        "padding": padding,
+        "key": key,
+        "rules": rules,
+        "strings": strings,
+        "body_len": pos + 2 - (end + 1 + 1 + padding + 1 + 9),
+        "length": len(d),
     }
 
 
-def zapis_dump(iqp: dict, cesta: Path) -> None:
+def write_dump(iqp: dict, path: Path) -> None:
     """The decoded rule base as readable CP1250 text, one record per blank-line block."""
-    radky = []
-    for i in range(iqp["pocetpodminek"]):
-        blok = iqp["retezce"][i * 8:(i + 1) * 8]
-        podminka = bytes(dekoduj_znak(b) for b in blok[0])
+    lines = []
+    for i in range(iqp["rules"]):
+        block = iqp["strings"][i * 8:(i + 1) * 8]
+        condition = bytes(decode_byte(b) for b in block[0])
         # The last byte of a condition is the mood delta, written as 100+/-N.
-        nalada = podminka[-1] - 100
-        radky.append(b"# " + str(i + 1).encode() + b"  nalada " +
-                     (b"%+d" % nalada) + b"\r\n")
-        radky.append(podminka[:-1] + b"\r\n")
-        for odpoved in blok[1:]:
-            radky.append(bytes(dekoduj_znak(b) for b in odpoved) + b"\r\n")
-        radky.append(b"\r\n")
-    cesta.write_bytes(b"".join(radky))
+        mood = condition[-1] - 100
+        lines.append(b"# " + str(i + 1).encode() + b"  mood " +
+                     (b"%+d" % mood) + b"\r\n")
+        lines.append(condition[:-1] + b"\r\n")
+        for answer in block[1:]:
+            lines.append(bytes(decode_byte(b) for b in answer) + b"\r\n")
+        lines.append(b"\r\n")
+    path.write_bytes(b"".join(lines))
 
 
-def kratce(cesta: Path) -> str:
+def short(path: Path) -> str:
     """Repo-relative if it is inside the repo, absolute otherwise (`--out` may not be)."""
     try:
-        return str(cesta.relative_to(ROOT))
+        return str(path.relative_to(ROOT))
     except ValueError:
-        return str(cesta)
+        return str(path)
 
 
-def spust(cmd, verbose, **kw) -> int:
+def run(cmd, verbose, **kw) -> int:
     if verbose:
         print("  " + " ".join(str(c) for c in cmd))
     return subprocess.call([str(c) for c in cmd], **kw)
@@ -276,8 +277,8 @@ def spust(cmd, verbose, **kw) -> int:
 
 # Everything the output depends on.  If none of it moved, the rule base on disk is
 # the rule base this script would produce -- give or take the padding, which is the
-# whole point of keeping the old one (see `otisk`).
-def otisk(out: Path) -> str:
+# whole point of keeping the old one (see `fingerprint`).
+def fingerprint(out: Path) -> str:
     r"""A fingerprint of the inputs, so a rebuild happens when something changed.
 
     Why this exists at all: `ZAPIS_HLAVICKU` seeds from the clock, so rebuilding
@@ -289,46 +290,46 @@ def otisk(out: Path) -> str:
     the source moves.  `--force` rebuilds anyway.
     """
     h = hashlib.sha256()
-    for cesta in (ARCHIV / "GRAMATIK.C", ARCHIV / "GRAMATIK.IQZ",
+    for path in (ARCHIVE / "GRAMATIK.C", ARCHIVE / "GRAMATIK.IQZ",
                   SHIM / "nahoda.h", SHIM / "nahoda.cpp"):
-        h.update(cesta.read_bytes())
-    h.update(repr((CC, CXX, CFLAGS, CXXFLAGS, ZDROJ, VSTUP, VYSTUP)).encode())
+        h.update(path.read_bytes())
+    h.update(repr((CC, CXX, CFLAGS, CXXFLAGS, SOURCE, INPUT, OUTPUT)).encode())
     return h.hexdigest()
 
 
-def prelozit(out: Path, verbose: bool) -> int:
+def compile_rules(out: Path, verbose: bool) -> int:
     """Copy the archive's two files out, build the compiler, run it."""
     # Straight out of the archive, byte for byte.  Copied unconditionally: the
     # archive is read only, so the copy is the only thing that can be stale.
-    for jmeno, zdroj in ((ZDROJ, ARCHIV / "GRAMATIK.C"), (VSTUP, ARCHIV / "GRAMATIK.IQZ")):
-        (out / jmeno).write_bytes(zdroj.read_bytes())
-        print(f"data    {jmeno}  <- {zdroj.relative_to(ROOT)}")
+    for name, source in ((SOURCE, ARCHIVE / "GRAMATIK.C"), (INPUT, ARCHIVE / "GRAMATIK.IQZ")):
+        (out / name).write_bytes(source.read_bytes())
+        print(f"data    {name}  <- {source.relative_to(ROOT)}")
 
     # `PRECTI_RADEK` takes '\r' as the line terminator and swallows the byte after
     # it, so the input has to be CRLF.  An LF-only checkout runs the whole file
     # together into one line and dies at 10,000 characters -- loudly, but 2,500
     # lines too late to be obvious.  Say so here instead.
-    vstup = (out / VSTUP).read_bytes()
-    if vstup.count(b"\n") != vstup.count(b"\r\n"):
-        print(f"error: {VSTUP} has LF line endings; PRECTI_RADEK needs CRLF.\n"
+    input_bytes = (out / INPUT).read_bytes()
+    if input_bytes.count(b"\n") != input_bytes.count(b"\r\n"):
+        print(f"error: {INPUT} has LF line endings; PRECTI_RADEK needs CRLF.\n"
               f"       check .gitattributes and re-checkout original/.", file=sys.stderr)
         return 1
 
-    print(f"compiling {ZDROJ}")
-    if spust([CC] + CFLAGS + ["-c", out / ZDROJ, "-o", out / "gramatik.o"], verbose):
+    print(f"compiling {SOURCE}")
+    if run([CC] + CFLAGS + ["-c", out / SOURCE, "-o", out / "gramatik.o"], verbose):
         return 1
     print("compiling src/shim/nahoda.cpp")
-    if spust([CXX] + CXXFLAGS + ["-c", SHIM / "nahoda.cpp", "-o", out / "nahoda.o"], verbose):
+    if run([CXX] + CXXFLAGS + ["-c", SHIM / "nahoda.cpp", "-o", out / "nahoda.o"], verbose):
         return 1
     exe = out / ("gramatik.exe" if sys.platform == "win32" else "gramatik")
     print(f"linking {exe.name}")
-    if spust([CXX, out / "gramatik.o", out / "nahoda.o", "-o", exe], verbose):
+    if run([CXX, out / "gramatik.o", out / "nahoda.o", "-o", exe], verbose):
         return 1
 
     # It opens both files by bare name, so it has to be run in its own directory.
     # `--out` may point anywhere, including off this drive, so no relative_to here.
-    print(f"running {exe.name} in {kratce(out)}")
-    return spust([exe], verbose, cwd=out)
+    print(f"running {exe.name} in {short(out)}")
+    return run([exe], verbose, cwd=out)
 
 
 def main() -> int:
@@ -344,90 +345,90 @@ def main() -> int:
                     help="also write the decoded rule base there (CP1250, CRLF)")
     args = ap.parse_args()
 
-    for zdroj in (ARCHIV / "GRAMATIK.C", ARCHIV / "GRAMATIK.IQZ"):
-        if not zdroj.is_file():
-            print(f"missing {zdroj.relative_to(ROOT)}", file=sys.stderr)
+    for source in (ARCHIVE / "GRAMATIK.C", ARCHIVE / "GRAMATIK.IQZ"):
+        if not source.is_file():
+            print(f"missing {source.relative_to(ROOT)}", file=sys.stderr)
             return 1
 
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    razitko = out / "otisk.txt"
-    otisk_ted = otisk(out)
+    stamp = out / "fingerprint.txt"
+    fingerprint_now = fingerprint(out)
 
-    aktualni = (not args.force and (out / VYSTUP).is_file() and razitko.is_file()
-                and razitko.read_text(encoding="ascii").strip() == otisk_ted)
-    if aktualni:
+    up_to_date = (not args.force and (out / OUTPUT).is_file() and stamp.is_file()
+                and stamp.read_text(encoding="ascii").strip() == fingerprint_now)
+    if up_to_date:
         if not args.quiet:
-            print(f"{VYSTUP} is up to date (inputs unchanged); --force to rebuild")
+            print(f"{OUTPUT} is up to date (inputs unchanged); --force to rebuild")
     else:
-        if prelozit(out, args.verbose):
+        if compile_rules(out, args.verbose):
             return 1
-        razitko.write_text(otisk_ted + "\n", encoding="ascii")
+        stamp.write_text(fingerprint_now + "\n", encoding="ascii")
 
     # Verified on every run, rebuilt or not: decoding is milliseconds and it is the
     # only thing that says the file on disk is one the engine will actually load.
     try:
-        novy = precti_iqp(out / VYSTUP)
-    except ChybnySoubor as e:
-        print(f"error: {out / VYSTUP} is not loadable: {e}", file=sys.stderr)
+        built = read_iqp(out / OUTPUT)
+    except BadFile as e:
+        print(f"error: {out / OUTPUT} is not loadable: {e}", file=sys.stderr)
         return 1
 
     if args.dump:
         args.dump.parent.mkdir(parents=True, exist_ok=True)
-        zapis_dump(novy, args.dump)
+        write_dump(built, args.dump)
 
     # Phase 2.4: the shipped file, decoded the same way, and compared where a
     # comparison means something -- the rule stream, not the obfuscation around it.
     # This is the standing proof that building from `GRAMATIK.IQZ` (phase 2.5) gives
     # the visitor the same IQ Pokyd the author released, so it runs every build.
-    vydany_soubor = ARCHIV / "IQPOKYD.IQP"
-    vydany = None
-    if vydany_soubor.is_file():
+    shipped_path = ARCHIVE / "IQPOKYD.IQP"
+    shipped = None
+    if shipped_path.is_file():
         try:
-            vydany = precti_iqp(vydany_soubor)
-        except ChybnySoubor as e:
-            print(f"error: shipped {vydany_soubor.name} is not loadable: {e}", file=sys.stderr)
+            shipped = read_iqp(shipped_path)
+        except BadFile as e:
+            print(f"error: shipped {shipped_path.name} is not loadable: {e}", file=sys.stderr)
             return 1
 
-    stejne = vydany is not None and novy["retezce"] == vydany["retezce"]
+    same = shipped is not None and built["strings"] == shipped["strings"]
 
     if args.quiet:
-        stav = ("identical to the shipped rule base" if stejne else
-                "DIFFERS from the shipped rule base" if vydany else "shipped file absent")
-        print(f"rules   {VYSTUP}: {novy['pocetpodminek']} rules, "
-              f"{len(novy['retezce'])} strings, checksums verify, {stav}")
+        state = ("identical to the shipped rule base" if same else
+                "DIFFERS from the shipped rule base" if shipped else "shipped file absent")
+        print(f"rules   {OUTPUT}: {built['rules']} rules, "
+              f"{len(built['strings'])} strings, checksums verify, {state}")
     else:
-        print(f"\n{VYSTUP}: {novy['delka']} B, {novy['pocetpodminek']} rules, "
-              f"{len(novy['retezce'])} strings, both checksums verify")
-        print(f"         header {novy['nadpis'].decode('cp1250')!r}")
-        print(f"         {novy['pocetzbytecnosti']} padding byte(s), "
-              f"key {novy['klic']:#04x} -- both random, redrawn on every rebuild")
+        print(f"\n{OUTPUT}: {built['length']} B, {built['rules']} rules, "
+              f"{len(built['strings'])} strings, both checksums verify")
+        print(f"         header {built['banner'].decode('cp1250')!r}")
+        print(f"         {built['padding']} padding byte(s), "
+              f"key {built['key']:#04x} -- both random, redrawn on every rebuild")
         if args.dump:
             print(f"         dumped to {args.dump}")
-        if vydany is not None:
-            print(f"\nshipped {vydany_soubor.name}: {vydany['delka']} B, "
-                  f"{vydany['pocetpodminek']} rules, {len(vydany['retezce'])} strings, "
+        if shipped is not None:
+            print(f"\nshipped {shipped_path.name}: {shipped['length']} B, "
+                  f"{shipped['rules']} rules, {len(shipped['strings'])} strings, "
                   f"both checksums verify")
-            print(f"         header {vydany['nadpis'].decode('cp1250')!r}")
+            print(f"         header {shipped['banner'].decode('cp1250')!r}")
             print("\ncompared:")
-            print(f"  rule stream   {'identical' if stejne else 'DIFFERS'}  "
-                  f"({len(vydany['retezce'])} strings, "
-                  f"{sum(len(s) for s in vydany['retezce'])} B)")
+            print(f"  rule stream   {'identical' if same else 'DIFFERS'}  "
+                  f"({len(shipped['strings'])} strings, "
+                  f"{sum(len(s) for s in shipped['strings'])} B)")
             print(f"  header text   "
-                  f"{'identical' if novy['nadpis'] == vydany['nadpis'] else 'differs'}")
-            print(f"  obfuscation   {novy['pocetzbytecnosti']} vs "
-                  f"{vydany['pocetzbytecnosti']} padding bytes, "
-                  f"key {novy['klic']:#04x} vs {vydany['klic']:#04x}  (random, as designed)")
+                  f"{'identical' if built['banner'] == shipped['banner'] else 'differs'}")
+            print(f"  obfuscation   {built['padding']} vs "
+                  f"{shipped['padding']} padding bytes, "
+                  f"key {built['key']:#04x} vs {shipped['key']:#04x}  (random, as designed)")
 
-    if vydany is not None and not stejne:
-        lisi = [i for i in range(min(len(novy["retezce"]), len(vydany["retezce"])))
-                if novy["retezce"][i] != vydany["retezce"][i]]
+    if shipped is not None and not same:
+        differ = [i for i in range(min(len(built["strings"]), len(shipped["strings"])))
+                if built["strings"][i] != shipped["strings"][i]]
         print(f"\nerror: the rebuilt rule base is not the one the author shipped -- "
-              f"{len(lisi)} of {len(vydany['retezce'])} strings differ.", file=sys.stderr)
-        for i in lisi[:5]:
+              f"{len(differ)} of {len(shipped['strings'])} strings differ.", file=sys.stderr)
+        for i in differ[:5]:
             print(f"  rule {i // 8 + 1}, line {i % 8 + 1}:", file=sys.stderr)
-            print(f"    shipped {vydany['retezce'][i]!r}", file=sys.stderr)
-            print(f"    rebuilt {novy['retezce'][i]!r}", file=sys.stderr)
+            print(f"    shipped {shipped['strings'][i]!r}", file=sys.stderr)
+            print(f"    rebuilt {built['strings'][i]!r}", file=sys.stderr)
         return 1
 
     return 0
