@@ -9,9 +9,11 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 4 — the JS boundary — **is complete, 4.1 through 4.4.** Phase 3 is
-complete, 3.1 through 3.4; the gate is passed and the numbers are in. Phases 1 and 2 are
-complete, 1.1–1.6 and 2.1–2.5.
+**Phase:** 5 — the vertical slice — **is at 5.2, and 5.2 is the milestone: IQ Pokyd
+holds a conversation in a browser.** 5.3, the deploy, is written and waiting on a push:
+GitHub Pages, built from source by CI, with the golden conversation as the gate.
+Phase 4 is complete, 4.1 through 4.4; phase 3 is complete, 3.1 through 3.4, gate passed
+and numbers in; phases 1 and 2 are complete, 1.1–1.6 and 2.1–2.5.
 **The engine runs, answers in Czech, and the conversation is on disk.**
 `python3 tools/build.py` builds `build/native/pokyd.exe` and lays out `build/run/`;
 `build/native/pokyd.exe --data build/run` holds a conversation. The patch set against
@@ -110,7 +112,8 @@ in Chrome 152, cold and warm — 5.1's riskiest assumption retired before 5.1 st
 **4.1 is done, and the web side has its first file.** `src/web/cp1250.ts` is the codec —
 256 entries, both directions, no dependencies, and nothing else in the project may turn a
 byte into a character. `node test/web/cp1250.test.ts` puts **71 checks** on it and needs
-nothing but node, which strips the types itself; there is still no `package.json`.
+nothing but node, which strips the types itself; at 4.1 there was still no
+`package.json`.
 
 The table was not typed out by hand. It is generated from `TextDecoder("windows-1250")`
 and cross-checked against Python's `cp1250`, which **agree on all 251 bytes Python
@@ -255,8 +258,78 @@ eight non-percentage lines per cold load and the markers' exact bytes.
 `node test/web/progress.test.mjs` puts **47** on the real thing in Chrome, reading the
 loading window back out of the DOM at every change.
 
-**Next action:** 5.1 — the Vite project and the plainest possible chat page. Everything
-5.2 needs now exists: the codec, the worker, the cache and the loading window.
+**5.1 is done, and the repository has a `package.json` for the first time.** Two
+dependencies, `vite` 7.3.6 and `typescript` 5.9.3 — plus `@types/node`, which is what
+lets one `tsconfig.json` cover the node tests as well as the browser code. Nothing is
+shipped at runtime that was not already here. `npx tsc --noEmit` passes over every
+`.ts` in `src/` and `test/`, including the four phase-4 modules, which had never been
+checked by anything but their author's intent.
+
+The Vite root is the repository root, deliberately: the page imports `src/web/*.ts` at
+the same specifiers node and `test/browser.mjs` already use, so phase 4 is consumed
+unchanged rather than copied into an app directory. `index.html` is a mount point and
+one module; `src/app/chat.ts` is the whole page — a transcript, a line to type into,
+and four states published as `data-state` — and `src/app/main.ts` is the three things
+a page cannot know for itself. The build is **612 KB, 450 of it the engine** (185 KB
+gzipped), and the visitor's own code is 15.6 KB.
+
+**Two things in 5.1 were not plumbing.** The first: **a warm start never seeds the
+engine.** `pokyd_seed` is `srand`, the cold path reseeds from the clock on its way out
+(`SLOVNIK.FU:1732`), and a visit that imports the cache runs neither — so without the
+`Math.floor(Date.now() / 1000)` in `chat.ts` every returning visitor would have got the
+same conversation, word for word, forever. The original called `srand(time(NULL))`
+twice, at `mfcDlg.cpp:363` and again at `PROSTRED.FU:307` where the greeting is drawn;
+this is that, and 6.4 will want it. Nothing before 5.1 could have noticed: every test
+in phases 3 and 4 pins the seed on purpose.
+
+The second: **`new URL(x, import.meta.url)` is not an expression under Vite, it is an
+asset declaration.** Written as a default for `workerUrl`/`moduleUrl` it put a second,
+unbundled copy of the worker *and* of the 137 KB Emscripten glue into `dist/`, loaded
+by nothing. So both are required options with no defaults, and the caller that knows
+where the build put things is the one that says — which is `main.ts` for the exhibit
+and the page itself for a test. `vite.config.ts` emits the engine pair verbatim under
+`<base>/pokyd/`, in one directory because the glue finds its binary with that same
+expression, and `base` is `"./"` so a subdirectory deploy needs no rebuild.
+
+**5.2 is done, and it is the milestone this port was for. IQ Pokyd holds the phase 1.6
+conversation in a browser, byte for byte, on a first visit and on a second.**
+`node test/app/chat.test.mjs` runs `vite build`, serves `dist/` over loopback, and puts
+the built `index.html` in an iframe — then types the 23 sentences of
+`test/golden/rozhovor.in` into the input and **presses the button**, one at a time,
+waiting for `data-state` to come back to `ready`. What it compares against
+`test/golden/rozhovor.txt` is the transcript read back out of the DOM and encoded to
+CP1250: **1,116 bytes, identical**, on a cold visit and on a warm one. It drives no
+client, constructs no worker and knows nothing of the protocol; the only module it
+imports is the codec, and only to turn what was on a screen back into bytes.
+
+Measured in Chrome 152: **16.3 s from opening the page to the first typed character**
+on a first visit, **0.24 s on the second**, 46 turns on the screen, zero unfreed blocks
+either time, and the same `pokyd/1/a620640e93e20cf3` key both times. 48 checks.
+
+Two things it noticed that nothing else had. The author's own words are already on the
+page — `IQPokyd.rc:106-115` gives the window's title, the `Tvá věta` beside the input
+and the `Řekni` on the button, three phases before 6.1 reads that file properly. And
+**the mood drifts**: `nalada` starts at `NASTAV_STANDARDNE`'s 3 and ends those 23
+civil sentences at 1, the best of the five (`INTELIG.FU:532`). That is phase 7.2's
+subject, now pinned by a test so that a change to it is noticed by something.
+
+`npm test` also means something now: `test/run.mjs` runs all **nine** tests in this
+repository in order — `--quick` keeps the five that do not launch a browser — and all
+nine pass in a little over two minutes.
+
+**5.3 is written and has never run.** Michal chose GitHub Pages, so
+`.github/workflows/deploy.yml` builds the whole chain from source on a Linux runner —
+rule compiler, rule base, Emscripten, Vite — and publishes `dist/` to
+`timichal.github.io/pokyd/`. **The golden conversation is the gate**: `npm test --
+--quick` runs before the upload, `test/wasm/smoke.mjs` is in it, and a Linux build that
+stopped saying what the 2005 binary said would refuse to deploy. Hazard 11 is what
+makes that fair on a second toolchain.
+
+**Next action: Michal.** Commit and push this working tree, then Settings → Pages →
+Source → *GitHub Actions*. The first run is the first time any of this has been built
+anywhere but a Windows laptop, so expect to read a log. After that, phase 6 — the retro
+UI, and `IQPokyd.rc` is already paying for itself: the window title, the `Tvá věta`
+beside the input and the `Řekni` on the button are on the page already.
 
 ---
 
@@ -270,12 +343,20 @@ On this machine `python3` is 3.14.7 as before, but bare `python` resolves to a m
 commands throughout this file say `python3` so the recorded toolchain is the one actually
 used.
 
+**`npm` 12.0.2 ships with that node, and as of 5.1 the repository uses it.**
+`npm install` brings `vite` 7.3.6, `typescript` 5.9.3 and `@types/node`, and nothing
+else — 16 packages. One warning is expected and harmless: npm 12 blocks `esbuild`'s
+postinstall script, and it is not needed, because the platform binary arrives as the
+optional `@esbuild/win32-x64` dependency anyway. `npm run dev`, `build`, `preview`,
+`typecheck` and `test` are the whole of the interface; `src/README.md` has the table.
+
 **Chrome 152 is here too**, at the usual `C:/Program Files/Google/Chrome/`, and as of 3.4
 it is part of the toolchain rather than a browser that happens to be installed:
 `node test/wasm/bench.mjs --browser` launches it headless against a loopback server and
 takes the results back over HTTP. It looks for Edge in the same list — both are on this
-machine — and needs no driver, no puppeteer and no `npm install`; there is still no
-`package.json` in this repo and 3.4 did not need one.
+machine — and needs no driver, no puppeteer and nothing out of `node_modules`. It
+predates the `package.json` 5.1 brought and is unaffected by it: the browser tests
+still run on a plain `node`.
 
 **`emcc` 6.0.9 is installed**, as of 3.2, at `C:/Program Files/emsdk` — the emsdk default
 on Windows. It is **not activated and not on `PATH`**, deliberately, and nothing needs it to
@@ -296,6 +377,8 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
 - **`src/engine/` is the canonical source tree** (UTF-8). Edit there and nowhere else.
   Everything under `build/` is generated and gitignored — `build/src/` is the CP1250
   mirror of `original/`, `build/cp1250/` is what the compiler is actually pointed at.
+  So are `dist/` and `node_modules/`, as of 5.1: `npm run build` writes the first and
+  `npm install` the second, and neither is ever edited or committed.
 - Original sources are **CP1250**, uniformly — see hazard 6, the "Latin 2" is data, not
   a second source encoding. Anything new we write is UTF-8.
 - The engine speaks CP1250 bytes internally, end to end. Convert **only** at the JS boundary.
@@ -334,8 +417,15 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   tracker to a real cold load in node and is where the engine's console output is
   written down (`--no-cold` again), and `node test/web/progress.test.mjs` runs the
   worker, the throttle and the loading window in Chrome. Anything under `src/web/` is
-  UTF-8, ASCII-only in content, and CRLF like everything else, and it typechecks clean
-  under `tsc --strict`.
+  UTF-8, ASCII-only in content, and CRLF like everything else, and it typechecks
+  clean under `tsc --strict` — as does everything in `src/app/`.
+- **And one asks whether the page works**, which since 5.2 is the question that
+  matters: `node test/app/chat.test.mjs` builds the app with Vite, drives the built
+  `index.html` through the golden conversation in Chrome by typing into it, and
+  compares what was on the screen with `test/golden/rozhovor.txt`. **`npm test` runs
+  all nine**, in phase order, in a little over two minutes; `node test/run.mjs
+  --quick` keeps the five that do not launch a browser. `npm run typecheck` covers
+  every `.ts` in `src/` and `test/` at once.
 
 ---
 
@@ -1242,8 +1332,9 @@ is not a refinement and the cache is not an optimization.
       server and the headless-Chrome launcher, now shared by both browser tests, plus one
       addition — it strips the types out of any `.ts` it serves with node's own
       `stripTypeScriptTypes`, so Chrome imports `src/web/*.ts` unbundled, at the same
-      specifiers node uses. Still no `package.json`. The bench reproduces 3.4's numbers
-      exactly after the move (15,330 ms cold, 28.3 MB wasm, 17.4 MB MEMFS, 48.7 MB tab).
+      specifiers node uses. At 3.4 there was still no `package.json`. The bench
+      reproduces 3.4's numbers exactly after the move (15,330 ms cold, 28.3 MB wasm,
+      17.4 MB MEMFS, 48.7 MB tab).
 - [x] 4.3 **Wire up loading progress to real UI feedback. Done**, and measuring the
       stream first moved the ground twice. Two files: `src/web/progress.ts`
       (`PokydLoadingTracker`, the state machine — no DOM, no worker) and
@@ -1331,9 +1422,93 @@ is not a refinement and the cache is not an optimization.
 
 ## Phase 5 — Vertical slice
 
-- [ ] 5.1 Vite + TypeScript project. Plainest possible chat page: input, transcript, nothing else.
-- [ ] 5.2 **Milestone: hold a conversation with IQ Pokyd in a browser.**
-- [ ] 5.3 Deploy it somewhere as a checkpoint, even ugly.
+- [x] 5.1 **Vite + TypeScript project. Plainest possible chat page: input, transcript,
+      nothing else. Done.** `package.json` is the repository's first, and it has two
+      dependencies: `vite` 7.3.6 and `typescript` 5.9.3, plus `@types/node` so that one
+      `tsconfig.json` covers the node tests as well as the browser code. `npm run
+      typecheck` passes over every `.ts` in `src/` and `test/` — including the four
+      phase-4 modules, which until now had only been checked by hand.
+
+      The Vite root is the repository root, so `src/web/*.ts` is imported at the same
+      specifiers node and `test/browser.mjs` use and phase 4 is consumed rather than
+      copied. `src/app/chat.ts` is the page: `mountChat(parent, options)`, a transcript,
+      a line to type into, and `data-state` = `loading` | `ready` | `busy` | `failed`.
+      `src/app/main.ts` is what `index.html` runs and the only file that needs Vite.
+      `src/app/chat.css` is plain and phase 6 replaces it. The build is **612 KB**, 450
+      of it the engine (185 KB gzipped); the page's own JavaScript is 15.6 KB.
+
+      **A warm start never seeds the engine**, and nothing before 5.1 could have noticed
+      because every earlier test pins the seed. `pokyd_seed` is `srand`; the cold path
+      reseeds from the clock on its way out (`SLOVNIK.FU:1732`) and a visit that imports
+      the cache runs neither, so a returning visitor would have got the same
+      conversation forever. The app seeds with `Date.now()/1000`, which is the original's
+      own `srand(time(NULL))` at `mfcDlg.cpp:363` and `PROSTRED.FU:307`.
+
+      **`new URL(x, import.meta.url)` is an asset declaration under Vite, not an
+      expression.** As a default for `workerUrl`/`moduleUrl` it emitted a second,
+      unbundled copy of the worker and of the 137 KB glue into `dist/`, loaded by
+      nothing. Both are now required options: the caller that knows where the build put
+      things is the one that says. `vite.config.ts` emits the engine pair verbatim under
+      `<base>/pokyd/` — one directory, because the glue finds its binary with that same
+      expression, and untransformed, because the worker imports it by a runtime URL
+      (`@vite-ignore`).
+- [x] 5.2 **Milestone: hold a conversation with IQ Pokyd in a browser. Done, and it is
+      the phase 1.6 conversation, byte for byte.** `node test/app/chat.test.mjs` runs
+      `vite build`, serves `dist/` over loopback and puts the built `index.html` in an
+      iframe; then it types the 23 sentences of `test/golden/rozhovor.in` into the input
+      and presses the button, one at a time, waiting for `data-state` to return to
+      `ready`. What it compares against `test/golden/rozhovor.txt` is the transcript
+      read back out of the DOM and encoded to CP1250 — **1,116 bytes, identical, cold
+      and warm.** It imports one module, the codec, and only to do that encoding: it
+      drives no client and knows nothing of the protocol.
+
+      Chrome 152: **16.3 s from opening the page to the first typed character** on a
+      first visit, **0.24 s on the second**, 46 turns on the screen, zero unfreed blocks
+      either time, one cache key for both. 48 checks.
+
+      Two things it noticed. The author's own words are on the page already —
+      `IQPokyd.rc:106-115` gives the title, the `Tvá věta` beside the input and the
+      `Řekni` on the button, three phases before 6.1 reads that file properly. And the
+      **mood drifts**: `nalada` starts at `NASTAV_STANDARDNE`'s 3 and ends those 23 civil
+      sentences at 1, the best of the five (`INTELIG.FU:532`) — 7.2's subject, now
+      pinned by a test.
+
+      `npm test` runs `test/run.mjs`, which is all **nine** tests in this repository in
+      order; `--quick` keeps the five that do not launch a browser. All nine pass, in a
+      little over two minutes.
+- [ ] 5.3 **Deploy it somewhere as a checkpoint, even ugly. Michal chose GitHub Pages,
+      and `.github/workflows/deploy.yml` is written — but it has not run yet, and it
+      cannot until he commits, pushes, and turns Pages on.** The URL it lands at is
+      `timichal.github.io/pokyd/`, a project page in a subdirectory, which `base: "./"`
+      already handles.
+
+      The workflow builds **the whole chain from source on a Linux runner**, because
+      nothing compiled is in this repository: `transcode.py --check`, then
+      `tools/build.py --wasm` — which compiles the author's own rule compiler out of
+      `original/`, rebuilds the rule base, checks it against the shipped `IQPOKYD.IQP`
+      and only then runs Emscripten — then `npm ci`, `npm run typecheck`, the tests,
+      and `npm run build`. Emscripten 6.0.9 is installed but **not activated**, exactly
+      as on this machine, and `find_emcc()` picks it up from `$EMSDK`.
+
+      **The golden conversation is the deploy gate**, not a formality: `npm test --
+      --quick` runs the five tests that need no browser, and `test/wasm/smoke.mjs` is
+      among them, so a Linux build that stopped saying what the 2005 binary said would
+      refuse to publish. That is a fair test on a second toolchain only because hazard
+      11 is closed — `src/shim/nahoda.h` owns `rand()`, so the conversation does not
+      depend on the C library underneath it. The four browser tests, 5.2's included,
+      stay on a machine with Chrome; the workflow does not gamble on the runner having
+      one.
+
+      **Three things left for a human**, and all three are Michal's: commit and push
+      this working tree; Settings → Pages → Source → *GitHub Actions* (the deploy step
+      has nothing to publish to until then, and the repo has to be public or the
+      account has to have Pages on private repos); and then watch the first run, which
+      is the first time any of this has been built anywhere but a Windows laptop.
+
+      Worth remembering before any *second* deploy: the first visit costs fifteen
+      seconds of CPU in the visitor's tab and 18 MB of their IndexedDB, and a stale
+      cache is the one failure a dictionary hash cannot see — read the note on
+      `POKYD_CACHE_VERSION` in `src/web/cache.ts`.
 
 ## Phase 6 — The retro UI
 
@@ -1412,10 +1587,24 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
   wasm module, `src/web/worker.ts` is the thread and `src/web/client.ts` the page's half
   — phase 4.2, and `src/README.md` has the table. Read `PROGRESS` at the foot of
   `protocol.ts` before designing anything that shows a loading bar.
+- The page: `index.html` is the Vite entry, `src/app/chat.ts` is the whole of what a
+  visitor sees and `src/app/main.ts` is what `index.html` runs — phase 5.1, and
+  `src/README.md` has the table and the three things worth knowing before changing any
+  of them. `npm run dev` serves it, `npm run build` writes `dist/`.
+- Deploying it: `.github/workflows/deploy.yml` — phase 5.3. It builds the engine, the
+  rule base and the page from source on a Linux runner, gates on the golden
+  conversation, and publishes `dist/` to GitHub Pages. Nothing compiled is committed,
+  which is why it reproduces the whole chain rather than uploading an artefact.
+- All the tests: `npm test`, which is `node test/run.mjs` — nine programs in phase
+  order, `--quick` for the five that do not launch a browser. The one that says the
+  port works is `test/app/chat.test.mjs`, phase 5.2: it builds the app, drives the
+  built page through the golden conversation in Chrome and compares what was on the
+  screen with `test/golden/rozhovor.txt`.
 - Running a page in a browser: `test/browser.mjs` serves the repo over loopback, launches
   headless Chrome or Edge at it, and takes the results back on `POST /result`. It
   strips the types out of `.ts` on the way through, so a browser imports `src/web/*.ts`
-  unbundled at the same specifiers node uses. No driver, no puppeteer, no `package.json`.
+  unbundled at the same specifiers node uses. No driver, no puppeteer, and nothing
+  out of `node_modules` — it predates 5.1's `package.json` and does not use it.
 - Engine entry point: `IQ_POKYDE_ODPOVEZ` — `Aplikace/Prostred/PROSTRED.FU:212`, and it is
   not the whole story: `!Prostre/mfcDlg.cpp:596-607` wraps it in the pre-processing the
   engine assumes has happened. Both are reproduced in `src/driver/pokyd.cpp`.

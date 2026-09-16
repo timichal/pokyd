@@ -1,0 +1,119 @@
+# IQ Pokyd - .github/workflows/deploy.yml - phase 5.3 of PLAN.md.
+#
+# Builds the exhibit from source and publishes it to GitHub Pages. "From source"
+# is meant literally: nothing compiled is committed to this repository, so this
+# job reproduces the whole chain on a Linux runner -- the author's rule compiler
+# out of original/, the rule base, the engine to WebAssembly with Emscripten,
+# and then Vite over the phase 4 modules. The only inputs are what is in git.
+#
+# That makes it the first time this build has run anywhere but a Windows laptop,
+# which is why the golden conversation is a gate here and not a formality: if
+# the Linux build ever stopped saying what the 2005 binary said, this refuses to
+# deploy it. Hazard 11 is what makes that a fair test on a second toolchain --
+# src/shim/nahoda.h owns rand(), so the conversation does not depend on the C
+# library underneath it.
+#
+# What Michal has to do once, by hand: Settings -> Pages -> Source -> GitHub
+# Actions. Until then this job builds and the deploy step has nothing to publish
+# to.
+#
+# Written by us, not ported.
+
+name: Deploy IQ Pokyd to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, and let a running one finish: a cancelled publish can
+# leave the site half-written.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  EMSDK_VERSION: 6.0.9
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # .gitattributes pins original/ and src/engine/ to CRLF on every platform,
+      # because transcode.py --check compares files on disk byte for byte. This
+      # says so out loud rather than discovering it three steps later.
+      - name: The archive checked out with its own line endings
+        run: |
+          python3 tools/transcode.py --check
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      # tools/build.py finds emcc by $EMSDK without emsdk_env ever being sourced
+      # -- see find_emcc() there, and PLAN.md's toolchain section for why
+      # activating it is deliberately avoided.  It goes outside the workspace so
+      # that a checkout never sees it and nothing has to teach .gitignore about
+      # it, and it is set here rather than in the workflow's env: because the
+      # runner context does not exist up there.
+      - name: Where the SDK goes
+        run: echo "EMSDK=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
+
+      - name: Cache the Emscripten SDK
+        id: emsdk-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.EMSDK }}
+          key: emsdk-${{ env.EMSDK_VERSION }}-${{ runner.os }}
+
+      # Installed, not activated: emcc resolves .emscripten relative to itself,
+      # so an absolute path is enough and emsdk's own node never gets in front
+      # of the runner's.
+      - name: Install Emscripten ${{ env.EMSDK_VERSION }}
+        if: steps.emsdk-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$EMSDK"
+          "$EMSDK/emsdk" install "$EMSDK_VERSION"
+          "$EMSDK/emsdk" activate "$EMSDK_VERSION"
+
+      # Compiles the author's GRAMATIK.C, rebuilds the rule base and checks it
+      # against the shipped IQPOKYD.IQP, then builds the engine to wasm.
+      - name: Build the engine
+        run: python3 tools/build.py --wasm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      # The gate. node test/run.mjs --quick is the five tests that need no
+      # browser, and among them is test/wasm/smoke.mjs: the 23 sentences of
+      # test/golden/rozhovor.in through this build, compared byte for byte with
+      # what the MinGW build printed in 2026. The four browser tests, phase 5.2's
+      # included, run on a machine with Chrome; this one does not gamble on the
+      # runner having one.
+      - name: Does it still say the same things?
+        run: npm test -- --quick
+
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

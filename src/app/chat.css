@@ -1,0 +1,176 @@
+/* IQ Pokyd - src/app/chat.css - phase 5.1 of PLAN.md.
+
+   The plainest possible chat page, styled only enough to be usable: a column
+   that fits a phone, a transcript that scrolls while the input stays put, and
+   two colours. Nothing here is the exhibit -- phase 6 has the background
+   bitmap, the menu, iqpokyd.ttf and the author's own layout, and it replaces
+   this file rather than extends it.
+
+   The one thing worth keeping when it does: the transcript is what scrolls, not
+   the page. A page-level scroll takes the input off the screen on a phone every
+   time the keyboard opens.
+
+   src/web/loading.ts brings its own stylesheet and is styled through six custom
+   properties; the .pokyd-loading rules at the foot are this page setting three
+   of them, which is the whole of what a caller is meant to do to it.
+
+   Ours, not ported. ASCII only, like the rest of the non-engine code. */
+
+:root {
+  --pokyd-bg: #f4f4f2;
+  --pokyd-panel: #ffffff;
+  --pokyd-ink: #1a1a1a;
+  --pokyd-dim: #6b6b6b;
+  --pokyd-rule: #d8d8d4;
+  --pokyd-human: #316ac5;   /* the loading bar's blue, so the page has one */
+  --pokyd-error: #a12b2b;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--pokyd-bg);
+  color: var(--pokyd-ink);
+  font: 16px/1.45 "Trebuchet MS", system-ui, sans-serif;  /* IQPokyd.rc:108 */
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.pokyd {
+  width: 100%;
+  max-width: 44rem;
+  height: 100%;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pokyd-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--pokyd-dim);
+}
+
+/* ------------------------------------------------------------- the transcript */
+
+.pokyd-transcript {
+  flex: 1 1 auto;
+  min-height: 0;                 /* without it the flex item refuses to shrink */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 0.75rem;
+  list-style: none;
+  background: var(--pokyd-panel);
+  border: 1px solid var(--pokyd-rule);
+  border-radius: 3px;
+}
+
+.pokyd-turn {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+}
+
+.pokyd-marker {
+  flex: 0 0 auto;
+  width: 1ch;
+  color: var(--pokyd-dim);
+  font-family: ui-monospace, "Consolas", monospace;
+}
+
+.pokyd-text { white-space: pre-wrap; }
+
+.pokyd-turn[data-who="human"] .pokyd-text { color: var(--pokyd-human); }
+
+/* ------------------------------------------------------------------ the input */
+
+.pokyd-form {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pokyd-label {
+  flex: 0 0 auto;
+  color: var(--pokyd-dim);
+}
+
+.pokyd-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
+  font: inherit;
+  color: inherit;
+  background: var(--pokyd-panel);
+  border: 1px solid var(--pokyd-rule);
+  border-radius: 3px;
+}
+
+.pokyd-input:focus-visible,
+.pokyd-send:focus-visible {
+  outline: 2px solid var(--pokyd-human);
+  outline-offset: 1px;
+}
+
+.pokyd-send {
+  flex: 0 0 auto;
+  padding: 0.45rem 1rem;
+  font: inherit;
+  color: var(--pokyd-panel);
+  background: var(--pokyd-human);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.pokyd-input:disabled,
+.pokyd-send:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* The engine takes a few milliseconds to answer and the input is disabled while
+   it does; this is the only feedback that says so. */
+.pokyd[data-state="busy"] .pokyd-transcript { cursor: progress; }
+
+.pokyd-failure {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--pokyd-error);
+}
+
+/* ------------------------------------------------------- the loading window */
+
+/* src/web/loading.ts draws IDD_NACITANI into .pokyd-loading-slot and takes
+   itself off the page when the load ends; the slot goes with it. It sits in the
+   same column as everything else, so it mostly needs telling how wide it is
+   allowed to be.
+
+   Two class names deep on purpose. loading.ts installs its own stylesheet into
+   the head when it mounts, which is after this file's <link>, so a single-class
+   rule here would lose the cascade to its own --pokyd-loading-width: 20em. */
+.pokyd-loading-slot { flex: 0 0 auto; }
+
+.pokyd .pokyd-loading {
+  --pokyd-loading-width: 100%;
+  --pokyd-loading-ink: var(--pokyd-ink);
+  --pokyd-loading-border: var(--pokyd-rule);
+  padding: 0.75rem;
+  background: var(--pokyd-panel);
+  border: 1px solid var(--pokyd-rule);
+  border-radius: 3px;
+}

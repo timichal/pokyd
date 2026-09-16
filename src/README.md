@@ -77,8 +77,9 @@ mirror of the original — `transcode.py --check` still reports it clean.
 Phase 4.1 onward. TypeScript, no dependencies, no build step needed to test it:
 node 24 strips the types itself, so `node test/web/cp1250.test.ts` runs as it stands,
 and `test/browser.mjs` does the same stripping on the way out to a browser, so Chrome
-runs these files rather than a build of them. Vite arrives at phase 5.1 and will
-consume them unchanged.
+runs these files rather than a build of them. Phase 5.1 brought Vite and it consumes
+them unchanged — the Vite root is the repository root precisely so that the page can
+import them at the same specifiers node and `test/browser.mjs` already use.
 
 | File | What it is |
 |---|---|
@@ -131,6 +132,36 @@ letters by code point. `PokydSettings` mirrors `struct pokyd_settings` field for
 field and in the same order — snake_case there because it is C, camelCase here
 because it is TypeScript — with the author's own Czech name in a comment on every
 line, so the two can still be read against each other.
+
+## `src/app/` — the page
+
+Phase 5.1 onward: the exhibit, and the first code in this repository that a
+visitor rather than a test ever runs. Three files, one of them a stylesheet.
+
+| File | What it is |
+|---|---|
+| `chat.ts` | `mountChat(parent, options)` — a transcript, a line to type into, and four states published on the root element as `data-state`: `loading`, `ready`, `busy`, `failed`. A caller of phase 4 and nothing else: `PokydClient` for the worker, `startCached` for the eighteen megabytes, `mountLoading` for the fifteen seconds. |
+| `main.ts` | What `index.html` runs, and the only file here that needs Vite: where the worker chunk ended up (`?worker&url`), where the engine was emitted, and what the query string asked for. |
+| `chat.css` | Plain, and only as far as usable. Phase 6 replaces it rather than extends it. |
+
+Three things in it are worth knowing before changing any of them.
+
+- **The app seeds the engine, and it has to.** `pokyd_seed` is `srand`, and the
+  original called it twice — `mfcDlg.cpp:363` at startup and `PROSTRED.FU:307`
+  after the load, where the greeting is drawn. A cold load reseeds from the clock
+  on its way out (`SLOVNIK.FU:1732`) but **a warm one from the cache never seeds at
+  all**, so without `Math.floor(Date.now() / 1000)` in `chat.ts` every returning
+  visitor would get the same conversation, word for word, forever.
+- **`workerUrl` and `moduleUrl` are required, with no defaults.** A default would
+  have to be spelled `new URL("../web/worker.ts", import.meta.url)`, and Vite
+  rewrites exactly that expression at build time into an emitted asset — so the
+  bundle would carry a second, unbundled copy of the worker and of the 137 KB
+  Emscripten glue, whether or not anything ever loaded them. Measured: it did.
+- **The query string is a developer's door, not a feature.** `?seed=` pins the
+  conversation to one `rand()` sequence, which is how `test/app/chat.test.mjs`
+  compares a page against a transcript recorded from a console; `?mood=` sets
+  `nalada` 1..5; `?cache=no` and `?cache=rebuild` get at the fifteen seconds phase
+  4.4 makes disappear. Phase 7 is where settings become a dialog.
 
 ## `src/api/` — the exported surface
 
@@ -250,3 +281,41 @@ Two that are easy to get wrong:
 
 The build prints ~39 warnings and that is on purpose; `PLAN.md` step 1.3 catalogues
 them. Seven are `-Wmaybe-uninitialized`, which is hazard 4 handing us its own list.
+
+## The web app: Vite, TypeScript, npm
+
+Phase 5.1 is where this repository grew a `package.json`, and it grew exactly two
+dependencies: `vite` and `typescript` (plus `@types/node`, which is what lets the
+one `tsconfig.json` cover the node tests as well as the browser code). Nothing is
+bundled at runtime that was not already here.
+
+```sh
+npm install
+npm run dev          # http://localhost:5173, the page against src/ as it stands
+npm run build        # dist/, what phase 5.3 deploys
+npm run preview      # serve that dist/
+npm run typecheck    # tsc --noEmit over src/ and test/
+npm test             # every test in the repository -- test/run.mjs
+```
+
+`vite.config.ts` is short and two things in it are load-bearing:
+
+- **`build/wasm/pokyd.mjs` and `pokyd.wasm` are served and emitted verbatim**, by a
+  plugin, under `<base>/pokyd/`. They are generated and gitignored, so they cannot
+  live in the source tree; they must stay in one directory, because the Emscripten
+  glue finds the binary with `new URL('pokyd.wasm', import.meta.url)`; and neither
+  may be transformed as a module, because the worker loads the glue by a runtime
+  URL that Vite is told to leave alone (`@vite-ignore`, `src/web/worker.ts:115`).
+  A missing file fails the build with the `tools/build.py --wasm` command in the
+  error.
+- **`worker: { format: "es" }`**, because `src/web/worker.ts` is started with
+  `{ type: "module" }` and imports the glue dynamically. An IIFE worker could do
+  neither.
+
+`base` is `"./"`, so the built page runs from a subdirectory as happily as from
+the root of a domain. Phase 5.3 needs that: GitHub Pages serves this as a project
+page at `timichal.github.io/pokyd/`, and `.github/workflows/deploy.yml` builds the
+whole chain from source on a Linux runner — rule compiler, rule base, Emscripten,
+Vite — because nothing compiled is committed here. `npm test -- --quick` runs before
+the upload, so a build that stopped reproducing `test/golden/rozhovor.txt` does not
+get published.

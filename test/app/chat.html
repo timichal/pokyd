@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<!-- IQ Pokyd - test/app/chat.html - phase 5.2 of PLAN.md, the milestone itself.
+
+     The browser half of test/app/chat.test.mjs, and the thing it does that no
+     test before it could: it holds a conversation with IQ Pokyd the way a
+     visitor does. It does not import src/app/chat.ts, it does not construct a
+     PokydClient and it knows nothing about the protocol. It puts the built page
+     -- dist/index.html, what phase 5.3 will deploy -- in an iframe, types into
+     the input, presses the button the author labelled "Rekni", and reads what
+     came back out of the transcript. What node then compares against
+     test/golden/rozhovor.txt is 23 answers that were on a screen.
+
+     Twice, because a first visit and a second one are different programs. The
+     first inflects 402,252 word forms and writes 18 MB to IndexedDB; the second
+     is a fresh iframe with a fresh worker, a fresh wasm module and a fresh
+     database connection, which finds that blob and starts in a fifth of a
+     second. The conversation has to be the same one either way, and the same
+     one the MinGW build printed to a console in phase 1.6.
+
+     ?seed= is why that is even a question worth asking: rand() is what picks
+     between equally-unheard answers, so the conversation is a function of the
+     seed, and pinning it is the only way to compare with a file recorded in
+     2026 against a program from 2005. Without it the app seeds from the clock,
+     which is what the original did too (mfcDlg.cpp:363, PROSTRED.FU:307).
+
+     Written by us, not ported. English identifiers and ASCII only, like the
+     rest of the non-engine code, so every Czech letter in here is an escape.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IQ Pokyd - the conversation, in the built app</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 0; display: flex; }
+  iframe { width: 46em; height: 32em; border: 1px solid #ccc; }
+  pre { flex: 1; margin: 0; padding: 1em; overflow: auto; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<pre id="log">running...</pre>
+<script type="module">
+/* The one module this page imports, and only to turn what is on the screen back
+   into the bytes the golden file is written in.  Everything else it touches, it
+   touches through the iframe's DOM. */
+import { decodeCp1250, encodeCp1250 } from "/src/web/cp1250.ts";
+
+/* test/golden/README.md: the settings that transcript was recorded under. */
+const SEED = 20050415;
+const MOOD = 3;
+
+/* The built app, not the sources.  test/app/chat.test.mjs runs `vite build`
+   before it launches the browser, so this is the deliverable. */
+const APP = "/dist/index.html?seed=" + SEED + "&mood=" + MOOD;
+
+const stage = document.getElementById("stage");
+const logEl = document.getElementById("log");
+const lines = [];
+function log(text) {
+  lines.push(text);
+  logEl.textContent = lines.join("\n");
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Wait for a condition in the iframe, or say what it was still showing. */
+async function until(what, predicate, timeoutMs = 120000) {
+  const deadline = performance.now() + timeoutMs;
+  for (;;) {
+    const value = predicate();
+    if (value) return value;
+    if (performance.now() > deadline) throw new Error("timed out waiting for " + what);
+    await sleep(10);
+  }
+}
+
+/* ---------------------------------------------------------------- one visit */
+
+/* A visit is an iframe.  A second one is a second iframe: its own worker, its
+   own wasm module, its own IndexedDB connection -- and the same origin, which
+   is what lets it find the blob the first one left behind. */
+async function visit({ kind, sentences }) {
+  const frame = document.createElement("iframe");
+  frame.src = APP;
+  const loaded = new Promise((resolve, reject) => {
+    frame.onload = resolve;
+    frame.onerror = () => reject(new Error("the app page failed to load"));
+  });
+  stage.replaceChildren(frame);
+  await loaded;
+
+  const win = frame.contentWindow;
+  const doc = frame.contentDocument;
+
+  /* The visitor's view of "is it ready": the root element says so, and the
+     input is no longer disabled.  window.pokyd is used for the report and the
+     settings afterwards -- never to put a sentence in. */
+  const root = await until("the chat to be mounted",
+    () => doc.querySelector(".pokyd"));
+  const firstState = root.dataset.state;
+  const loadingShown = doc.querySelector(".pokyd-loading") !== null;
+
+  const t0 = performance.now();
+  await until("the engine to load", () => root.dataset.state === "ready");
+  const loadMs = performance.now() - t0;
+
+  const input = doc.querySelector(".pokyd-input");
+  const send = doc.querySelector(".pokyd-send");
+  const inputLive = !input.disabled && !send.disabled;
+  const focused = doc.activeElement === input;
+  const loadingGone = doc.querySelector(".pokyd-loading") === null;
+
+  /* The defaults the golden conversation leans on, read before a word is typed:
+     nalada drifts as the conversation goes (INTELIG.FU:532), so after it they
+     would be a measurement of that and not of NASTAV_STANDARDNE. */
+  const handle = win.pokyd;
+  const report = await handle.ready;
+  const settings = await handle.client.getSettings();
+
+  /* ------------------------------------------------------ the conversation */
+
+  let busySeen = 0;
+  for (const sentence of sentences) {
+    input.value = sentence;
+    /* A submit button inside the form: this is the click, not a call. */
+    send.click();
+    /* The engine answers in milliseconds, so "busy" can come and go between two
+       polls.  Seeing it at all is what says the input was locked while it
+       worked; seeing it every time is not something a poll can promise. */
+    if (root.dataset.state === "busy") busySeen++;
+    await until("an answer to " + sentence,
+      () => root.dataset.state === "ready", 30000);
+  }
+
+  /* What is on the screen, read back out of the transcript in the order it was
+     drawn, and written in the two characters the golden file uses. */
+  const turns = Array.from(doc.querySelectorAll(".pokyd-turn")).map((li) => ({
+    who: li.dataset.who,
+    marker: li.querySelector(".pokyd-marker").textContent,
+    text: li.querySelector(".pokyd-text").textContent,
+  }));
+  let transcript = "";
+  for (const turn of turns) {
+    transcript += (turn.who === "human" ? "> " : "< ") + turn.text + "\r\n";
+  }
+
+  /* And again at the end, which is the same number only if the mood never
+     moved.  Phase 7.2 is where that becomes something a visitor can see. */
+  const moodAfter = (await handle.client.getSettings()).mood;
+  const sentenceCount = await handle.client.sentenceCount();
+  const unfreed = await handle.client.close();
+  stage.replaceChildren();
+
+  return {
+    kind, loadMs, sentenceCount, unfreed, busySeen, moodAfter,
+    firstState, loadingShown, loadingGone, inputLive, focused,
+    turns: turns.length,
+    markers: Array.from(new Set(turns.map((t) => t.marker))).sort(),
+    whoOrder: turns.map((t) => t.who).join(","),
+    emptyAnswers: turns.filter((t) => t.who === "pokyd" && t.text.trim() === "").length,
+    title: doc.title,
+    lang: doc.documentElement.lang,
+    report: { ...report, error: report.error ? report.error.message : null },
+    settings: {
+      character: settings.character,
+      mood: settings.mood,
+      humanGender: settings.humanGender,
+      computerGender: settings.computerGender,
+    },
+    transcript: Array.from(encodeCp1250(transcript)),
+  };
+}
+
+/* -------------------------------------------------------------- the driver */
+
+async function main() {
+  const raw = await (await fetch("/test/golden/rozhovor.in")).arrayBuffer();
+  /* What the driver's loop does: strip the CR, drop the empty lines
+     (mfcDlg.cpp:556). */
+  const sentences = decodeCp1250(new Uint8Array(raw))
+    .split("\n").map((r) => r.replace(/\r+$/, "")).filter((r) => r.length > 0);
+  log("input   " + sentences.length + " sentences, seed " + SEED);
+
+  const out = { sentences: sentences.length, where: navigator.userAgent, app: APP };
+
+  log("cold    first visit, the dictionary is inflected...");
+  out.cold = await visit({ kind: "cold", sentences });
+  log("cold    " + (out.cold.loadMs / 1000).toFixed(2) + " s to ready, "
+    + out.cold.turns + " turns, " + (out.cold.report.saved ? "cache saved" : "NO CACHE"));
+
+  log("warm    second visit, from IndexedDB...");
+  out.warm = await visit({ kind: "warm", sentences });
+  log("warm    " + (out.warm.loadMs / 1000).toFixed(2) + " s to ready, "
+    + out.warm.turns + " turns, " + (out.warm.report.hit ? "cache hit" : "NO HIT"));
+
+  /* Two visits, one key: the second one found what the first one wrote. */
+  out.sameKey = out.cold.report.key === out.warm.report.key;
+  return out;
+}
+
+let result;
+try {
+  result = await main();
+} catch (e) {
+  result = { error: (e && e.stack) ? e.stack : String(e) };
+  log("FAILED: " + result.error);
+}
+await fetch("/result", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(result),
+});
+</script>
+</body>
+</html>

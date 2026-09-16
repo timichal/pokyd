@@ -3,16 +3,18 @@
    Extracted at phase 4.2 from test/wasm/bench.mjs, which grew it at 3.4 and is
    now one of its two callers.  It serves the repository read-only over loopback,
    launches headless Chrome or Edge at a page in it, and waits for that page to
-   POST its results back to /result.  No driver, no puppeteer, no npm install
-   -- there is still no package.json in this repo and neither 3.4 nor 4.2 needed
-   one.
+   POST its results back to /result.  No driver, no puppeteer and nothing out of
+   node_modules: it predates the package.json phase 5.1 brought and does not use
+   it, so every browser test in here runs on a plain node.
 
    The one thing it does that a plain static server does not: it strips the types
    out of any .ts it serves, with node's own stripTypeScriptTypes, and hands it
    over as JavaScript.  That is what lets a browser import src/web/*.ts directly,
    unbundled, at the same specifiers node uses -- so the module the browser runs
-   is the file on disk and not a build of it.  Phase 5.1 brings Vite and takes
-   this over; until then it is thirty lines and no dependencies.
+   is the file on disk and not a build of it.  Phase 5.1 brought Vite, and it did
+   not take this over: Vite serves the exhibit, this serves the tests, and
+   test/app/chat.test.mjs uses both -- it builds with one and serves dist/ with
+   the other.
 
    Written by us, not ported.  English identifiers and ASCII only, like the rest
    of the non-engine code.
@@ -60,6 +62,7 @@ const TYPES = {
   ".mjs": "text/javascript; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".ts": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
   ".wasm": "application/wasm",
   ".txt": "application/octet-stream",
   ".in": "application/octet-stream",

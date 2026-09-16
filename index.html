@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!-- IQ Pokyd - index.html - phase 5.1 of PLAN.md, and the Vite entry point.
+
+     The whole page: a mount point and the module that fills it. Everything a
+     visitor sees is built in src/app/chat.ts, because phase 6 replaces that
+     file with the author's own window and there is nothing here for it to
+     fight with.
+
+     lang="cs" because IQ Pokyd speaks Czech and nothing else -- it indexes a
+     28-letter Czech alphabet. The charset declaration is about this file only:
+     everything the engine says crosses the worker boundary as CP1250 bytes and
+     is decoded by src/web/cp1250.ts, which is the one place in the project
+     where a byte becomes a character.
+
+     Written by us, not ported. -->
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IQ Pokyd v0.15</title>
+<meta name="description" content="IQ Pokyd 0.15, a 2005 Czech conversation program by Ales Janda / KYBLSoft, running in a browser.">
+<link rel="stylesheet" href="./src/app/chat.css">
+</head>
+<body>
+<div id="app"></div>
+<script type="module" src="./src/app/main.ts"></script>
+</body>
+</html>

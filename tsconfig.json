@@ -1,0 +1,37 @@
+{
+  /* IQ Pokyd - tsconfig.json - phase 5.1 of PLAN.md.
+
+     One config for the whole repository, deliberately.  src/web/ is written to
+     run in a browser and in node without a build step, and the tests are node
+     programs that import it, so both libraries are on and both are needed.
+     src/web/worker.ts declares the two worker globals it uses by hand rather
+     than pull in lib.webworker, which cannot be loaded alongside lib.dom -- the
+     comment at the top of that file is the argument.
+
+     Nothing here emits.  Vite compiles what ships (esbuild, types stripped and
+     not checked) and node strips the types out of the rest; `npm run typecheck`
+     is the only thing that ever reads this file, which is why it is noEmit and
+     why allowImportingTsExtensions is on: every import in this repository names
+     the .ts file it means, so that node and a browser can follow it as written. */
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": false,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "vite.config.ts"]
+}
