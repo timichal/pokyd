@@ -15,6 +15,11 @@
 original/**       text eol=crlf
 src/engine/**     text eol=crlf
 
+# Phase 6.2.  src/app/assets.ts is generated from the same list by
+# tools/extract-assets.mjs, and test/app/assets.test.ts compares the file on disk
+# with a fresh render, so it needs the same pinning as resources.ts below.
+src/app/assets.ts      text eol=crlf
+
 # Phase 6.1.  src/app/resources.ts is generated from original/!Prostre/IQPokyd.rc
 # by tools/extract-rc.mjs, and test/app/resources.test.ts compares the file on disk
 # with a fresh parse byte for byte -- so its checkout has to be CRLF everywhere,
@@ -43,6 +48,13 @@ src/app/resources.ts   text eol=crlf
 *.EXE   binary
 *.hlp   binary
 *.HLP   binary
+
+# Phase 6.2's output.  src/app/assets/ is BMP and ICO re-encoded as PNG, and the
+# favicon is res/IQPokyd.ico copied out byte for byte -- git must not go near any
+# of it.  .ico is already listed above; .png is new because until 6.2 there was
+# not one in the repository.
+*.png   binary
+*.PNG   binary
 
 # Added after the audit: binary, present in original/, and previously being mangled.
 # .fon is the bitmap font resource; .obj are 1990s MSVC objects; .gid is the help

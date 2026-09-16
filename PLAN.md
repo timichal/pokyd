@@ -9,8 +9,9 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 6 — the retro UI — **is under way: 6.1 is done and the author's resource
-script is now a module the page can read.** Phase 5 is complete, 5.1 through 5.3, and
+**Phase:** 6 — the retro UI — **is under way: 6.1 and 6.2 are done, and the author's
+resource script and all eighteen of his pictures are now modules the page can read.**
+Phase 5 is complete, 5.1 through 5.3, and
 **IQ Pokyd is live at <https://timichal.github.io/pokyd/>.** A twenty-year-old Czech
 Windows program holds a conversation in a browser, at a URL, saying byte for byte what
 it said in 2005.
@@ -386,13 +387,70 @@ essay are string literals in `mfcDlg.cpp` (`:705-716` and `:823-845`), the latte
 written in the `<b>/<u>/<c>/<h>` tag language `NAPIS_FORMATOVANY_TEXT_NAPOVEDY`
 (`PROSTRED.FU:1116`) renders into `IDD_TEXT`'s RICHEDIT — 8.2 and 8.3's source.
 
-**Next action:** 6.2 — extract and transcode the assets. The list is now in
-`BITMAPS` and `ICONS` rather than in a directory listing, the one miscased path is
-known, and `pozadi-iqpokyd.bmp` is 1.2 MB of 24-bit BMP that wants to be a WebP.
-6.3 then has everything it needs: `resources.ts` for the inventory and the strings,
-`WINDOW_LAYOUT` and `PALETTE` for where they go and what colour they are. The open
-question 6.5 asks — how far to take the fidelity — can now be answered against
-something running.
+**6.2 is done, and the whole of the author's artwork is in the repository as PNG.**
+`node tools/extract-assets.mjs` reads `BITMAPS` and `ICONS` out of `resources.ts`,
+decodes each file out of the archive and writes `src/app/assets/` — **18 files,
+1,287,294 bytes of BMP and ICO down to 177,304 of PNG, 86% off** — with
+`src/app/assets.ts` as the manifest, one Vite import per file, which is how a
+subdirectory deploy gets them fingerprinted and emitted. Proved by building against
+it once: all eighteen land in `dist/assets/`, none inlined.
+
+**The claim the test makes is that not one pixel moved, and it checks it pixel by
+pixel.** `node test/app/assets.test.ts` decodes every committed PNG with a decoder
+written inside the test — its own inflate, its own unfilter, its own CRC — and
+compares it with the BMP or ICO it came from, alpha included: **51 checks, under a
+second, no browser and no engine.** It is deliberately *not* a byte comparison.
+Re-running the extractor and diffing the output would test this machine's zlib, and
+a different node on the Linux runner could deflate the same image differently and
+fail a test nothing was wrong with. `--check` on the extractor is the byte
+comparison and is for this machine only. Three more checks keep the decoder honest
+about itself: the geometry of every bitmap is read straight off its
+`BITMAPINFOHEADER` here, the AND mask of every icon is read bit by bit and held
+against the PNG's alpha, and all 196 pixels of `bmp00001.bmp` are decoded from raw
+bits by the test, sharing nothing with the extractor.
+
+**PNG and not WebP, and the reason is not that WebP was hard.** Nothing on this
+machine encodes WebP — no Pillow, no `cwebp`, no ImageMagick — and the one encoder
+in reach is the headless Chrome already in the toolchain, whose output is a browser
+version rather than a function of its input. But the decisive argument is the other
+one: **lossy WebP would be the first thing in this port to change what the author
+made.** `pozadi-iqpokyd.bmp` is a 900×459 night photograph of bare branches, already
+posterised down to **135 colours**, and re-quantising it is exactly the improvement
+a museum piece should refuse. An 8-bit *indexed* PNG carries those 135 colours
+exactly and costs **161 KB against 1.2 MB**. Two smaller decisions fell out of that
+one. Indexed beats truecolour on this archive because most of these images are
+palettes (135 colours in a 900×459 frame is not a photograph any more), and the row
+filters that help a photograph *hurt* an index — filtering the background adaptively
+costs 200 KB where not filtering it at all costs 164 KB. So `encodePng` deflates
+five ways and keeps the smallest, which needs no table of rules and no guessing.
+
+**`iqpokyd.ttf` is not a TrueType font, and 6.2 is where that stopped being
+believed.** It is 1,332 bytes beginning `MZ`, with a DOS stub that says so — "This
+is a TrueType font, not a program" — which makes it a **`.FOT`**: the installation
+stub `CreateScalableFontResource` writes, holding a *path* and no glyphs. The path
+is `CEARIABI.TTF`, Microsoft's **Arial CE Bold Italic**, and that file is nowhere in
+the archive. `font.fon` beside it is not the author's either: it is Microsoft's
+`8514SYS.FON`, "Sistem Font (8514) - Hebrew", ©1988-1995. **Neither file is named
+anywhere in the source**, and the fonts the program actually asks for are Windows
+faces — Trebuchet MS, Garamond, Times New Roman, Courier New, System, Tahoma. So
+there is no font to convert; 6.3 writes a `font-family` stack instead, and the two
+orphans stay in the archive as what they are, dev-folder leftovers.
+
+Four things worth knowing before 6.3 draws anything. The background is **stretched**
+and the sub-window's tile **repeats** — both read off `PROSTRED.FU`, and both are one
+CSS declaration each (the 6.3 entry has the line numbers). The ICO masks work and
+are not decoration: `IDI_TVAR`'s 135×42 banner has 2,698 of its 5,670 pixels masked
+out. **`ico00001.ico`'s 32×32 entry is blank** — 1,024 of 1,024 pixels transparent,
+a size the author never drew, so `IDI_TVAR16` means the 16×16 and only that. And
+`res\POZMALE.BMP` was worth the fold it got: `resolveInArchive()` resolves the
+`.rc`'s Windows spelling against the real directory, which is what lets the Linux
+runner build this at all.
+
+**Next action:** 6.3 — rebuild the main window. Everything it needs is now a module:
+`resources.ts` for the inventory, the strings and the eight controls of
+`IDD_HLAVNI_OKNO`, `WINDOW_LAYOUT` and `PALETTE` for where they go and what colour
+they are, `assets.ts` for the pictures. The open question 6.5 asks — how far to take
+the fidelity — can now be answered against something running.
 
 ---
 
@@ -489,12 +547,21 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   editing that file. It also reads `PALETTE` and `WINDOW_LAYOUT` back out of
   `src/engine/prostred/`, which makes it the one test that notices if the engine's
   colours or margins move.
+- **And one asks whether the pictures are still the author's pictures.**
+  `node test/app/assets.test.ts` — phase 6.2, no browser, no engine, under a second.
+  It decodes all eighteen files in `src/app/assets/` with a PNG decoder of its own
+  and compares them with `original/` **pixel for pixel, alpha included**, so a lossy
+  re-encode or a dropped mask fails here. Deliberately not a byte comparison: a
+  different zlib deflates the same image differently and would fail a test nothing
+  was wrong with. `node tools/extract-assets.mjs --check` is the byte comparison, and
+  it is for this machine, not for CI. Run the extractor rather than editing
+  `src/app/assets.ts` or anything under `src/app/assets/`.
 - **And one asks whether the page works**, which since 5.2 is the question that
   matters: `node test/app/chat.test.mjs` builds the app with Vite, drives the built
   `index.html` through the golden conversation in Chrome by typing into it, and
   compares what was on the screen with `test/golden/rozhovor.txt`. **`npm test` runs
-  all ten**, in phase order, in a little over two minutes; `node test/run.mjs
-  --quick` keeps the six that do not launch a browser. `npm run typecheck` covers
+  all eleven**, in phase order, in a little over two minutes; `node test/run.mjs
+  --quick` keeps the seven that do not launch a browser. `npm run typecheck` covers
   every `.ts` in `src/` and `test/` at once.
 
 ---
@@ -1544,7 +1611,7 @@ is not a refinement and the cache is not an optimization.
       pinned by a test.
 
       `npm test` runs `test/run.mjs`, which is every test in this repository in phase
-      order — **nine** of them when 5.2 landed, ten since 6.1; `--quick` keeps the ones
+      order — **nine** of them when 5.2 landed, eleven since 6.2; `--quick` keeps the ones
       that do not launch a browser. They all pass, in a little over two minutes.
 - [x] 5.3 **Deploy it somewhere as a checkpoint, even ugly. Done — it is live at
       <https://timichal.github.io/pokyd/>.** `.github/workflows/deploy.yml` builds it
@@ -1634,17 +1701,48 @@ All the original assets are in `original/IQ Pokyd/!Prostre/res/`.
       runtime `STATIC`s laid out by `PROSTRED.FU` (`WINDOW_LAYOUT`), the colours are
       byte-reversed `COLORREF`s in `PROSTRED.PR` (`PALETTE`), and dialog units need
       base units the script does not contain (`dluToPx`).
-- [ ] 6.2 Extract and transcode: `pozadi-iqpokyd.bmp` and friends → PNG/WebP,
-      `iqpokyd.ttf` → WOFF2, `IQPokyd.ico` → favicon. The list is `BITMAPS` and
-      `ICONS` in `src/app/resources.ts`; note `IDB_POZADIMALE` names `res\POZMALE.BMP`
-      and the file on disk is `res/pozmale.bmp`, which only a Windows filesystem
-      forgives.
+- [x] 6.2 **Done** — `node tools/extract-assets.mjs` decodes every image in
+      `BITMAPS` and `ICONS` out of the archive and writes `src/app/assets/`:
+      **18 files, 1,287,294 bytes of BMP and ICO down to 177,304 of PNG**, with
+      `src/app/assets.ts` as the manifest 6.3 imports. `test/app/assets.test.ts`
+      puts **51 checks** on it and compares **every pixel of all eighteen** with
+      the archive, alpha included.
+
+      **PNG, lossless, and no WebP** — the argument is in the extractor's header
+      and in the Status section. **No WOFF2 either, and that is a finding:**
+      `iqpokyd.ttf` is not a TrueType font. The font work in this phase is a CSS
+      font stack in 6.3, not an asset.
+
+      Formats met on the way, all decoded from scratch: 1-, 4-, 8- and 24-bit
+      uncompressed DIBs, **RLE4 and RLE8**, and the ICO AND mask that gives the
+      icons their transparency. The one miscased path is folded by
+      `resolveInArchive()`, which resolves the `.rc`'s Windows spelling against
+      the real directory — the reason the Linux runner can build this at all.
 - [ ] 6.3 Rebuild the main window: background, menu bar, the sentence/answer panes,
       the live "name × name, character: mood" menu caption (`ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI`).
       Read `WINDOW_LAYOUT` and `PALETTE` in `src/app/resources.ts` before starting:
       the eight controls of `IDD_HLAVNI_OKNO` get re-anchored by
       `PREKRESLI_PRVKY_V_OKNE_PRI_ZMENE_VELIKOSTI` (`PROSTRED.FU:1022`) and the
       conversation is not one of them.
+
+      **Three things 6.2 found while reading the same file, each of them a CSS
+      declaration.** The main background is *stretched*, not tiled and not
+      cropped: `PREKRESLI_OBRAZOVKU` (`PROSTRED.FU:827`) reloads
+      `IDB_POZADIHLAVNIHOOKNA` at `okno.right × okno.bottom` on every resize, so
+      it is `background-size: 100% 100%` on a 900×459 image and the aspect ratio
+      is not preserved. `IDB_POZADIMALE` is the opposite — `CreatePatternBrush`
+      at `:348`, so the 100×100 grey noise tile *repeats* behind the sub-window.
+      And `prikaz_nezobrazovatpozadi` (`:337`) turns both off in favour of plain
+      black, which is phase 7.1's checkbox and worth building the CSS around.
+
+      **The fonts are Windows fonts, all four of them**, and nothing in the
+      archive ships one. `Trebuchet MS` at -18/500 for the two side headings and
+      at 20 for every line of the conversation (`PROSTRED.FU:913`), `Garamond` at
+      -22/800 for the middle title (`mfcDlg.cpp:376`), `Times New Roman` and
+      `Courier New` in the about box (`:700`, `:723`), and `System`/`Tahoma` in
+      the dialog templates. So this is a `font-family` stack with fallbacks, and
+      the one thing to get right is that a visitor without Trebuchet MS still
+      gets a metrically similar face.
 - [ ] 6.4 Rebuild the welcome line — `NAPIS_UVODNI_UVITANI` picks one of 10 greetings,
       gender-inflected.
 - [ ] 6.5 Decide how far to take it — window chrome? XP styling? (See open questions.)
@@ -1721,8 +1819,8 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
   rule base and the page from source on a Linux runner, gates on the golden
   conversation, and publishes `dist/` to GitHub Pages. Nothing compiled is committed,
   which is why it reproduces the whole chain rather than uploading an artefact.
-- All the tests: `npm test`, which is `node test/run.mjs` — ten programs in phase
-  order, `--quick` for the six that do not launch a browser. The one that says the
+- All the tests: `npm test`, which is `node test/run.mjs` — eleven programs in phase
+  order, `--quick` for the seven that do not launch a browser. The one that says the
   port works is `test/app/chat.test.mjs`, phase 5.2: it builds the app, drives the
   built page through the golden conversation in Chrome and compares what was on the
   screen with `test/golden/rozhovor.txt`.
@@ -1733,6 +1831,14 @@ Mirrors the `Nastaveni` class (`Vstup/NASTAVEN.PR`).
   hand. It is the place to look for any string, id or dialog rectangle of the
   original, and its header records the three things the script does *not* contain:
   the main window's runtime layout, the palette, and the dialog base units.
+- The author's pictures, transcoded: `node tools/extract-assets.mjs` decodes every
+  image in `BITMAPS` and `ICONS` out of the archive and writes `src/app/assets/`
+  plus `src/app/assets.ts` — phase 6.2. `--check` says whether they are stale,
+  `--dump` prints the sizes, and `node test/app/assets.test.ts` compares all
+  eighteen with the archive pixel for pixel. Read that file's header before
+  drawing with any of them: it is where the ICO mask, the one miscased path and
+  the indexed-PNG decision are written down. **Do not edit `src/app/assets.ts` or
+  anything under `src/app/assets/`** — run the extractor.
 - Running a page in a browser: `test/browser.mjs` serves the repo over loopback, launches
   headless Chrome or Edge at it, and takes the results back on `POST /result`. It
   strips the types out of `.ts` on the way through, so a browser imports `src/web/*.ts`

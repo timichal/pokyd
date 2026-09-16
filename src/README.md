@@ -136,13 +136,16 @@ line, so the two can still be read against each other.
 ## `src/app/` — the page
 
 Phase 5.1 onward: the exhibit, and the first code in this repository that a
-visitor rather than a test ever runs. Three files, one of them a stylesheet.
+visitor rather than a test ever runs. Five files and a directory of pictures,
+two of them generated.
 
 | File | What it is |
 |---|---|
 | `chat.ts` | `mountChat(parent, options)` — a transcript, a line to type into, and four states published on the root element as `data-state`: `loading`, `ready`, `busy`, `failed`. A caller of phase 4 and nothing else: `PokydClient` for the worker, `startCached` for the eighteen megabytes, `mountLoading` for the fifteen seconds. |
 | `main.ts` | What `index.html` runs, and the only file here that needs Vite: where the worker chunk ended up (`?worker&url`), where the engine was emitted, and what the query string asked for. |
 | `chat.css` | Plain, and only as far as usable. Phase 6 replaces it rather than extends it. |
+| `assets.ts` | Phase 6.2, and **generated**: one Vite import per file in `assets/`, and `BITMAP_ASSETS` / `ICON_ASSETS` keyed by the author's own symbol, with the pixel size of each. Import the URL from here; never build one by hand, or a fingerprinted deploy will hand the visitor a 404. |
+| `assets/` | Phase 6.2, and **generated**: the eleven bitmaps and three icons of `resources.ts`, decoded out of the archive and written as lossless PNG — eighteen files, because each `.ico` holds more than one size. `favicon.ico` beside them is `res/IQPokyd.ico` copied out byte for byte. |
 | `resources.ts` | Phase 6.1, and **generated**: `original/IQ Pokyd/!Prostre/IQPokyd.rc` parsed by `tools/extract-rc.mjs`. Six dialogs, the menu, the accelerator table, the version block and the eighteen image files, with the author's strings, ids and geometry. Plus the two things the .rc does not contain — `PALETTE` and `WINDOW_LAYOUT` — which come out of `PROSTRED.PR` and `PROSTRED.FU`. |
 
 **`resources.ts` is committed even though it is generated**, unlike everything
@@ -152,6 +155,16 @@ not have to know the extractor exists. `node tools/extract-rc.mjs` rewrites it,
 `--check` says whether it is stale, `--dump` prints the parse readably, and
 `node test/app/resources.test.ts` re-runs the parse in memory and fails if the
 committed file has drifted — so "generated" cannot quietly become "hand-edited".
+
+**`assets.ts` and `assets/` are committed on the same terms**, and regenerated the
+same way: `node tools/extract-assets.mjs`, `--check` for staleness, `--dump` for the
+sizes. What guards them is stronger than a diff, because a PNG is not readable as
+one: `node test/app/assets.test.ts` decodes all eighteen with a decoder of its own
+and compares them with `original/` **pixel for pixel, alpha included**. It is not a
+byte comparison on purpose — a different zlib deflates the same image differently,
+and CI would fail a test nothing was wrong with. That file's header says what else
+it checks; the extractor's says why the output is lossless indexed PNG and not WebP,
+and why one path in the `.rc` has to be resolved case-insensitively.
 
 Three things the resource script does **not** say, all of which phase 6.1 had to
 go and find, and all of which are written down in that file's header:
