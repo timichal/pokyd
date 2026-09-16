@@ -9,17 +9,28 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 9 — ship — **is open, and 9.0 is done.** The exhibit now says what it is on
-the two screens a visitor would ask it on: *Informace o verzi* opens with a 2026 preface
-above the author's own note, and *O programu* has an **Upozornění 2026** box with a link
-to the source where `http://iqpokyd.kyblsoft.cz` and `iqpokyd@kyblsoft.cz` used to sit.
-Both are `src/app/exhibit.ts`, which is the only file in this port that writes Czech of
-its own and the second place — after `exhibitMenu` — that it changes anything of his.
+**Phase:** 9 — ship — **is complete, 9.0 through 9.4, and so is the port.** A Czech
+Windows program from 2005 holds a conversation in a browser at
+<https://timichal.github.io/pokyd/>, and 9.4 checked it there rather than locally: the
+deployed page, driven through all 23 sentences of `test/golden/rozhovor.in`, answers
+with `test/golden/rozhovor.txt` **byte for byte** — the same transcript the native
+MinGW build printed at phase 1.6, now out of a Linux-built wasm module in Chrome. The
+mobile layout renders at 390×844 with nothing overflowing (9.3), and the two documents
+this repository was missing are written: `README.md`, which says what this is, whose it
+is, what changed and why, and reproduces `original/info.txt` in full (9.1), with the
+licensing note in it (9.2) describing the GPL-plus-no-commercial-use contradiction
+rather than pretending to resolve it.
+
+9.0 was the exhibit saying what it is on the two screens a visitor would ask it on:
+*Informace o verzi* opens with a 2026 preface above the author's own note, and *O
+programu* has an **Upozornění 2026** box with a link to the source where
+`http://iqpokyd.kyblsoft.cz` and `iqpokyd@kyblsoft.cz` used to sit. Both are
+`src/app/exhibit.ts`, which is the only file in this port that writes Czech of its own
+and the second place — after `exhibitMenu` — that it changes anything of his.
 `versionText` is untouched and still holds against `mfcDlg.cpp` character for character;
 `exhibitAbout` is arithmetic over his own rectangles, 50 checks in
 `test/app/exhibit.test.ts` and a real-browser measurement of the new caption against the
-box it was given in `test/app/chat.test.mjs`, now **371 checks**. Left in phase 9: the
-README, the licensing note, the mobile layout and the final transcript pass.
+box it was given in `test/app/chat.test.mjs`, now **371 checks**. `npm test` is 18 of 18.
 
 **Phase 8** — extras — **is complete, and two of its four items are the decision not to
 build them.** 8.1 and 8.3 are dropped: the conversation log has nothing to write to and
@@ -2356,22 +2367,49 @@ rather than a thing built.
       `test/app/chat.test.mjs` grew to **371**: it measures the new caption against the
       rectangle it was given **in a real browser** and fails if the words hang out of it,
       which is the one thing dialog-unit arithmetic cannot tell you.
-- [ ] 9.1 README: what this is, whose it is, how it was ported, what changed and why
-      (link `PATCHES.md`). **`original/info.txt` goes here**, reproduced in full — phase
-      8.3 was going to give it a page of its own and that page is dropped, because
-      `IDD_ABOUTBOX` is the attribution screen and the author wrote it — and since 9.0,
-      the attribution screen also says where this port came from.
-- [ ] 9.2 Licensing note. The author released under GNU/GPL *and* added "no commercial use",
-      which the GPL does not actually permit as a combination. Whatever we conclude, the
-      practical commitments are: keep attribution, keep `info.txt`, don't monetize it.
-- [ ] 9.3 Static deploy. Check the mobile layout at least renders.
-- [ ] 9.4 Final pass: compare a long browser conversation against the Phase 1 native
-      transcript one more time.
+- [x] **9.1 `README.md`, and there was none before it.** What this is, whose it is,
+      what changed and why, how to build it and how to open the debug menu — short,
+      because `PLAN.md` is the long version and `PATCHES.md` is the audit. The "what is
+      different" list is five items and it is the whole of them: the three dropped menu
+      commands, the two dead addresses off *O programu*, the one settings page instead
+      of two, the transcript that scrolls, and the settings in `localStorage` with no
+      `PROFIL.IQP` behind them. **`original/info.txt` is reproduced in full at the
+      foot**, which is what phase 8.3's dropped page was for.
+- [x] **9.2 Licensing note, in the README.** It describes the situation rather than
+      resolving it: `info.txt` says GNU/GPL and in the next sentence says no commercial
+      use, adding a restriction is the one thing the GPL rules out, so the two halves
+      cannot both be in force and nothing in the archive says which one is. The author
+      has not been reachable at either address in that file for many years. What the
+      port does instead is keep both halves of what he asked for — attribution on the
+      screen and in every file of his, `info.txt` whole, source open, no money — and
+      asks a fork to do the same.
+- [x] **9.3 Static deploy, and the mobile layout renders.** <https://timichal.github.io/pokyd/>
+      driven at 390×844 over CDP: no horizontal overflow (`documentElement.scrollWidth`
+      is 390), the menu bar and its live caption are on the first line, `IDD_NASTAVENI`
+      opens on arrival and fits inside the viewport, the transcript takes 725 px of the
+      820 the client gets, and the sentence line and *Řekni* sit on the bottom row. The
+      one thing that touches at that width is the heading row — "IQ Pokyd v0.15" and
+      "KÝBLSoft 2005" meet with no gap. They are `WINDOW_LAYOUT`'s own rectangles, so
+      that is his geometry in a narrower window and not a bug in ours.
+- [x] **9.4 Final pass, run against the deployed page and not a local build.**
+      `?seed=20050415&mood=3`, *Storno* on the settings dialog it opens by itself, then
+      all 23 sentences of `test/golden/rozhovor.in` typed into the sentence line and
+      sent with *Řekni*. The 46 lines read back off the screen are
+      `test/golden/rozhovor.txt` **byte for byte** — the transcript the native MinGW
+      build printed at phase 1.6, now coming out of a Linux-built wasm module in Chrome
+      on a GitHub Pages URL. Ctrl+Shift+Alt+D and `::debuginfo` both open
+      `IDD_DEBUGNASTAVENI` there, and F4, F1, Shift+F1, Alt+V, F7 and Ctrl+F7 all do
+      what `IDR_ZKRATKY` says. Locally, `npm test` is **18 of 18**.
 
 ---
 
 ## Reference
 
+- **What a visitor or a fork reads first: `README.md`** — phase 9.1 and 9.2, and the
+  only document here written for someone who has not read this file. It has the five
+  differences from the original, the build and run commands, the two ways into the debug
+  menu, the licensing note and `original/info.txt` in full. Keep it short: `PLAN.md` is
+  the long version.
 - **Changes to original code: `PATCHES.md`.** One line so far. It pairs with
   `python3 tools/transcode.py --check`, which names every file differing from the
   original; that list and `PATCHES.md` must agree, and `diff -r build/src build/cp1250`
@@ -2437,8 +2475,8 @@ rather than a thing built.
   rule base and the page from source on a Linux runner, gates on the golden
   conversation, and publishes `dist/` to GitHub Pages. Nothing compiled is committed,
   which is why it reproduces the whole chain rather than uploading an artefact.
-- All the tests: `npm test`, which is `node test/run.mjs` — seventeen programs in phase
-  order, `--quick` for the thirteen that do not launch a browser. The one that says the
+- All the tests: `npm test`, which is `node test/run.mjs` — eighteen programs in phase
+  order, `--quick` for the fourteen that do not launch a browser. The one that says the
   port works is `test/app/chat.test.mjs`, phase 5.2: it builds the app, drives the
   built page through the golden conversation in Chrome and compares what was on the
   screen with `test/golden/rozhovor.txt`.
