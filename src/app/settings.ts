@@ -274,9 +274,17 @@ export function edit(
 
 /* ---------------------------------------------------------- the two pages */
 
+/* The dialog on the screen has one page: src/app/dialog.ts draws BASIC_CONTROLS
+   and drops the second page whole, and `DROPPED` there is the list of what went
+   and why.  Both lists stay here all the same, because they are not the port's
+   arrangement but the author's -- test/app/settings.test.ts reads his two
+   ShowWindow runs out of Nastaveni.cpp and holds them against these -- and
+   because DROPPED is built from ADVANCED_CONTROLS rather than written out a
+   second time.  What the archive had is recorded; what the exhibit shows is
+   dialog.ts's decision. */
+
 /** IDC_ZAKLADNINASTAVENI, Nastaveni.cpp:337-379: every control it shows, in
- *  the order it shows them.  Everything not named here is hidden while the
- *  basic page is up, and the other list is the mirror image. */
+ *  the order it shows them.  It is the whole of the dialog this port draws. */
 export const BASIC_CONTROLS: readonly string[] = [
   "IDC_CLOVEKPOHLAVI", "IDC_POCITACPOHLAVI",
   "IDC_CLOVEKZENA", "IDC_POCITACZENA",
@@ -289,7 +297,8 @@ export const BASIC_CONTROLS: readonly string[] = [
   "IDC_POUZIVATEFEKTY", "IDC_SPISOVNACESTINA",
 ];
 
-/** IDC_ROZSIRENENASTAVENI, Nastaveni.cpp:381-424, the same way. */
+/** IDC_ROZSIRENENASTAVENI, Nastaveni.cpp:381-424, the same way -- and the page
+ *  this port does not draw. */
 export const ADVANCED_CONTROLS: readonly string[] = [
   "IDC_EMULOVATKLAVESNICI",
   "IDC_EMULOVATCESKOUKLAVESNICI", "IDC_EMULOVATSLOVENSKOUKLAVESNICI",
@@ -298,12 +307,13 @@ export const ADVANCED_CONTROLS: readonly string[] = [
   "IDC_READONLYMOD", "IDC_ZOBRAZOVATPOPISKY",
 ];
 
-/** The two group boxes are on both pages and are relabelled by SetWindowText
- *  when the page changes (:348, :364, :393, :409).  The basic page puts back
+/** The two group boxes were on both pages and were relabelled by SetWindowText
+ *  when the page changed (:348, :364, :393, :409).  The basic page put back
  *  what IQPokyd.rc already says, so only the advanced page's two words are
  *  written here -- the other two are read from src/app/resources.ts, and
  *  test/app/settings.test.ts checks that his two SetWindowText calls really do
- *  say what the template says. */
+ *  say what the template says.  With one page there is nothing to swap, so
+ *  these two are what the archive said and nothing on the screen. */
 export const ADVANCED_GROUP_CAPTIONS: Record<string, string> = {
   IDC_RAMECEK1: "Emulace prostředí",   /* Emulace prostredi */
   IDC_RAMECEK2: "Jiná nastavení",      /* Jina nastaveni */

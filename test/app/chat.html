@@ -119,8 +119,25 @@ async function visit({ kind, sentences }) {
   const input = doc.querySelector(".pokyd-input");
   const send = doc.querySelector(".pokyd-send");
   const inputLive = !input.disabled && !send.disabled;
-  const focused = doc.activeElement === input;
   const loadingGone = doc.querySelector(".pokyd-loading") === null;
+
+  /* Phase 7.3, and it is the first thing a visitor sees on a first visit:
+     PRECTI_NASTAVENI_ZE_SOUBORU found no IQPOKYD.CFG, so g_zobrazitnastaveni
+     is set and IDD_NASTAVENI opens by itself (mfcDlg.cpp:436, PROSTRED.FU:498).
+     The second visit reads the file the first one wrote and is not asked.
+
+     It is taken off with Storno, which applies nothing -- so the conversation
+     below is held under NASTAV_STANDARDNE's own defaults either way, and the
+     two visits stay the same conversation. */
+  const openedOnArrival = doc.querySelector(".pokyd-dialog") !== null;
+  if (openedOnArrival) {
+    doc.querySelector('.pokyd-dialog-item[data-control="IDCANCEL"]').click();
+    await until("the first-visit dialog to close",
+      () => doc.querySelector(".pokyd-dialog") === null, 5000);
+  }
+  /* After the dialog, not before it: the line takes the focus when the dialog
+     hands it back (mfcDlg.cpp:800, and src/app/chat.ts's openSettings). */
+  const focused = doc.activeElement === input;
 
   /* The defaults the golden conversation leans on, read before a word is typed:
      nalada drifts as the conversation goes (INTELIG.FU:532), so after it they
@@ -332,6 +349,8 @@ async function visit({ kind, sentences }) {
          first one, and 1 on the second, which reads what the first one wrote.
          Phase 7.3. */
       configStatus: handle.configStatus(),
+      /* Read at the top of the visit, before a word was typed. */
+      openedOnArrival,
     };
 
     /* 1. F4 opens it. */
@@ -341,8 +360,11 @@ async function visit({ kind, sentences }) {
     out.caption = doc.querySelector(".pokyd-dialog-title").textContent;
     out.modal = dialog().getAttribute("aria-modal");
     out.controls = doc.querySelectorAll(".pokyd-dialog-item").length;
-    out.page = dialog().dataset.page;
-    out.basicShown = shownIds();
+    out.shown = shownIds();
+    /* The two group boxes keep the template's own captions now: nothing swaps
+       them, because there is no second page to swap them for. */
+    out.groups = [item("IDC_RAMECEK1").querySelector("legend").textContent,
+      item("IDC_RAMECEK2").querySelector("legend").textContent];
     out.lists = {
       character: Array.from(input("IDC_CHARAKTER").options).map((o) => o.textContent),
       mood: Array.from(input("IDC_NALADA").options).map((o) => o.textContent),
@@ -353,7 +375,8 @@ async function visit({ kind, sentences }) {
       human: input("IDC_CLOVEKMUZ").checked,
       computer: input("IDC_POCITACMUZ").checked,
     };
-    /* The five controls src/app/dialog.ts draws and cannot honour. */
+    /* Nothing is greyed on this dialog any more: every control that was drawn
+       and could not be honoured was on the page that is now dropped. */
     out.disabled = Array.from(doc.querySelectorAll(".pokyd-dialog-item"))
       .filter((el) => {
         const control = el.matches("input, select") ? el
@@ -361,18 +384,31 @@ async function visit({ kind, sentences }) {
         return control !== null && control.disabled;
       }).map((el) => el.dataset.control).sort();
 
-    /* 2. the advanced page, and the two group captions it swaps in. */
-    item("IDC_ROZSIRENENASTAVENI").click();
-    out.advancedPage = dialog().dataset.page;
-    out.advancedShown = shownIds();
-    out.groups = {
-      advanced: [item("IDC_RAMECEK1").querySelector("legend").textContent,
-        item("IDC_RAMECEK2").querySelector("legend").textContent],
+    /* 2. the page that is not there.  Everything the second button showed is
+          off the dialog, the two buttons with it -- src/app/dialog.ts DROPPED.
+          Checked by absence, which is the only way a cut can be checked. */
+    out.droppedFound = ["IDC_ZAKLADNINASTAVENI", "IDC_ROZSIRENENASTAVENI",
+      "IDC_EMULOVATKLAVESNICI", "IDC_EMULOVATCESKOUKLAVESNICI",
+      "IDC_EMULOVATSLOVENSKOUKLAVESNICI", "IDC_KLAVESNICEQWERTY",
+      "IDC_TEXTKEMULACI", "IDC_ZOBRAZOVATSTANDARDNIKURZOR",
+      "IDC_NEZOBRAZOVATPOZADI", "IDC_READONLYMOD", "IDC_ZOBRAZOVATPOPISKY"]
+      .filter((id) => item(id) !== null);
+    /* And what that cut did to the window: the dialog is 13 dialog units
+       shorter, which is the row those two buttons stood in, and everything else
+       moved up by it.  Measured against IDC_RAMECEK1 rather than in pixels,
+       because the pixel is whatever MapDialogRect made of the visitor's font --
+       node has the template and can work out both ratios from it. */
+    const bodyRect = doc.querySelector(".pokyd-dialog-body").getBoundingClientRect();
+    const groupRect = item("IDC_RAMECEK1").getBoundingClientRect();
+    const rects = Array.from(doc.querySelectorAll(".pokyd-dialog-item"))
+      .map((el) => el.getBoundingClientRect());
+    out.rect = {
+      /* Nothing fell off the top or out of the bottom. */
+      fits: rects.every((r) => r.top >= bodyRect.top - 1
+        && r.bottom <= bodyRect.bottom + 1),
+      heightInGroups: bodyRect.height / groupRect.height,
+      topGapInGroups: (groupRect.top - bodyRect.top) / groupRect.height,
     };
-    item("IDC_ZAKLADNINASTAVENI").click();
-    out.groups.basic = [item("IDC_RAMECEK1").querySelector("legend").textContent,
-      item("IDC_RAMECEK2").querySelector("legend").textContent];
-    out.backToBasic = dialog().dataset.page;
 
     /* 3. a name that is two words: his MessageBox, and the dialog stays. */
     input("IDC_JMENOCLOVEKA").value = "Michal Novak";
@@ -414,6 +450,13 @@ async function visit({ kind, sentences }) {
          conversation drifted it -- Nastaveni.cpp:166. */
       mood: applied.mood,
       moodPoints: applied.moodPoints,
+      /* The two NASTAV_STANDARDNE leaves on that are on the page this port
+         does not draw (zobrazovatpopisky and klavesniceqwerty, NASTAVEN.PR:26
+         and :43).  OnOK writes the whole struct, so a dialog that read a
+         missing checkbox as "not ticked" would clear them here -- which is
+         exactly what src/app/dialog.ts's `read()` falls back to avoid. */
+      showLabels: applied.showLabels,
+      keyboardQwerty: applied.keyboardQwerty,
     };
     out.captionAfterOk = doc.querySelector(".pokyd-menu-state").textContent;
     /* pouzivatefekty is the one setting that shows on the window itself. */

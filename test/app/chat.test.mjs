@@ -53,8 +53,8 @@ import { GENDERS, MENU_BITMAPS, settingsCaption } from "../../src/app/caption.ts
    test/app/settings.test.ts has already held against Nastaveni.cpp -- so what
    is compared with the dialog on the screen is the author's own dialog. */
 import {
-  ADVANCED_CONTROLS, ADVANCED_GROUP_CAPTIONS, BASIC_CONTROLS, CHARACTERS,
-  HUMAN_NAME_ERROR, MOODS, NAME_ERROR_TITLE,
+  ADVANCED_CONTROLS, BASIC_CONTROLS, CHARACTERS, HUMAN_NAME_ERROR, MOODS,
+  NAME_ERROR_TITLE,
 } from "../../src/app/settings.ts";
 /* Phase 7.3.  The page wrote IQPOKYD.CFG into localStorage with this module;
    node reads it back with the same one, which is how the round trip is checked
@@ -83,12 +83,22 @@ const GENDER = 1;
    second place a visitor sees it: the mood list opens on this number. */
 const MOOD_AFTER = 1;
 
-/* The four controls of IDD_NASTAVENI that are on both pages -- the two buttons
-   that switch them, OK and Storno -- plus the two group boxes, which are
-   relabelled rather than hidden.  test/app/settings.test.ts is what proves this
-   is exactly what his two functions leave alone. */
-const ALWAYS_SHOWN = ["IDOK", "IDCANCEL", "IDC_RAMECEK1", "IDC_RAMECEK2",
-  "IDC_ZAKLADNINASTAVENI", "IDC_ROZSIRENENASTAVENI"];
+/* What is on IDD_NASTAVENI besides the basic page: OK, Storno and the two group
+   boxes, which his two functions leave alone (test/app/settings.test.ts proves
+   that is exactly the list).  The two page buttons were on it too and are not
+   drawn any more -- src/app/dialog.ts DROPPED. */
+const ALWAYS_SHOWN = ["IDOK", "IDCANCEL", "IDC_RAMECEK1", "IDC_RAMECEK2"];
+
+/* Everything src/app/dialog.ts does not draw: the second page, and the two
+   buttons that switched to it.  The list is written out here rather than
+   imported because a test that shares the module's own idea of what is missing
+   proves nothing -- ADVANCED_CONTROLS is held against Nastaveni.cpp by
+   test/app/settings.test.ts, and this is held against the screen. */
+const DROPPED = ["IDC_ZAKLADNINASTAVENI", "IDC_ROZSIRENENASTAVENI",
+  "IDC_EMULOVATKLAVESNICI", "IDC_EMULOVATCESKOUKLAVESNICI",
+  "IDC_EMULOVATSLOVENSKOUKLAVESNICI", "IDC_KLAVESNICEQWERTY",
+  "IDC_TEXTKEMULACI", "IDC_ZOBRAZOVATSTANDARDNIKURZOR",
+  "IDC_NEZOBRAZOVATPOZADI", "IDC_READONLYMOD", "IDC_ZOBRAZOVATPOPISKY"];
 
 /* GENDERS[1], "muz" -- what the caption says for a computer with no name. */
 const GENDER_WORD = GENDERS[1];
@@ -155,7 +165,8 @@ function checkVisit(run, golden, cold, seed) {
   ok("IDD_NACITANI was on the screen while it loaded", run.loadingShown === true);
   ok("and off it afterwards", run.loadingGone === true);
   ok("the input and the button are live", run.inputLive === true);
-  ok("and the cursor is in the input, so the visitor can just type",
+  ok("and the cursor is in the input, so the visitor can just type"
+    + (cold ? " -- once the first-visit settings are away" : ""),
     run.focused === true);
 
   /* 2. NAPIS_UVODNI_UVITANI, phase 6.4: the one line on the screen that nobody
@@ -353,11 +364,14 @@ function checkSettings(run, cold) {
   /* 2. what is on it. */
   eq("it is titled as the template titles it", d.caption, template.caption);
   eq("and it is modal", d.modal, "true");
-  eq("every control of IDD_NASTAVENI is on it", d.controls,
-    template.controls.length);
-  eq("a visitor opens on the basic page (Nastaveni.cpp:124)", d.page, "basic");
-  eq("which shows what OnZakladniNastaveni shows", d.basicShown.join(","),
-    [...BASIC_CONTROLS, ...ALWAYS_SHOWN].sort().join(","));
+  eq("every control of IDD_NASTAVENI that is not dropped is on it", d.controls,
+    template.controls.length - DROPPED.length);
+  eq("and what it shows is OnZakladniNastaveni's own list, entire",
+    d.shown.join(","), [...BASIC_CONTROLS, ...ALWAYS_SHOWN].sort().join(","));
+  eq("the two group boxes wear the template's own captions, with nothing left"
+    + " to swap them for", d.groups.join(" / "),
+    template.controls.find((c) => c.id === "IDC_RAMECEK1").text + " / "
+    + template.controls.find((c) => c.id === "IDC_RAMECEK2").text);
   eq("the character list is the author's seven words", d.lists.character.join(","),
     CHARACTERS.join(","));
   eq("  with the engine's own charakter selected", Number(d.lists.characterValue),
@@ -367,23 +381,35 @@ function checkSettings(run, cold) {
     MOOD_AFTER);
   ok("both genders are on the male radio, which is what pohlavi 1 means",
     d.genders.human && d.genders.computer);
-  /* The five the port draws and cannot honour, named in src/app/dialog.ts. */
-  eq("five controls are drawn greyed rather than lying", d.disabled.join(","),
-    ["IDC_EMULOVATKLAVESNICI", "IDC_EMULOVATCESKOUKLAVESNICI",
-      "IDC_EMULOVATSLOVENSKOUKLAVESNICI", "IDC_KLAVESNICEQWERTY",
-      "IDC_ZOBRAZOVATSTANDARDNIKURZOR", "IDC_ZOBRAZOVATPOPISKY"].sort().join(","));
+  eq("nothing on it is greyed: every control that could not be honoured was on"
+    + " the page that is gone", d.disabled.join(","), "");
 
-  /* 3. the other page, and the two captions it swaps in. */
-  eq("the second button shows the advanced page", d.advancedPage, "advanced");
-  eq("  which shows what OnRozsireneNastaveni shows", d.advancedShown.join(","),
-    [...ADVANCED_CONTROLS, ...ALWAYS_SHOWN].sort().join(","));
-  eq("  and relabels both group boxes", d.groups.advanced.join(" / "),
-    ADVANCED_GROUP_CAPTIONS["IDC_RAMECEK1"] + " / "
-    + ADVANCED_GROUP_CAPTIONS["IDC_RAMECEK2"]);
-  eq("the first button comes back", d.backToBasic, "basic");
-  eq("  and puts the template's own captions back", d.groups.basic.join(" / "),
-    template.controls.find((c) => c.id === "IDC_RAMECEK1").text + " / "
-    + template.controls.find((c) => c.id === "IDC_RAMECEK2").text);
+  /* 3. and that page, checked the only way a cut can be: by absence.  The
+        eleven controls of OnRozsireneNastaveni and the two buttons that
+        switched between the pages are not on the dialog at all. */
+  eq("the advanced page is not drawn, and neither are the two page buttons",
+    d.droppedFound.join(","), "");
+  eq("  which is the whole of ADVANCED_CONTROLS, plus the two buttons",
+    DROPPED.slice(2).join(","), ADVANCED_CONTROLS.join(","));
+
+  /* And the window is that much smaller.  Both numbers come off the screen as
+     multiples of IDC_RAMECEK1's own height, so the comparison is in the
+     template's dialog units and not in whatever pixel the visitor's font made
+     of them -- which is the same trick phase 6.3 measures the main window with,
+     one step further in. */
+  const rc = (id) => template.controls.find((c) => c.id === id).rect;
+  const shift = rc("IDC_ZAKLADNINASTAVENI").cy;
+  const near = (a, b) => Math.abs(a - b) < 0.03;
+  ok("no control fell off the dialog on the way up", d.rect.fits);
+  ok("the dialog is exactly the page buttons' row shorter -- " + shift
+    + " dialog units off " + template.rect.cy,
+    near(d.rect.heightInGroups, (template.rect.cy - shift) / rc("IDC_RAMECEK1").cy),
+    d.rect.heightInGroups.toFixed(3));
+  ok("and the first group box kept the template's own gap above it, less that"
+    + " same row",
+    near(d.rect.topGapInGroups,
+      (rc("IDC_RAMECEK1").y - shift) / rc("IDC_RAMECEK1").cy),
+    d.rect.topGapInGroups.toFixed(3));
 
   /* 4. the one refusal, which in 2005 was a MessageBox. */
   ok("a two-word name is refused", d.refusal.shown);
@@ -412,6 +438,12 @@ function checkSettings(run, cold) {
   eq("  and it is still the mood it was", d.applied.mood, MOOD_AFTER);
   /* NASTAV_VIDITELNOST_EFEKTNICH_PROGRESSBARU, PROSTRED.FU:163. */
   eq("both edge bars came out with pouzivatefekty", d.effectsShown, 2);
+  /* The trap in dropping a page from a dialog that writes its whole struct at
+     once: a control that is not there must not be read as "not ticked".  Both
+     of these are NASTAV_STANDARDNE's own 1s (NASTAVEN.PR:26, :43). */
+  eq("and the settings the dropped page carried survived the OK: zobrazovatpopisky",
+    d.applied.showLabels, 1);
+  eq("  and klavesniceqwerty", d.applied.keyboardQwerty, 1);
   /* ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI, :204 -- the caption is the name and
      the character it was just given. */
   eq("and the menu bar says what was just set", d.captionAfterOk,
@@ -449,6 +481,17 @@ function checkSettings(run, cold) {
      one left, rather than starting from NASTAV_STANDARDNE. */
   eq("this visit started from " + (cold ? "no stored settings" : "the stored ones"),
     d.configStatus, cold ? CONFIG_MISSING : CONFIG_OK);
+  /* g_zobrazitnastaveni, mfcDlg.cpp:436 and PROSTRED.FU:498: a visitor who has
+     no settings file is asked who he is before he types anything, and a visitor
+     who has one is not.  It is the same pair of visits that proves the file was
+     written and read, seen from the window instead of from storage. */
+  if (cold) {
+    ok("a first visit opens IDD_NASTAVENI by itself, with no file to read",
+      d.openedOnArrival);
+  } else {
+    ok("a second visit does not: it has a file, so it is not asked again",
+      !d.openedOnArrival);
+  }
 }
 
 /* -------------------------------------------------------------- the driver */

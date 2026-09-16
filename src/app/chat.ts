@@ -51,8 +51,9 @@
    for it.  Three things are new here and each is one of the author's:
 
      - **IDD_NASTAVENI opens.**  ID_NASTAVENI, from the menu, from the status
-       line that carries the same command, and from F4 -- src/app/dialog.ts
-       draws it, src/app/settings.ts is his OnOK, and `openSettings` below is
+       line that carries the same command, from F4, and by itself on a visit
+       that found no settings file -- src/app/dialog.ts draws it,
+       src/app/settings.ts is his OnOK, and `openSettings` below is
        CMfcDlg::OnNastaveni, `static BYTE ukazanonastaveni` included.
      - **the settings are read and written.**  src/app/config.ts is his
        IQPOKYD.CFG, in localStorage; it is read after the command line and
@@ -91,7 +92,7 @@ import { openingGreeting } from "./greeting.ts";
 import { dialogBaseUnits, emForCellHeight } from "./dlu.ts";
 import { mountSettings } from "./dialog.ts";
 import { MOODS } from "./settings.ts";
-import { CONFIG_BROKEN, loadStored, read, store } from "./config.ts";
+import { CONFIG_BROKEN, CONFIG_OK, loadStored, read, store } from "./config.ts";
 
 /* ----------------------------------------------------- the author's strings */
 
@@ -161,9 +162,11 @@ export interface PokydChatOptions extends PokydCachedStartOptions {
    *  3D face instead of the grey tile.  src/app/main.ts reads it off the query
    *  string, which is the nearest thing a page has to a command line.
    *
-   *  Since phase 7.1 it is also a checkbox on IDD_NASTAVENI, so this only *sets*
-   *  the setting -- what the window then wears is read back out of the engine
-   *  like every other setting, which is what keeps the two from disagreeing.
+   *  It only *sets* the setting -- what the window then wears is read back out
+   *  of the engine like every other setting, which is what keeps the two from
+   *  disagreeing.  The query string is the only door it has: the checkbox that
+   *  was the other one is on the page src/app/dialog.ts drops (DROPPED there),
+   *  and a dialog that cannot see this value also cannot clear it.
    *  ROZEBER_PRIKAZOVY_RADEK ran before PRECTI_NASTAVENI_ZE_SOUBORU for the same
    *  reason (SLOVNIK.FU:2033: the stored value is only honoured if the command
    *  line did not already set it). */
@@ -417,10 +420,11 @@ export function mountChat(
    *  greeting waits for the load. */
   let settings: PokydSettings | null = null;
   /** What PRECTI_NASTAVENI_ZE_SOUBORU said about the stored IQPOKYD.CFG: 0 no
-   *  file, 1 read, 2 broken (phase 7.3).  Nothing on the window shows it -- the
-   *  MessageBox and the dialog he opened on 0 and 2 were both the background
-   *  thread's, which this build does not have -- so it is on the handle, where
-   *  a page and a test can ask. */
+   *  file, 1 read, 2 broken (phase 7.3).  0 and 2 both open the settings on
+   *  their own, as g_zobrazitnastaveni did (mfcDlg.cpp:436-441); what the
+   *  window does not show is which of the two it was, because the MessageBox
+   *  that told a 2 from a 0 was the background thread's and this build has no
+   *  hlasky.  So the number is on the handle, where a page and a test can ask. */
   let configStatus = 0;
 
   function setState(next: PokydChatState): void {
@@ -518,8 +522,9 @@ export function mountChat(
   /** `static BYTE ukazanonastaveni`, mfcDlg.cpp:793-799: one at a time. */
   let dialog: { remove(): void } | null = null;
 
-  /** CMfcDlg::OnNastaveni.  The settings it fills the controls from are the
-   *  ones the page last read, which is what g_nastaveni was for him. */
+  /** CMfcDlg::OnNastaveni, and also what the load calls on a visit with no
+   *  IQPOKYD.CFG to read.  The settings it fills the controls from are the ones
+   *  the page last read, which is what g_nastaveni was for him. */
   function openSettings(): void {
     if (dialog !== null || settings === null) return;
     const open = mountSettings(element, {
@@ -667,11 +672,9 @@ export function mountChat(
       }
       /* PRECTI_NASTAVENI_ZE_SOUBORU, mfcDlg.cpp:435-442, and in his place in
          the sequence: after the command line and *before* the greeting, which
-         is inflected by the two pohlavi the file may have just changed.  His
-         three cases are kept but for one -- a missing or broken file set
-         g_zobrazitnastaveni, and the background thread that opened the dialog
-         on it (PROSTRED.FU:498) is not in a BEZ_PROSTREDI build.  PLAN.md 7.3
-         has the argument for not putting it back. */
+         is inflected by the two pohlavi the file may have just changed.  All
+         three of his cases are kept, the dialog a missing or broken file opens
+         included -- see below. */
       {
         const base = await pokyd.getSettings();
         const stored = read(loadStored(), base);
@@ -694,7 +697,30 @@ export function mountChat(
          with is not the engine's rand() and never was -- see
          src/app/greeting.ts. */
       if (opening !== null) turn("pokyd", openingGreeting(seed, opening));
-      input.focus();
+      /* g_zobrazitnastaveni, mfcDlg.cpp:436-441: a file that was not there (0)
+         or had been edited (2) meant the visitor had never been asked who he
+         was, so VLAKNO__HLASKY_A_OPERACE_NA_POZADI sent the window
+         ID_NASTAVENI (PROSTRED.FU:498) and the settings were the first thing
+         on the screen.  It is here rather than above the greeting for the
+         reason it came after it in 2005 too: a SendMessage from that thread is
+         run by the main thread's message pump, which does not turn until
+         OnInitDialog has returned -- so the welcome was already written on the
+         window behind the dialog.
+
+         What his thread waited for, `g_zobrazithlasku[0] == 0` at :498, was the
+         MessageBox a broken file also got (_NEKDO_SI_HRAL_S_NASTAVENIM_,
+         :485-496).  That one is still not ported -- it is a background-thread
+         hlaska like the other three, and none of them are in a BEZ_PROSTREDI
+         build -- so case 2 opens the dialog without the apology in front of
+         it.  `configStatus()` on the handle is what still tells the two apart.
+
+         A visitor who has been here before has a file that reads (1) and is not
+         asked again, which is the same rule per browser profile that it was per
+         installation. */
+      if (configStatus !== CONFIG_OK) openSettings();
+      /* The dialog focuses itself, and puts the focus back on the line when it
+         closes; the line takes it now only if there is no dialog over it. */
+      if (dialog === null) input.focus();
       return report;
     } catch (e) {
       const error = e instanceof Error ? e : new Error(String(e));

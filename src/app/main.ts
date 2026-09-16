@@ -70,7 +70,8 @@ export function optionsFromQuery(search: string): PokydQueryOptions {
   /* ROZEBER_PRIKAZOVY_RADEK (PROSTRED.FU:83-106) read "-bezpozadi" off the
      command line and turned the photograph and the tile off in favour of plain
      black; a page's command line is its query string, so it keeps his spelling.
-     Phase 7.1 is where prikaz_nezobrazovatpozadi becomes a checkbox. */
+     It is the only way to ask for it: the checkbox is on the page phase 7.1
+     drops (src/app/dialog.ts, DROPPED). */
   if (params.has("bezpozadi")) options.noBackground = true;
 
   return options;

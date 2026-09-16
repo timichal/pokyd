@@ -13,24 +13,33 @@
    the same dluToPx and the same measured base units phase 6.3 uses.  There is
    not one measurement in this file.
 
-   **Three things about the dialog are in Nastaveni.cpp rather than in the
-   script**, and all three are ported:
+   **The dialog wears the grey tile**, which is in Nastaveni.cpp rather than in
+   the script: OnCtlColor (:306-312) hands back g_stetecpozadipodokna for
+   everything except the edits and the list boxes -- the IDB_POZADIMALE pattern
+   brush, which is the same one the loading window wears, with
+   SetBkMode(TRANSPARENT) over it.
 
-     - **it has two pages.**  IDC_ZAKLADNINASTAVENI and IDC_ROZSIRENENASTAVENI
-       are two buttons across the top that show one set of controls and hide the
-       other (:337-424), relabelling both group boxes as they go.  They are not
-       a tab control -- the author left his CTabCtrl commented out at :340 and
-       :384 -- so they are drawn as what they are: two buttons, the current one
-       held down with SetState(TRUE).
-     - **hiding a control disables its mnemonic.**  ZOBRAZ_NA_DIALOGU_POLICKO
-       (:314-335) walks the caption and swaps `&` for `~` on the way out and
-       back on the way in, because an Alt+key that reaches a hidden control is a
-       bug.  A browser spells that `accessKey`, so it is set when a control is
-       shown and removed when it is hidden.
-     - **the dialog wears the grey tile.**  OnCtlColor (:306-312) hands back
-       g_stetecpozadipodokna for everything except the edits and the list boxes
-       -- the IDB_POZADIMALE pattern brush, which is the same one the loading
-       window wears, with SetBkMode(TRANSPARENT) over it.
+   **The second page is not drawn at all, and that is the one real cut in this
+   file.**  IDC_ZAKLADNINASTAVENI and IDC_ROZSIRENENASTAVENI were two buttons
+   across the top that showed one set of controls and hid the other (:337-424);
+   `DROPPED` below is both of them and everything the second one showed, and the
+   reason each control went is written there.  What follows from it:
+
+     - **there is no ZOBRAZ_NA_DIALOGU_POLICKO.**  His (:314-335) walked a
+       caption and swapped `&` for `~` on the way out and back on the way in,
+       because an Alt+key that reaches a hidden control is a bug.  With one page
+       nothing is ever hidden, so every mnemonic is set once and stays.
+     - **there is no OnNastavDisableEmulace** (:426-437), because the checkbox
+       it hung the keyboard radios off is gone with them.
+     - **nothing on this dialog is greyed any more.**  Every control that was
+       drawn and could not be honoured was on that page, so the rule the menu
+       keeps -- a command with no handler is greyed rather than a lie -- has
+       nothing left to grey here.
+     - **the dialog is 13 dialog units shorter**, which is the height of the row
+       those two buttons stood in, taken off the top.  Everything else keeps the
+       template's own rectangle, moved up by that one number and by nothing
+       else; the 5-unit gap under it is the template's gap between that row and
+       the first group box.
 
    **What is ours, and it is the frame.**  Phase 6.5 refused to draw an XP title
    bar on the main window, because the page is a *maximized* window and a
@@ -56,8 +65,8 @@ import { DIALOGS, dluToPx } from "./resources.ts";
 import type { RcControl, RcDialog } from "./resources.ts";
 import { dialogBaseUnits } from "./dlu.ts";
 import {
-  ADVANCED_CONTROLS, ADVANCED_GROUP_CAPTIONS, BASIC_CONTROLS,
-  CHARACTERS, FEMALE, MALE, MOODS, NAME_LIMIT, edit, formFromSettings,
+  ADVANCED_CONTROLS, CHARACTERS, FEMALE, MALE, MOODS, NAME_LIMIT, edit,
+  formFromSettings,
 } from "./settings.ts";
 import type { PokydSettingsEdit, PokydSettingsForm } from "./settings.ts";
 import type { PokydSettings } from "../web/protocol.ts";
@@ -75,30 +84,49 @@ const DIALOG_FONT =
 
 const CLASS = "pokyd-dialog";
 
-/* ------------------------------------------------------- what is not honoured */
+/* ------------------------------------------------------------ what is dropped */
 
-/* The menu greys a command with nothing behind it (src/app/menu.ts), and a
-   checkbox with nothing behind it is the same promise broken quietly.  These
-   five are drawn, ticked to whatever the settings say, and disabled:
+/* IDC_ROZSIRENENASTAVENI, the second page, and the two buttons that switched
+   between them.  Nothing here is drawn, and it is the one thing on this dialog
+   that the archive says should be: it is a cut, not a port.
 
-     - the three keyboard controls, because EMULUJ_KLAVESNICI is a whole
-       keyboard layout (VSTUP.FU) that is not ported, and a tick that did not
-       change what a keystroke produces would be worse than a grey one.
+   What was on it, and why each one has nothing left to say in a browser:
+
+     - the four keyboard controls and the paragraph of text under them, because
+       EMULUJ_KLAVESNICI is a whole keyboard layout (VSTUP.FU) that is not
+       ported.  A tick that did not change what a keystroke produces is worse
+       than no tick.
      - the standard-cursor one, because the caret it switches to is the DOS
        underscore the program drew itself, and a page does not draw the caret.
      - the tool tips, because the twenty-odd bubbles are Nastaveni.cpp literals
        and nothing here shows one.
+     - the read-only one, because prikaz_readonlymod guards fopen() -- KYDY.TXT,
+       PROFIL.IQP, the settings file, the dictionary cache -- and none of the
+       four is a file here.  The engine still carries the flag and the settings
+       file still writes it; what is gone is the checkbox.
+     - the background one, because turning the photograph off is the author's
+       own command-line switch and stays one: `?bezpozadi` (src/app/main.ts,
+       ROZEBER_PRIKAZOVY_RADEK at PROSTRED.FU:100).
 
-   Everything else on the dialog is live: the engine reads it, the window shows
-   it, or phase 7.3 stores it. */
-const UNIMPLEMENTED: readonly string[] = [
-  "IDC_EMULOVATKLAVESNICI",
-  "IDC_EMULOVATCESKOUKLAVESNICI",
-  "IDC_EMULOVATSLOVENSKOUKLAVESNICI",
-  "IDC_KLAVESNICEQWERTY",
-  "IDC_ZOBRAZOVATSTANDARDNIKURZOR",
-  "IDC_ZOBRAZOVATPOPISKY",
+   The values behind all of them survive an OK untouched -- `read()` below asks
+   the settings, not the missing control -- so a visit started with ?bezpozadi
+   keeps its black background through as many trips to this dialog as it likes.
+
+   Everything left is live: the engine reads it, the window shows it, or phase
+   7.3 stores it. */
+const DROPPED: readonly string[] = [
+  "IDC_ZAKLADNINASTAVENI",
+  "IDC_ROZSIRENENASTAVENI",
+  ...ADVANCED_CONTROLS,
 ];
+
+/** The row those two buttons stood in (:0..13 in the template), which is what
+ *  the dialog and everything on it move up by.  Read off the button rather
+ *  than written down: this file has no measurements of its own. */
+function droppedRow(dialog: RcDialog): number {
+  const button = dialog.controls.find((c) => c.id === "IDC_ZAKLADNINASTAVENI");
+  return button === undefined ? 0 : button.rect.cy;
+}
 
 /* ---------------------------------------------------------------- the labels */
 
@@ -152,7 +180,10 @@ export function mountSettings(
   const base = dialogBaseUnits(DIALOG_FONT, dialog.font!.size);
   const px = (rect: { x: number; y: number; cx: number; cy: number }) =>
     dluToPx(rect, base);
-  const size = px(dialog.rect);
+  /* The page buttons' row, off the top of the template and off the top of
+     everything in it -- see DROPPED. */
+  const shift = droppedRow(dialog);
+  const size = px({ ...dialog.rect, cy: dialog.rect.cy - shift });
 
   const control = (id: string): RcControl => {
     const found = dialog.controls.find((c) => c.id === id);
@@ -210,7 +241,7 @@ export function mountSettings(
 
   /** Absolute at the author's rectangle, in pixels, always. */
   function place(node: HTMLElement, rc: RcControl): void {
-    const box = px(rc.rect);
+    const box = px({ ...rc.rect, y: rc.rect.y - shift });
     node.style.left = box.x + "px";
     node.style.top = box.y + "px";
     node.style.width = box.width + "px";
@@ -247,6 +278,7 @@ export function mountSettings(
   }
 
   for (const rc of dialog.controls) {
+    if (DROPPED.includes(rc.id)) continue;
     let node: HTMLElement;
 
     switch (rc.id) {
@@ -295,11 +327,6 @@ export function mountSettings(
       case "IDC_POCITACZENA":
       case "IDC_POCITACMUZ":
         node = makeButton(rc, "pokyd-computer-gender");
-        break;
-
-      case "IDC_EMULOVATCESKOUKLAVESNICI":
-      case "IDC_EMULOVATSLOVENSKOUKLAVESNICI":
-        node = makeButton(rc, "pokyd-keyboard");
         break;
 
       default: {
@@ -370,63 +397,6 @@ export function mountSettings(
   refusal.append(refusalTitle, refusalText);
   body.appendChild(refusal);
 
-  /* --------------------------------------------------------- the two pages */
-
-  /** ZOBRAZ_NA_DIALOGU_POLICKO, :314-335: show or hide, and take the mnemonic
-   *  with it. */
-  function reveal(id: string, shown: boolean): void {
-    const box = boxes.get(id);
-    if (box === undefined) return;
-    box.hidden = !shown;
-    const mnemonic = mnemonics.get(id);
-    if (mnemonic === undefined) return;
-    if (shown) mnemonic.target.accessKey = mnemonic.key;
-    else mnemonic.target.removeAttribute("accesskey");
-  }
-
-  /** OnZakladniNastaveni / OnRozsireneNastaveni, :337 and :381 -- the same
-   *  function twice over, so it is written once. */
-  function showPage(wantAdvanced: boolean): void {
-    element.dataset["page"] = wantAdvanced ? "advanced" : "basic";
-    for (const id of BASIC_CONTROLS) reveal(id, !wantAdvanced);
-    for (const id of ADVANCED_CONTROLS) reveal(id, wantAdvanced);
-
-    for (const id of ["IDC_RAMECEK1", "IDC_RAMECEK2"]) {
-      const legend = boxes.get(id)?.querySelector("legend");
-      if (legend == null) continue;
-      const text = wantAdvanced
-        ? ADVANCED_GROUP_CAPTIONS[id]! : control(id).text!;
-      legend.replaceChildren(renderLabel(text).node);
-    }
-
-    /* SetState(TRUE) on the page you are on: a button held down. */
-    for (const [id, on] of [
-      ["IDC_ZAKLADNINASTAVENI", !wantAdvanced],
-      ["IDC_ROZSIRENENASTAVENI", wantAdvanced],
-    ] as [string, boolean][]) {
-      const button = boxes.get(id);
-      if (button === undefined) continue;
-      button.classList.toggle(CLASS + "-held", on);
-      button.setAttribute("aria-pressed", String(on));
-    }
-    disableEmulation();
-  }
-
-  /** OnNastavDisableEmulace, :426-437.  The radio pair and QWERTY are only live
-   *  while the emulation checkbox is ticked -- and in this port they are never
-   *  live at all, which is why this runs after UNIMPLEMENTED rather than
-   *  instead of it. */
-  function disableEmulation(): void {
-    const on = (inputs.get("IDC_EMULOVATKLAVESNICI") as HTMLInputElement | undefined)
-      ?.checked === true;
-    for (const id of ["IDC_EMULOVATCESKOUKLAVESNICI",
-      "IDC_EMULOVATSLOVENSKOUKLAVESNICI", "IDC_KLAVESNICEQWERTY"]) {
-      const input = inputs.get(id);
-      if (input === undefined) continue;
-      input.disabled = !on || UNIMPLEMENTED.includes(id);
-    }
-  }
-
   /* ------------------------------------------------------ OnInitDialog, :61 */
 
   const check = (id: string, on: boolean): void => {
@@ -454,38 +424,31 @@ export function mountSettings(
   check("IDC_POUZIVATZVUKY", form.useSounds);
   check("IDC_POUZIVATEFEKTY", form.useEffects);
   check("IDC_SPISOVNACESTINA", form.formalCzech);
-  check("IDC_EMULOVATKLAVESNICI", form.emulateKeyboard);
-  check("IDC_EMULOVATSLOVENSKOUKLAVESNICI", form.slovakKeyboard);
-  check("IDC_EMULOVATCESKOUKLAVESNICI", !form.slovakKeyboard);
-  check("IDC_KLAVESNICEQWERTY", form.keyboardQwerty);
-  check("IDC_ZOBRAZOVATSTANDARDNIKURZOR", form.standardCursor);
-  check("IDC_NEZOBRAZOVATPOZADI", form.noBackground);
-  check("IDC_READONLYMOD", form.readOnly);
-  check("IDC_ZOBRAZOVATPOPISKY", form.showLabels);
+  /* The other eight things OnInitDialog ticked are on the page that is not
+     drawn (DROPPED), and their values ride through `read()` untouched. */
 
-  for (const id of UNIMPLEMENTED) {
-    const input = inputs.get(id);
-    if (input !== undefined) input.disabled = true;
-    boxes.get(id)?.classList.add(CLASS + "-unimplemented");
-  }
-
-  /* The four controls that are on neither page -- IDOK, IDCANCEL and the two
-     page buttons -- are never hidden, so their mnemonics are never swapped for
-     a `~` and are set once, here. */
-  for (const [id, mnemonic] of mnemonics) {
-    if (BASIC_CONTROLS.includes(id) || ADVANCED_CONTROLS.includes(id)) continue;
+  /* Every mnemonic, once: with the second page gone nothing on this dialog is
+     ever hidden, so there is no `&`-to-`~` to do (ZOBRAZ_NA_DIALOGU_POLICKO,
+     :314-335). */
+  for (const mnemonic of mnemonics.values()) {
     mnemonic.target.accessKey = mnemonic.key;
   }
 
-  /* :124 -- the basic page is the one a visitor opens on. */
-  showPage(false);
-
   /* ------------------------------------------------------------- OnOK, :135 */
 
-  /** What the controls say, which is what OnOK reads. */
+  /** What the controls say, which is what OnOK reads.
+   *
+   *  A control that is not on the dialog does not get a vote: `checked` falls
+   *  back to what the settings already said, so the eight values DROPPED took
+   *  off the window come back out of here exactly as they went in.  Without
+   *  that, one OK on a name would quietly clear prikaz_nezobrazovatpozadi and
+   *  the rest of them -- which is the trap in dropping a page from a dialog
+   *  that writes its whole struct at once (:163-168). */
   function read(): PokydSettingsForm {
-    const checked = (id: string): boolean =>
-      (inputs.get(id) as HTMLInputElement | undefined)?.checked === true;
+    const checked = (id: string, absent: boolean): boolean => {
+      const input = inputs.get(id) as HTMLInputElement | undefined;
+      return input === undefined ? absent : input.checked;
+    };
     const value = (id: string): string =>
       (inputs.get(id) as HTMLInputElement | undefined)?.value ?? "";
     const chosen = (id: string, fallback: number): number => {
@@ -496,23 +459,28 @@ export function mountSettings(
     return {
       /* :140-143.  Not "is the male one ticked" -- "is the female one not",
          which is the same thing with a radio pair and is what he wrote. */
-      humanGender: checked("IDC_CLOVEKZENA") ? FEMALE : MALE,
-      computerGender: checked("IDC_POCITACZENA") ? FEMALE : MALE,
+      humanGender: checked("IDC_CLOVEKZENA", form.humanGender === FEMALE)
+        ? FEMALE : MALE,
+      computerGender: checked("IDC_POCITACZENA", form.computerGender === FEMALE)
+        ? FEMALE : MALE,
       humanName: value("IDC_JMENOCLOVEKA"),
       computerName: value("IDC_JMENOPOCITACE"),
       character: chosen("IDC_CHARAKTER", form.character),
       mood: chosen("IDC_NALADA", form.mood),
-      saveConversation: checked("IDC_UKLADATROZHOVOR"),
-      useSounds: checked("IDC_POUZIVATZVUKY"),
-      useEffects: checked("IDC_POUZIVATEFEKTY"),
-      formalCzech: checked("IDC_SPISOVNACESTINA"),
-      emulateKeyboard: checked("IDC_EMULOVATKLAVESNICI"),
-      slovakKeyboard: checked("IDC_EMULOVATSLOVENSKOUKLAVESNICI"),
-      keyboardQwerty: checked("IDC_KLAVESNICEQWERTY"),
-      standardCursor: checked("IDC_ZOBRAZOVATSTANDARDNIKURZOR"),
-      noBackground: checked("IDC_NEZOBRAZOVATPOZADI"),
-      readOnly: checked("IDC_READONLYMOD"),
-      showLabels: checked("IDC_ZOBRAZOVATPOPISKY"),
+      saveConversation: checked("IDC_UKLADATROZHOVOR", form.saveConversation),
+      useSounds: checked("IDC_POUZIVATZVUKY", form.useSounds),
+      useEffects: checked("IDC_POUZIVATEFEKTY", form.useEffects),
+      formalCzech: checked("IDC_SPISOVNACESTINA", form.formalCzech),
+      /* The eight below are DROPPED, every one of them. */
+      emulateKeyboard: checked("IDC_EMULOVATKLAVESNICI", form.emulateKeyboard),
+      slovakKeyboard:
+        checked("IDC_EMULOVATSLOVENSKOUKLAVESNICI", form.slovakKeyboard),
+      keyboardQwerty: checked("IDC_KLAVESNICEQWERTY", form.keyboardQwerty),
+      standardCursor:
+        checked("IDC_ZOBRAZOVATSTANDARDNIKURZOR", form.standardCursor),
+      noBackground: checked("IDC_NEZOBRAZOVATPOZADI", form.noBackground),
+      readOnly: checked("IDC_READONLYMOD", form.readOnly),
+      showLabels: checked("IDC_ZOBRAZOVATPOPISKY", form.showLabels),
     };
   }
 
@@ -545,12 +513,6 @@ export function mountSettings(
 
   boxes.get("IDCANCEL")?.addEventListener("click", cancel);
   closeBox.addEventListener("click", cancel);
-  boxes.get("IDC_ZAKLADNINASTAVENI")
-    ?.addEventListener("click", (): void => { showPage(false); });
-  boxes.get("IDC_ROZSIRENENASTAVENI")
-    ?.addEventListener("click", (): void => { showPage(true); });
-  inputs.get("IDC_EMULOVATKLAVESNICI")
-    ?.addEventListener("change", disableEmulation);
 
   /* Escape is IDCANCEL, and it is his as well: ON_COMMAND(ID_ZKRATKA_SMAZRADEK,
      OnClose) at :42 puts the main window's Escape accelerator on this dialog

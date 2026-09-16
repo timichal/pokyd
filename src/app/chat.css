@@ -639,19 +639,6 @@ body {
    window. */
 .pokyd-dialog-default { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); }
 
-/* SetState(TRUE), Nastaveni.cpp:345 and :390 -- the page you are on is a button
-   held down. */
-.pokyd-dialog-held {
-  background: #dcd9c8;
-  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.35);
-}
-
-/* The five controls this port draws and cannot honour, which are named in
-   src/app/dialog.ts with the reason for each.  Greyed, exactly as a menu
-   command with no handler is. */
-.pokyd-dialog-item input:disabled { opacity: 0.6; }
-.pokyd-dialog-unimplemented { color: #6b6b60; }
-
 .pokyd-dialog-item:focus-visible,
 .pokyd-dialog-item input:focus-visible,
 .pokyd-dialog-close:focus-visible {

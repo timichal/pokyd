@@ -147,8 +147,8 @@ two of them generated.
 | `menu.ts` | Phase 6.3. `IDR_MENU` drawn — two popups, the accelerator text, the seven gutter bitmaps, and the right-justified caption. Anything with no handler yet is `MF_GRAYED` rather than silent. Since 7.1 it also binds `IDR_ZKRATKY`, by the same rule: four of those commands (F7, F8 and the two with Ctrl) are in no menu at all. |
 | `caption.ts` | Phase 6.3, and one of the three files here that spell Czech by hand: `ZAPIS_DO_MENU_AKTUALNI_STAV_NASTAVENI` builds the status line with `strcat` out of two switches, so there is no resource to read its fourteen words from. `node test/app/caption.test.ts` finds every one of them in `PROSTRED.FU` as CP1250 bytes. |
 | `greeting.ts` | Phase 6.4, and the second: `NAPIS_UVODNI_UVITANI`'s ten greetings, three of them inflected for the two `pohlavi`, plus the `rand()%10` that picks between them. `node test/app/greeting.test.ts` parses his switch back out of `PROSTRED.FU` and compares it part for part. |
-| `dialog.ts` | Phase 7.1. `IDD_NASTAVENI` drawn — the two pages his two buttons switch between, the list boxes, the radios, the name edits, and a frame of ours around them. Unlike the main window, **the layout of this one is entirely the resource script's**: a modal dialog is laid out by `MapDialogRect` and nothing moves afterwards, so there is not one measurement in the file. |
-| `settings.ts` | Phase 7.1, and the third file here that spells Czech by hand — four strings `Nastaveni.cpp` holds as literals. `CNastaveni` with the window taken off: his `OnInitDialog`, his `OnOK`, `ZKONTROLUJ_SPRAVNOST_ZNAKU_VE_JMENE`, and the two lists of control ids his two pages show. `node test/app/settings.test.ts` parses all of it back out of `Nastaveni.cpp` and compares. |
+| `dialog.ts` | Phase 7.1. `IDD_NASTAVENI` drawn — the list boxes, the radios, the name edits, and a frame of ours around them. Unlike the main window, **the layout of this one is entirely the resource script's**: a modal dialog is laid out by `MapDialogRect` and nothing moves afterwards, so there is not one measurement in the file. `DROPPED` is the one cut: the second page and the two buttons that switched to it are not drawn, and the reason for each control is written there. |
+| `settings.ts` | Phase 7.1, and the third file here that spells Czech by hand — four strings `Nastaveni.cpp` holds as literals. `CNastaveni` with the window taken off: his `OnInitDialog`, his `OnOK`, `ZKONTROLUJ_SPRAVNOST_ZNAKU_VE_JMENE`, and the two lists of control ids his two pages showed (the second of which `dialog.ts` no longer draws). `node test/app/settings.test.ts` parses all of it back out of `Nastaveni.cpp` and compares. |
 | `config.ts` | Phase 7.3. `IQPOKYD.CFG` — `ZAPIS_NASTAVENI_DO_SOUBORU` and `PRECTI_NASTAVENI_ZE_SOUBORU`, written to and read from `localStorage` under his own file name. **The stored settings are his file and not JSON**, which is what gives the format a specification instead of a schema of ours; his three return values and every one of his refusals are kept. |
 | `dlu.ts` | Phase 6.3. `MapDialogRect`'s base units, measured off the face the visitor actually got rather than the one the author had — which is what puts a fallback font on his 20 pixels. |
 | `assets.ts` | Phase 6.2, and **generated**: one Vite import per file in `assets/`, and `BITMAP_ASSETS` / `ICON_ASSETS` keyed by the author's own symbol, with the pixel size of each. Import the URL from here; never build one by hand, or a fingerprinted deploy will hand the visitor a 404. |
@@ -236,9 +236,10 @@ Three things in it are worth knowing before changing any of them.
   `nalada` 1..5; `?cache=no` and `?cache=rebuild` get at the fifteen seconds phase
   4.4 makes disappear; `?bezpozadi` is the author's own switch. Since phase 7.1
   the settings are a dialog, and `?bezpozadi` now sets the *setting* rather than
-  the page, which is how the switch and the checkbox stay agreed —
+  the page, which is how the switch and the window stay agreed —
   `ROZEBER_PRIKAZOVY_RADEK` ran before the settings file was read for the same
-  reason (`SLOVNIK.FU:2033`).
+  reason (`SLOVNIK.FU:2033`). It is also the only door left to it: the checkbox
+  was on the dialog page phase 7.1 drops.
 - **The settings live in the engine, and the page reads them back.** There is no
   copy of `g_nastaveni` on this side. A change goes `setSettings` →
   `refreshCaption` → the window, so the menu's status line, the black background
@@ -247,13 +248,16 @@ Three things in it are worth knowing before changing any of them.
   `naladabody` verbatim, and only `set_mood` recomputes it from `nalada`, which is
   what stops an OK on a name from throwing away twenty sentences of drift
   (`Nastaveni.cpp:166`).
-- **A first visit does not open the settings dialog, and in 2005 it did.**
+- **A first visit opens the settings dialog, as it did in 2005.**
   `PRECTI_NASTAVENI_ZE_SOUBORU` returning 0 or 2 set `g_zobrazitnastaveni`, and
-  the background thread sent itself `ID_NASTAVENI` (`PROSTRED.FU:498`). That
-  thread is in `Aplikace/Prostred/`, which `BEZ_PROSTREDI` drops whole, and
-  `PLAN.md` 7.3 has the rest of the argument: every visitor with a clean browser
-  profile is a first run on the web, where in 2005 it happened once per
-  installation. F4 is one keystroke away.
+  the background thread sent the window `ID_NASTAVENI` (`PROSTRED.FU:498`). That
+  thread is in `Aplikace/Prostred/`, which `BEZ_PROSTREDI` drops whole, so the
+  load calls `openSettings` itself — after the welcome line, which is where the
+  message pump would have got to it. A visitor who has been here before has a
+  file that reads and is not asked again: the same rule per browser profile that
+  it was per installation. What is not ported with it is the `MessageBox` a
+  *broken* file also got, which was another of that thread's `hlasky`;
+  `configStatus()` on the handle is what still tells a 0 from a 2.
 
 ## `src/api/` — the exported surface
 

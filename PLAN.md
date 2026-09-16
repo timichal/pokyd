@@ -714,10 +714,12 @@ as of 3.2 it compiles on emsdk's clang too, with a different warning inventory (
   Since 6.4 the first turn on the screen is the welcome line rather than a typed
   sentence, so it is held out of the golden comparison and checked on its own.
   Since 7.1 it also opens IDD_NASTAVENI both ways a visitor can — F4 and the
-  menu — walks its two pages, refuses a two-word name, sets a character through
-  it, and presses F7, F8 and Ctrl+F8; and since 7.3 the second visit starts from
-  the IQPOKYD.CFG the first one wrote, which is the one thing only two visits can
-  show. **219 checks**, and the golden transcript still byte for byte under all
+  menu — checks that the dropped second page is not on it and that the dialog
+  lost exactly that page's button row, refuses a two-word name, sets a character
+  through it, and presses F7, F8 and Ctrl+F8; and since 7.3 a first visit is
+  *met* by that dialog and a second one is not, because the second starts from
+  the IQPOKYD.CFG the first wrote — which is the one thing only two visits can
+  show. **225 checks**, and the golden transcript still byte for byte under all
   of them.
   **`npm test` runs all fifteen**, in phase order, in a little over two minutes;
   `node test/run.mjs --quick` keeps the eleven that do not launch a browser.
@@ -2015,11 +2017,13 @@ rather than a thing built.
       **The layout of this window *is* the resource script**, which the main
       window's was not: a modal dialog is laid out by `MapDialogRect` once and
       nothing moves afterwards, so there is not one measurement in `dialog.ts`.
-      Everything else about it came out of `Nastaveni.cpp` — the two pages his
-      two buttons switch between (a `CTabCtrl` he left commented out at :340),
-      the group captions they relabel, and `ZOBRAZ_NA_DIALOGU_POLICKO`'s
-      `&`↔`~` swap, which is how a hidden control loses its mnemonic and is
-      `accessKey` here.
+      What `Nastaveni.cpp` had to say about it on top of the template was the
+      two pages his two buttons switch between (a `CTabCtrl` he left commented
+      out at :340), the group captions they relabel, and
+      `ZOBRAZ_NA_DIALOGU_POLICKO`'s `&`↔`~` swap, which is how a hidden control
+      loses its mnemonic — and all three went with the page that is dropped
+      below, because with one page nothing is ever hidden. `settings.ts` still
+      holds every one of them, and the test still reads them out of his file.
 
       **It corrected `pohlavi` again, and this time finished it: the second
       value is 2, not 0.** 6.3 got half of it off the `if` that prints "muž";
@@ -2033,17 +2037,37 @@ rather than a thing built.
       (`IQPokyd.h:84`), which is wrong twice over and is where the port's
       comments got it.
 
-      **Five controls are drawn greyed rather than lying**, by the same rule
-      `src/app/menu.ts` greys a command with no handler: the three keyboard
-      ones, because `EMULUJ_KLAVESNICI` is a whole layout that is not ported and
-      a tick that did not change what a keystroke produces would be worse than a
-      grey one; the standard-cursor one, because the caret it asks for is the
-      DOS underscore the program drew itself; and the tool tips, because the
-      twenty-odd bubbles are `Nastaveni.cpp` literals that nothing shows. The
-      rest are live. **"Používat zvuky" is live and does nothing**, and that is
-      faithful rather than sloppy: the archive ships no `TUKNUTI.WAV`, and the
-      author's own bubble help for that checkbox says in capitals that the value
-      does not matter while the file is missing.
+      **The second page is dropped whole, and that is the one cut in the
+      dialog.** `Rozšířené nastavení` (:381-424) is nine controls and two
+      buttons, and after the port there was nothing behind any of them: the four
+      keyboard ones and their paragraph need `EMULUJ_KLAVESNICI`, which is a
+      whole layout that is not ported; the standard-cursor one asks for the DOS
+      underscore the program drew itself; the tool tips are twenty-odd
+      `Nastaveni.cpp` literals that nothing shows; `Read only mod` guards
+      `fopen()` and there are no files here; and `Nezobrazovat pozadí` is the
+      author's own command-line switch, which stays one — `?bezpozadi`. Six of
+      them were drawn greyed until this change, which is `src/app/menu.ts`'s rule
+      for a command with no handler; a page that is *entirely* greyed is a
+      different thing, so it is gone instead, with the two buttons that switched
+      to it. The dialog is 13 dialog units shorter for it — the row those buttons
+      stood in — and everything else keeps the template's own rectangle moved up
+      by that one number. `src/app/dialog.ts`'s `DROPPED` is the list and the
+      reason for each; `ADVANCED_CONTROLS` stays in `settings.ts` because it is
+      the *author's* arrangement and `test/app/settings.test.ts` still holds it
+      against his two `ShowWindow` runs.
+
+      **Dropping it left one trap, and `read()` is where it is sprung.** `OnOK`
+      writes the whole struct at once (:163-168), so a control that is not on the
+      dialog must not be read as "not ticked" — or one OK on a name would clear
+      `zobrazovatpopisky`, `klavesniceqwerty` and `prikaz_nezobrazovatpozadi`
+      behind the visitor's back. A missing control falls back to what the
+      settings already said, and the browser test checks the two that
+      `NASTAV_STANDARDNE` leaves on come back out of an OK still on.
+
+      **"Používat zvuky" is live and does nothing**, and that is faithful rather
+      than sloppy: the archive ships no `TUKNUTI.WAV`, and the author's own
+      bubble help for that checkbox says in capitals that the value does not
+      matter while the file is missing.
 
       **Two deviations, both small and both the platform's.** A two-word name
       got `MessageBox(...,MB_SYSTEMMODAL)` in 2005; `alert()` blocks the whole
@@ -2097,17 +2121,31 @@ rather than a thing built.
       because he wrote it that way: `prumerny` in the file, `průměrný` on the
       screen.
 
-      **A first visit does not open the settings dialog, and in 2005 it did.**
+      **A first visit opens the settings dialog, as it did in 2005.**
       `PRECTI_NASTAVENI_ZE_SOUBORU` returning 0 or 2 set `g_zobrazitnastaveni`
       and the background thread sent the window `ID_NASTAVENI`
-      (`PROSTRED.FU:498`). Three reasons it is not put back: that thread is in
-      `Aplikace/Prostred/`, which `BEZ_PROSTREDI` drops whole, so it is absent
-      here for the same reason the loading window has no Cancel button; every
-      visitor with a clean browser profile is a "first run" on the web, where in
-      2005 it happened once per installation; and the front door of an exhibit
-      should be the conversation. F4 is one keystroke away. The one thing lost
-      is the prompt itself — `PokydChatHandle.configStatus()` still reports his
-      three values, so a page that wants to act on them can.
+      (`PROSTRED.FU:498`). That thread is in `Aplikace/Prostred/`, which
+      `BEZ_PROSTREDI` drops whole, so the load calls `openSettings` itself; it
+      is the one place in the port where a missing thread is worked around
+      rather than written off, because what it does is not environment but the
+      program's front door. Being asked who you are is how IQ Pokyd starts —
+      the name and the two `pohlavi` inflect everything it says afterwards —
+      and a visitor who never finds F4 would never be asked at all.
+
+      It runs **after** the welcome line, which is also where 2005 put it: a
+      `SendMessage` from that thread is run by the main thread's message pump,
+      which does not turn until `OnInitDialog` has returned. A visitor who has
+      been here before has a file that reads (1) and is not asked again — the
+      same rule per browser profile that it was per installation — and
+      `test/app/chat.test.mjs` checks both halves, because its two visits are
+      exactly a first run and a second.
+
+      What is *not* put back is the `MessageBox` a broken file also got
+      (`_NEKDO_SI_HRAL_S_NASTAVENIM_`, `PROSTRED.FU:485-496`): it is one of that
+      thread's four `hlasky`, none of which this build has, so a 2 opens the
+      dialog without the apology in front of it.
+      `PokydChatHandle.configStatus()` still reports all three values, so a page
+      that wants to tell a 0 from a 2 can.
 - [x] 7.4 **Done**, and it is four lines of `mfcDlg.cpp` (:944-972) plus a
       table. `src/app/menu.ts` now binds IDR_ZKRATKY as well as drawing
       IDR_MENU, by the same rule: an accelerator whose command has no handler is
@@ -2209,8 +2247,9 @@ rather than a thing built.
   of them. `npm run dev` serves it, `npm run build` writes `dist/`.
 - The settings: `src/app/settings.ts` is `CNastaveni` with the window taken off —
   his `OnInitDialog`, his `OnOK`, his name check and the two lists of controls his
-  two pages show — and `src/app/dialog.ts` draws IDD_NASTAVENI over it (phase
-  7.1). `src/app/config.ts` is `IQPOKYD.CFG`, his own file format, in
+  two pages showed — and `src/app/dialog.ts` draws IDD_NASTAVENI over it (phase
+  7.1), minus the second of those pages: `DROPPED` there is what is not drawn and
+  why. `src/app/config.ts` is `IQPOKYD.CFG`, his own file format, in
   `localStorage` under his own file name (phase 7.3). Read the header of
   `settings.ts` before touching any of the three: it has the four things reading
   the C got right, `pohlavi` being 1 or 2 among them.
