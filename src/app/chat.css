@@ -711,8 +711,10 @@ E-mail:" is
 
 /* IDD_ABOUTBOX.  Two controls the template does not describe: the thanks, which
    OnInitDialog fills and sets Times New Roman on (mfcDlg.cpp:698-717), and the
-   web address, which gets an underline and 0x00FF0000 -- a COLORREF again, so
-   blue.  It is not a link; src/app/screens.ts says why. */
+   web address, which got an underline and 0x00FF0000 -- a COLORREF again, so
+   blue.  His address is no longer on the screen (src/app/exhibit.ts says why)
+   and the rule it was drawn by is now worn by the one address that does answer,
+   in the 2026 notice, which is a real link. */
 
 .pokyd-dialog-thanks {
   overflow: auto;
@@ -730,6 +732,8 @@ E-mail:" is
   color: #0000ff;
   text-decoration: underline;
 }
+
+.pokyd-dialog-www:focus-visible { outline: 1px dotted #000; }
 
 /* The logo, IDB_KYBLSOFT.  A SS_BITMAP static draws the bitmap at the control's
    own rectangle, and the author's rectangle is half the bitmap's pixels -- 66x22

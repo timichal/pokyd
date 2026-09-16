@@ -393,21 +393,48 @@ async function visit({ kind, sentences }) {
       out.version.closedByX = dialog() === null;
     }
 
-    /* 5. O programu, by Shift+F1.  IDD_ABOUTBOX is the one dialog of his the
-          port draws with nothing taken off it. */
+    /* 5. O programu, by Shift+F1.  IDD_ABOUTBOX with the two dead addresses
+          taken off it and the 2026 notice put in -- exhibitAbout(), and node
+          builds the same template to compare this with. */
     press("F1", { shiftKey: true });
     await until("the about box", dialog, 5000);
     {
+      const link = item("IDC_WEBNOTICETEXT").querySelector("a");
+      /* How far the words in a static spill past the rectangle the template
+         gave it, in pixels.  A static has no overflow of its own, so a caption
+         that wrapped one line further than it was drawn for would hang out
+         through the group box below it rather than be clipped -- which is a
+         thing to fail on and not a thing to notice later. */
+      const spill = (el) => {
+        const range = doc.createRange();
+        range.selectNodeContents(el);
+        return Math.round(range.getBoundingClientRect().bottom
+          - el.getBoundingClientRect().bottom);
+      };
       out.about = {
         caption: doc.querySelector(".pokyd-dialog-title").textContent,
         controls: doc.querySelectorAll(".pokyd-dialog-item").length,
         shown: Array.from(doc.querySelectorAll(".pokyd-dialog-item"))
           .map((el) => el.dataset.control).sort(),
         heading: item("IDC_NADPIS").textContent,
-        internet: item("IDC_INTERNET").textContent,
-        /* mfcDlg.cpp:931 -- 0x00FF0000 is a COLORREF, so blue. */
-        internetColour: win.getComputedStyle(item("IDC_INTERNET")).color,
-        internetIsLink: item("IDC_INTERNET").querySelector("a") !== null,
+        /* His two addresses, and the label over them: nothing on the screen
+           should carry any of the three any more. */
+        body: Array.from(encodeCp1250(doc.body.textContent)),
+        notice: Array.from(encodeCp1250(item("IDC_WEBNOTICETEXT").textContent)),
+        noticeCaption: Array.from(encodeCp1250(
+          item("IDC_WEBNOTICE").querySelector("legend").textContent)),
+        linkText: Array.from(encodeCp1250(link === null ? "" : link.textContent)),
+        linkHref: link === null ? "" : link.href,
+        linkTarget: link === null ? "" : link.target,
+        /* mfcDlg.cpp:931 -- 0x00FF0000 is a COLORREF, so blue.  His rule, on
+           the one address in this dialog that answers. */
+        linkColour: link === null ? "" : win.getComputedStyle(link).color,
+        noticeSpill: spill(item("IDC_WEBNOTICETEXT")),
+        /* His own line, measured the same way: it is what says the measure
+           means anything, because his fits by construction. */
+        hisLineSpill: spill(Array.from(
+          doc.querySelectorAll(".pokyd-dialog--about .pokyd-dialog-static"))
+          .find((el) => el.textContent.startsWith("Toto je jedna"))),
         thanks: Array.from(encodeCp1250(
           doc.querySelector(".pokyd-dialog-thanks").textContent)),
         logo: doc.querySelector(".pokyd-dialog--about img") !== null,

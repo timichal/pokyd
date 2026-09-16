@@ -9,7 +9,19 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 8 — extras — **is complete, and two of its four items are the decision not to
+**Phase:** 9 — ship — **is open, and 9.0 is done.** The exhibit now says what it is on
+the two screens a visitor would ask it on: *Informace o verzi* opens with a 2026 preface
+above the author's own note, and *O programu* has an **Upozornění 2026** box with a link
+to the source where `http://iqpokyd.kyblsoft.cz` and `iqpokyd@kyblsoft.cz` used to sit.
+Both are `src/app/exhibit.ts`, which is the only file in this port that writes Czech of
+its own and the second place — after `exhibitMenu` — that it changes anything of his.
+`versionText` is untouched and still holds against `mfcDlg.cpp` character for character;
+`exhibitAbout` is arithmetic over his own rectangles, 50 checks in
+`test/app/exhibit.test.ts` and a real-browser measurement of the new caption against the
+box it was given in `test/app/chat.test.mjs`, now **371 checks**. Left in phase 9: the
+README, the licensing note, the mobile layout and the final transcript pass.
+
+**Phase 8** — extras — **is complete, and two of its four items are the decision not to
 build them.** 8.1 and 8.3 are dropped: the conversation log has nothing to write to and
 nothing left to promise, so `IDC_UKLADATROZHOVOR` came off the settings dialog with it,
 and the attribution page was already on the screen twice over once 8.2 landed. What is
@@ -2321,10 +2333,34 @@ rather than a thing built.
 
 ## Phase 9 — Ship
 
+- [x] **9.0 The web edition says so on its own two screens.** Everything in this port is
+      the author's except the fact that it is a web page in 2026, and that is exactly
+      what a visitor opening *Informace o verzi* or *O programu* wants told. Both are in
+      `src/app/exhibit.ts` — **the only file here that writes Czech of its own**, and the
+      second place after `exhibitMenu` that this port changes what he made:
+      - *Informace o verzi* gets a **preface, not a rewrite**: `webVersionText` puts a
+        second `<h><u>` heading and a paragraph above `CMfcDlg::OnOverzi`'s text and
+        leaves that text alone, so `test/app/help.test.ts` goes on comparing it with
+        `mfcDlg.cpp` character for character.
+      - *O programu* loses `http://iqpokyd.kyblsoft.cz`, `iqpokyd@kyblsoft.cz` and the
+        "Web: / E-mail:" label over them — the `DROPPED_COMMANDS` argument, twice: a site
+        that has not answered in twenty years and a mailbox behind a dead domain. In
+        their place `exhibitAbout` puts a second group box, **Upozornění 2026**, in his
+        own rectangle a line taller, with the one address on that screen that does answer
+        as a real link. The logo, the copyright line and the thanks are untouched.
+
+      `exhibitAbout` is a pure function over the parse in `src/app/resources.ts` — it
+      drops three controls, adds two, and moves the rest by two offsets it computes off
+      his own geometry, so `src/app/resources.ts` stays generated and unedited.
+      `node test/app/exhibit.test.ts` is 50 checks on both halves, and
+      `test/app/chat.test.mjs` grew to **371**: it measures the new caption against the
+      rectangle it was given **in a real browser** and fails if the words hang out of it,
+      which is the one thing dialog-unit arithmetic cannot tell you.
 - [ ] 9.1 README: what this is, whose it is, how it was ported, what changed and why
       (link `PATCHES.md`). **`original/info.txt` goes here**, reproduced in full — phase
       8.3 was going to give it a page of its own and that page is dropped, because
-      `IDD_ABOUTBOX` is the attribution screen and the author wrote it.
+      `IDD_ABOUTBOX` is the attribution screen and the author wrote it — and since 9.0,
+      the attribution screen also says where this port came from.
 - [ ] 9.2 Licensing note. The author released under GNU/GPL *and* added "no commercial use",
       which the GPL does not actually permit as a combination. Whatever we conclude, the
       practical commitments are: keep attribution, keep `info.txt`, don't monetize it.
@@ -2375,7 +2411,13 @@ rather than a thing built.
   `IDD_ABOUTBOX` over it, `src/app/frame.ts` is the window all four of his dialogs wear,
   and `node test/app/help.test.ts` reassembles every one of those strings out of his own
   C string literals — phase 8.2. Read `DROPPED_COMMANDS` in `src/app/caption.ts` before
-  wondering where a menu item went.
+  wondering where a menu item went, and `src/app/exhibit.ts` for the two paragraphs on
+  those screens that are ours and not his.
+- What is *not* his: `src/app/exhibit.ts` — the 2026 preface on *Informace o verzi* and
+  the **Upozornění 2026** box that replaced the two dead addresses in `IDD_ABOUTBOX`
+  (phase 9.0). It is the only file in the port that writes Czech of its own, and with
+  `DROPPED_COMMANDS` in `src/app/caption.ts` it is one of the two places this port
+  changes what the author made. Read it before wondering where the web address went.
 - The cheat panel: `src/app/debug.ts` is `CDebugNastaveni` with the window taken off and
   `src/app/cheat.ts` draws `IDD_DEBUGNASTAVENI` over it — phase 8.4, and the only one of
   his dialogs the port draws whole. `node test/app/debug.test.ts` reads his `sprintf`,

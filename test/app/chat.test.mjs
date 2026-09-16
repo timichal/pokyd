@@ -62,8 +62,17 @@ import {
    test/app/debug.test.ts does the same for the cheat panel's report and its two
    refusals.  So what is compared with the screens below is his own writing. */
 import {
-  HELP_CAPTION, THANKS, VERSION_CAPTION, helpText, markup, plain, versionText,
+  HELP_CAPTION, THANKS, VERSION_CAPTION, helpText, markup, plain,
 } from "../../src/app/help.ts";
+/* Phase 9.0.  The same rule a fourth time: src/app/exhibit.ts is pure data and
+   pure functions, test/app/exhibit.test.ts has already held its preface against
+   the author's own text and its template edit against his own rectangles, so
+   what is compared with the two screens below is that module and not a second
+   copy of the Czech. */
+import {
+  DROPPED_TEXT, NOTICE_CAPTION, NOTICE_LINK, NOTICE_URL, exhibitAbout,
+  webVersionText,
+} from "../../src/app/exhibit.ts";
 import {
   CHEAT_SENTENCE, ERROR_TITLE, MOOD_NOT_A_NUMBER, MOOD_OUT_OF_RANGE,
   WARNING_TITLE, report as debugReport, tooltips, warningText,
@@ -622,25 +631,44 @@ function checkScreens(run) {
 
   heading("Informace o verzi -- CMfcDlg::OnOverzi, in the same window");
   eq("the caption is his", s.version.caption, VERSION_CAPTION);
-  eqBytes("and the text is the one in mfcDlg.cpp",
-    s.version.text, plain(versionText(settings)));
+  eqBytes("and the text is the 2026 preface and then the one in mfcDlg.cpp",
+    s.version.text, plain(webVersionText(settings)));
   ok("the close box in the caption bar shuts it", s.version.closedByX);
 
   /* ------------------------------------------------------------ O programu */
 
-  heading("O programu -- IDD_ABOUTBOX, drawn whole");
-  const about = DIALOGS["IDD_ABOUTBOX"];
+  heading("O programu -- IDD_ABOUTBOX, as exhibitAbout leaves it");
+  const about = exhibitAbout();
   eq("the caption is the template's", s.about.caption, about.caption);
   eq("every one of its controls is on the screen", s.about.controls,
     about.controls.length);
   eq("the heading is the template's", s.about.heading, "IQ Pokyd v0.15");
-  eq("the web address is his", s.about.internet, "http://iqpokyd.kyblsoft.cz");
-  eq("in the blue his COLORREF actually is", s.about.internetColour,
-    "rgb(0, 0, 255)");
-  ok("and it is text, not a link -- the site has not answered in twenty years",
-    !s.about.internetIsLink);
   eqBytes("the thanks are the paragraph he wrote", s.about.thanks, THANKS);
   ok("the KYBLSoft logo is IDB_KYBLSOFT", s.about.logo);
+  /* Phase 9.0: the two dead addresses and the label over them are off the
+     screen, and the check is over the whole page rather than over the three
+     controls, so moving one somewhere else would not pass it either. */
+  const page = decodeCp1250(Uint8Array.from(s.about.body));
+  for (const gone of DROPPED_TEXT) {
+    ok("nothing on the page says " + JSON.stringify(gone),
+      !page.includes(gone));
+  }
+  /* And the notice that took their place. */
+  const notice = about.controls.find((c) => c.id === "IDC_WEBNOTICETEXT");
+  eqBytes("the 2026 box says what the template says", s.about.notice,
+    notice.text);
+  eqBytes("under the caption it gives it", s.about.noticeCaption,
+    NOTICE_CAPTION);
+  eqBytes("and 'na GitHubu' is the part that is a link",
+    s.about.linkText, NOTICE_LINK);
+  eq("pointing at the repository", s.about.linkHref, NOTICE_URL);
+  eq("in a tab of its own", s.about.linkTarget, "_blank");
+  eq("in the blue his COLORREF actually is", s.about.linkColour,
+    "rgb(0, 0, 255)");
+  ok("his own line fits the rectangle he drew for it, as it always did",
+    s.about.hisLineSpill <= 0, "it spills " + s.about.hisLineSpill + "px");
+  ok("and ours fits the one it borrowed from him",
+    s.about.noticeSpill <= 0, "it spills " + s.about.noticeSpill + "px");
   ok("and OK closes it", s.about.closedByOk);
 
   /* ------------------------------------------------------ the cheat panel */

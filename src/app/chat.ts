@@ -94,8 +94,9 @@ import { mountSettings } from "./dialog.ts";
 import { mountAbout, mountText } from "./screens.ts";
 import { mountCheat } from "./cheat.ts";
 import {
-  HELP_CAPTION, THANKS, VERSION_CAPTION, helpText, versionText,
+  HELP_CAPTION, THANKS, VERSION_CAPTION, helpText,
 } from "./help.ts";
+import { webVersionText } from "./exhibit.ts";
 import { CHEAT_SENTENCE } from "./debug.ts";
 import { MOODS } from "./settings.ts";
 import { CONFIG_BROKEN, CONFIG_OK, loadStored, read, store } from "./config.ts";
@@ -302,8 +303,9 @@ export function mountChat(
       ID_NASTAVENI: (): void => { openSettings(); },
       /* CMfcDlg::OnMalaNapoveda, :788 -- ZOBRAZ_NAPOVEDU, PROSTRED.FU:775. */
       ID_MALANAPOVEDA: (): void => { openText(HELP_CAPTION, helpText); },
-      /* CMfcDlg::OnOverzi, :815.  The same CText with another text in it. */
-      ID_OVERZI: (): void => { openText(VERSION_CAPTION, versionText); },
+      /* CMfcDlg::OnOverzi, :815.  The same CText with another text in it --
+         his own, with the web edition's preface above it (src/app/exhibit.ts). */
+      ID_OVERZI: (): void => { openText(VERSION_CAPTION, webVersionText); },
       /* CMfcDlg::OnAbout, :801-804 -- CAboutDlg, IDD_ABOUTBOX. */
       ID_OPROGRAMU: (): void => { openAbout(); },
       /* CMfcDlg::OnCheatDebugInfo, :889.  In no menu: IDR_ZKRATKY binds it to

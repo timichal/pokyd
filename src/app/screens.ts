@@ -26,22 +26,27 @@
    The template has the whole of it -- the KYBLSoft logo, the two group boxes,
    the copyright line, ":: freeware ::", "1. vydani", the web and e-mail
    addresses -- and CAboutDlg::OnInitDialog (mfcDlg.cpp:669) adds three fonts
-   and the paragraph of thanks.  All three fonts are his and are set here the
-   same way: Times New Roman at lfHeight -12 on IDC_PODEKOVANI, Courier New at
-   a *positive* lfHeight of 20 and FW_BLACK on IDC_NADPIS -- a cell height, so
-   it goes through emForCellHeight like the transcript's font in
-   src/app/chat.ts -- and an underline on IDC_INTERNET.
+   and the paragraph of thanks.  Two of those fonts are his and are set here the
+   same way: Times New Roman at lfHeight -12 on IDC_PODEKOVANI, and Courier New
+   at a *positive* lfHeight of 20 and FW_BLACK on IDC_NADPIS -- a cell height,
+   so it goes through emForCellHeight like the transcript's font in
+   src/app/chat.ts.  His third was an underline on IDC_INTERNET, which this no
+   longer draws.
 
-   **The one thing that is not honoured is that underline's click.**
+   **The template it draws is `exhibitAbout()`, not IDD_ABOUTBOX itself.**
    ON_BN_CLICKED(IDC_INTERNET, OnKliknutiNaInternet) opened
-   http://iqpokyd.kyblsoft.cz (mfcDlg.cpp:1009), and that address has not
-   answered in twenty years.  Phase 8.2 dropped the menu item that did the same
-   thing -- DROPPED_COMMANDS in src/app/caption.ts has the argument -- and
-   dropping one while keeping the other would be pointless.  So the address is
-   still on the screen in his blue and his underline, and it is text.
+   http://iqpokyd.kyblsoft.cz (mfcDlg.cpp:1009) and that address has not
+   answered in twenty years; phase 8.2 kept it on the screen as text because
+   text is harmless, and phase 9.0 drops it, with the e-mail address beside it,
+   for a second Upozorneni box that says what this page is and where its source
+   is.  src/app/exhibit.ts is that edit and the argument for it, the way
+   src/app/caption.ts is for the menu.  The one thing here that knows about it
+   is the branch for NOTICE_TEXT_ID: it is the only control in the port whose
+   caption is not one run of text, because the middle of it is a link.
 
    Written by us, not ported.  English identifiers and ASCII only; every Czech
-   letter drawn here comes from src/app/resources.ts or src/app/help.ts.
+   letter drawn here comes from src/app/resources.ts, src/app/help.ts or
+   src/app/exhibit.ts.
 */
 
 import { DIALOGS, dluToPx } from "./resources.ts";
@@ -52,6 +57,10 @@ import {
   DIALOG_CLASS, DIALOG_FONT, controlOf, makeStatic, mountFrame, placeControl,
 } from "./frame.ts";
 import { markup } from "./help.ts";
+import {
+  NOTICE_AFTER, NOTICE_BEFORE, NOTICE_LINK, NOTICE_TEXT_ID, NOTICE_URL,
+  exhibitAbout,
+} from "./exhibit.ts";
 
 /* ------------------------------------------------------------ the two fonts */
 
@@ -163,14 +172,16 @@ export interface PokydAboutOptions {
    *  and does not also decide. */
   thanks: string;
   onClose(): void;
-  /** IDD_ABOUTBOX by default. */
+  /** `exhibitAbout(IDD_ABOUTBOX)` by default -- his template with the two dead
+   *  addresses gone and the 2026 notice in their place.  A test can hand in
+   *  his own. */
   dialog?: RcDialog;
 }
 
 export function mountAbout(
   parent: Element, options: PokydAboutOptions,
 ): PokydScreenHandle {
-  const dialog = options.dialog ?? DIALOGS["IDD_ABOUTBOX"]!;
+  const dialog = options.dialog ?? exhibitAbout();
   const base = dialogBaseUnits(DIALOG_FONT, dialog.font!.size);
   const size = dluToPixels(dialog, base);
 
@@ -212,6 +223,22 @@ export function mountAbout(
       box.style.fontSize = "12px";
       box.textContent = options.thanks;
       node = box;
+    } else if (rc.id === NOTICE_TEXT_ID) {
+      /* src/app/exhibit.ts wrote this one, and it is the only caption in the
+         port with markup of its own: three pieces, the middle one an anchor.
+         It wears IDC_INTERNET's old class, because blue and underlined is what
+         his dialog already said a web address looks like -- only this one is
+         a link, since unlike his it answers. */
+      const span = document.createElement("span");
+      span.className = DIALOG_CLASS + "-static";
+      const link = document.createElement("a");
+      link.className = DIALOG_CLASS + "-www";
+      link.href = NOTICE_URL;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = NOTICE_LINK;
+      span.append(NOTICE_BEFORE, link, NOTICE_AFTER);
+      node = span;
     } else if (rc.class === "Static" && rc.styles.includes("SS_BITMAP")) {
       /* CONTROL ... #139, which is IDB_KYBLSOFT -- the logo, and the only
          picture in this dialog.  The template's rectangle is 66x22 dialog
@@ -248,11 +275,6 @@ export function mountAbout(
         node.style.fontFamily = MONO;
         node.style.fontWeight = "900";
         node.style.fontSize = emForCellHeight(MONO, 20).toFixed(2) + "px";
-      }
-      if (rc.id === "IDC_INTERNET") {
-        /* :679-683 and :931: underlined, and blue -- 0x00FF0000 is a COLORREF,
-           so it is #0000ff and not red.  Not a link; see the header. */
-        node.classList.add(DIALOG_CLASS + "-www");
       }
     }
 
