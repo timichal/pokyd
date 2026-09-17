@@ -125,6 +125,46 @@ const DROPPED: readonly string[] = [
   ...ADVANCED_CONTROLS,
 ];
 
+/* ------------------------------------------------------- what iOS draws instead */
+
+/* IDC_CHARAKTER and IDC_NALADA are LBS_NOTIFY list boxes with a scroll bar, and
+   a `<select>` with `size` above one is what a browser makes of that -- on a
+   desktop.  Safari on iOS draws every `<select>` as a dropdown whatever `size`
+   says, and hands the sheet with the options in it to the system; what is left
+   on the dialog is one line, floating in the middle of the 62 pixels his
+   rectangle asked for.  The picker is fine and stays; the empty 46 pixels
+   under the line are not his and are taken off.
+
+   Detected and not sniffed.  A `size=2` select no taller than a `size=1` one is
+   a dropdown wherever that happens to be true, which is the fact that matters
+   and the only one worth asking about.  The answer cannot change inside a
+   visit, so it is asked once. */
+let dropdownLists: boolean | undefined;
+
+function listsAreDropdowns(family: string, size: string): boolean {
+  if (dropdownLists !== undefined) return dropdownLists;
+  const probe = (rows: number): number => {
+    const list = document.createElement("select");
+    list.size = rows;
+    for (let i = 0; i < 3; i++) {
+      const option = document.createElement("option");
+      option.textContent = "Mg";
+      list.appendChild(option);
+    }
+    list.style.cssText = "position:absolute;left:-9999px;top:0;visibility:hidden";
+    list.style.fontFamily = family;
+    list.style.fontSize = size;
+    document.body.appendChild(list);
+    const height = list.getBoundingClientRect().height;
+    list.remove();
+    return height;
+  };
+  /* A pixel of slack: two rows are never within one pixel of one row, and a
+     dropdown is the same control either way. */
+  dropdownLists = probe(2) <= probe(1) + 1;
+  return dropdownLists;
+}
+
 /* ----------------------------------------------------------- what moves up */
 
 /** A band of the template with nothing left in it.  Everything below one moves
@@ -341,6 +381,13 @@ export function mountSettings(
 
     node.classList.add(CLASS + "-item");
     place(node, rc);
+    /* The one control whose height is not his to give: a dropdown is one line
+       tall and knows how tall that is, so the rectangle keeps his left, his top
+       and his width, and the browser answers for the rest. */
+    if (node instanceof HTMLSelectElement
+        && listsAreDropdowns(DIALOG_FONT, body.style.fontSize)) {
+      node.style.height = "";
+    }
     boxes.set(rc.id, node);
     body.appendChild(node);
   }

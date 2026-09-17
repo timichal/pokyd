@@ -9,16 +9,17 @@ not a fork. Same engine, same answers, same look, running at a URL.
 
 ## Status
 
-**Phase:** 9 — ship — **is complete, 9.0 through 9.4, and so is the port.** A Czech
+**Phase:** 9 — ship — **is complete, 9.0 through 9.5, and so is the port.** A Czech
 Windows program from 2005 holds a conversation in a browser at
 <https://timichal.github.io/pokyd/>, and 9.4 checked it there rather than locally: the
 deployed page, driven through all 23 sentences of `test/golden/rozhovor.in`, answers
 with `test/golden/rozhovor.txt` **byte for byte** — the same transcript the native
 MinGW build printed at phase 1.6, now out of a Linux-built wasm module in Chrome. The
-mobile layout renders at 390×844 with nothing overflowing (9.3), and the two documents
-this repository was missing are written: `README.md`, which says what this is, whose it
-is, what changed and why, and reproduces `original/info.txt` in full (9.1), with the
-licensing note in it (9.2) describing the GPL-plus-no-commercial-use contradiction
+mobile layout renders at 390×844 with nothing overflowing (9.3) and, since a real phone
+looked at it, nothing overlapping, zooming, clipped or floating either (9.5). The two
+documents this repository was missing are written: `README.md`, which says what this is,
+whose it is, what changed and why, and reproduces `original/info.txt` in full (9.1), with
+the licensing note in it (9.2) describing the GPL-plus-no-commercial-use contradiction
 rather than pretending to resolve it.
 
 9.0 was the exhibit saying what it is on the two screens a visitor would ask it on:
@@ -2390,7 +2391,8 @@ rather than a thing built.
       820 the client gets, and the sentence line and *Řekni* sit on the bottom row. The
       one thing that touches at that width is the heading row — "IQ Pokyd v0.15" and
       "KÝBLSoft 2005" meet with no gap. They are `WINDOW_LAYOUT`'s own rectangles, so
-      that is his geometry in a narrower window and not a bug in ours.
+      that is his geometry in a narrower window and not a bug in ours — **9.5 fixed it
+      anyway**, on a real iPhone where they do not meet but overlap.
 - [x] **9.4 Final pass, run against the deployed page and not a local build.**
       `?seed=20050415&mood=3`, *Storno* on the settings dialog it opens by itself, then
       all 23 sentences of `test/golden/rozhovor.in` typed into the sentence line and
@@ -2400,6 +2402,37 @@ rather than a thing built.
       on a GitHub Pages URL. Ctrl+Shift+Alt+D and `::debuginfo` both open
       `IDD_DEBUGNASTAVENI` there, and F4, F1, Shift+F1, Alt+V, F7 and Ctrl+F7 all do
       what `IDR_ZKRATKY` says. Locally, `npm test` is **18 of 18**.
+- [x] **9.5 What a real phone said, and four things 9.3 could not see.** The deployed
+      page opened on an iPhone 15, and a headless Chrome at 390×844 confirms three of
+      the four. Every one of them is the same shape: a 2005 window meeting a screen
+      smaller and a browser stranger than any it was drawn for.
+      - **The heading row, which 9.3 saw and called his.** It was his, and it still
+        overlapped: `OnGetMinMaxInfo` (mfcDlg.cpp:990-991) would not let the window go
+        below 400 px across and a phone is 390. The row now scales down whole —
+        `--pokyd-heading-fit`, measured off the three spans as they are drawn, because
+        the faces a visitor gets are not his (Garamond is Palatino on an iPhone, and
+        wider). At 390 the factor is 0.925 and the gaps are 22 px and 10 px; in any
+        window he could have had it is 1 and nothing moves.
+      - **Safari zooms the page in on a field whose text is under 16 px**, and does not
+        zoom back out — so the first tap on the sentence line threw the window off the
+        screen. `.pokyd-input` is 16 px under `(hover: none) and (pointer: coarse)` and
+        13 px as he had it everywhere else; his edit is 29 px tall and has the room.
+        The two dialogs a visitor touches are already 16 (a 12-point template at 96 dpi).
+      - **The four dialogs were clipped to the screen, not fitted to it.** `max-width`
+        and `max-height` cut the frame and `.pokyd-dialog-body` is `overflow: hidden`
+        over absolutely placed controls, so the right-hand third of `IDD_TEXT` — 568 px
+        wide against a 390 px phone — was not scrolled off, it was gone. Both caps are
+        off and `fitToScreen` (`src/app/frame.ts`) scales the window down whole instead,
+        one factor on both axes, keeping OKRAJE clear. At 390×844: 0.634 for `IDD_TEXT`,
+        0.914 for `IDD_NASTAVENI`, 0.678 for `IDD_ABOUTBOX`, 0.750 for
+        `IDD_DEBUGNASTAVENI`, and all four land inside the viewport. The overlay is
+        `height: 100dvh`, not `100%`, because a `position: fixed` box on a phone is
+        measured against the tall viewport the toolbars are hidden in.
+      - **iOS draws every `<select>` as a dropdown**, `size` and all, so `IDC_CHARAKTER`
+        and `IDC_NALADA` arrived as one line floating in the 62 px his list box asked
+        for. Detected rather than sniffed — a `size=2` select no taller than a `size=1`
+        one — and where it is true the inline height comes off and the browser answers
+        for it. On a desktop the probe says no and the two lists are 62 px, as measured.
 
 ---
 

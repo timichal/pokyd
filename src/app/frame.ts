@@ -29,7 +29,7 @@
    letter that reaches the screen through this file arrived as an argument.
 */
 
-import { dluToPx } from "./resources.ts";
+import { WINDOW_LAYOUT, dluToPx } from "./resources.ts";
 import type { RcControl, RcRect } from "./resources.ts";
 import type { DialogBaseUnits } from "./resources.ts";
 
@@ -49,6 +49,43 @@ export const DIALOG_FONT =
 /** Every dialog in this port wears the same class family, because every one of
  *  them is the same XP window; a caller adds a modifier of its own. */
 export const DIALOG_CLASS = "pokyd-dialog";
+
+/* ------------------------------------------------------------- the fitting */
+
+/* The one thing in this file that a 2005 desktop never had to answer: a screen
+   smaller than the window.  His four dialogs are 394 to 568 pixels across and
+   318 to 564 down once MapDialogRect has had the visitor's font -- a phone is
+   390 by about 660 -- and IDD_TEXT does not fit either way.
+
+   What used to happen is what `max-width`/`max-height` in src/app/chat.css did:
+   the frame was cut to the screen and the body, which is `overflow: hidden`
+   over absolutely placed controls, simply lost whatever was past the cut.  The
+   right-hand third of the help text was not scrolled off, it was gone.
+
+   So the window is scaled instead -- all of it, on both axes by the same
+   factor, which is exactly what a visitor would do with a pinch if we let the
+   page be pinched.  Nothing about his geometry changes: every rectangle is
+   still MapDialogRect's, every ratio between them is still his, and on any
+   screen the window already fits on the factor is 1 and there is no transform
+   at all.  The margin it keeps is OKRAJE, the same fifteen pixels the main
+   window holds its own headings off the edge by. */
+function fitToScreen(overlay: HTMLElement, frame: HTMLElement): void {
+  /* The overlay is `height: 100dvh`, so this is the band that is really on the
+     screen -- and, unlike visualViewport, it does not shrink under the on-screen
+     keyboard, which would otherwise squeeze the window while a name is typed. */
+  const room = overlay.getBoundingClientRect();
+  /* offsetWidth/offsetHeight and not getBoundingClientRect: the first pair is
+     the layout box, which is what the factor has to be measured against, and
+     the second is already scaled by whatever this function set last time. */
+  const width = frame.offsetWidth;
+  const height = frame.offsetHeight;
+  if (width === 0 || height === 0 || room.width === 0 || room.height === 0) return;
+
+  const margin = 2 * WINDOW_LAYOUT.margin;
+  const factor = Math.min(1,
+    (room.width - margin) / width, (room.height - margin) / height);
+  frame.style.transform = factor < 1 ? "scale(" + factor.toFixed(4) + ")" : "";
+}
 
 /* --------------------------------------------------------------- the labels */
 
@@ -177,6 +214,13 @@ export function mountFrame(
   closeBox.addEventListener("click", (): void => { options.onCancel(); });
 
   parent.appendChild(element);
+  /* Once it is on the page and has a size, and again whenever the screen
+     changes under it -- an orientation, a resized window, and on a phone the
+     browser's own toolbars sliding away, which is a resize as far as `dvh` and
+     this listener are concerned. */
+  fitToScreen(element, frame);
+  const onResize = (): void => { fitToScreen(element, frame); };
+  window.addEventListener("resize", onResize);
   frame.focus();
 
   return {
@@ -184,6 +228,7 @@ export function mountFrame(
     frame,
     body,
     close: (): void => {
+      window.removeEventListener("resize", onResize);
       element.removeEventListener("keydown", onKeyDown);
       element.remove();
     },

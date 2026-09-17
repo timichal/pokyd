@@ -209,12 +209,19 @@ body {
   white-space: nowrap;
 }
 
+/* --pokyd-heading-fit is the one thing on this row that is not his, and it is
+   1 in every window he could have had: OnGetMinMaxInfo (mfcDlg.cpp:990-991)
+   would not let the window go below 400 pixels across, so his three headings
+   never had to fit in less than that and at 390 they meet.  src/app/chat.ts
+   measures them and sets the factor; the row shrinks whole, so the two faces
+   keep their ratio and :1071-:1077 keep their arithmetic. */
+
 /* :1071 and :1077 -- both at OKRAJE-3, one against each edge. */
 .pokyd-heading-left,
 .pokyd-heading-right {
   top: calc(var(--pokyd-margin) - 3px);
   font-family: var(--pokyd-sans);
-  font-size: var(--pokyd-heading-size);
+  font-size: calc(var(--pokyd-heading-size) * var(--pokyd-heading-fit, 1));
   font-weight: var(--pokyd-heading-weight);
   color: var(--pokyd-heading-text, #90ffff);
 }
@@ -231,7 +238,7 @@ body {
   top: calc(var(--pokyd-margin) - 5px);
   text-align: center;
   font-family: var(--pokyd-serif);
-  font-size: var(--pokyd-title-size);
+  font-size: calc(var(--pokyd-title-size) * var(--pokyd-heading-fit, 1));
   font-weight: var(--pokyd-title-weight);
   color: var(--pokyd-title-text, #fff);
 }
@@ -338,6 +345,16 @@ body {
   border-radius: 0;
   font-family: var(--pokyd-sans);
   font-size: 13px;
+}
+
+/* Safari on iOS zooms the whole page in when it focuses a field whose text is
+   smaller than 16 pixels, and it does not zoom back out -- so the sentence line
+   his window is built around throws the window off the screen the first time a
+   visitor taps it.  Sixteen pixels is the one number that stops it happening,
+   and the edit is 29 pixels tall (12 dialog units), which has the room.
+   Nothing else about the control moves, and on a mouse it is 13 as he had it. */
+@media (hover: none) and (pointer: coarse) {
+  .pokyd-input { font-size: 16px; }
 }
 
 /* PROSTRED.FU:343 -- with no background the edit brush is white, and
@@ -501,6 +518,16 @@ body {
   position: fixed;
   inset: 0;
   z-index: 10;
+  /* `dvh` and not `100%` or `vh`: on a phone the browser's own chrome sits over
+     the bottom of a `position: fixed` box, and the viewport a percentage is
+     measured against is the tall one the toolbars are hidden in.  `dvh` is the
+     short one -- the band that is really on the screen -- and it is what
+     src/app/frame.ts reads back to scale a window that would not fit into it.
+     Overflow hidden because what it scales is a transform: the layout box of a
+     window bigger than the phone is still bigger than the phone, and only the
+     drawing of it comes back inside. */
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -510,9 +537,12 @@ body {
   background: rgba(0, 0, 0, 0.35);
 }
 
+/* No max-width and no max-height: a window that does not fit used to be clipped
+   to the screen with its right-hand third simply gone -- IDD_TEXT is 568 pixels
+   across and a phone is 390 -- and src/app/frame.ts now scales it down whole
+   instead, which is the same window and all of it. */
 .pokyd-dialog-frame {
-  max-width: calc(100% - 2 * var(--pokyd-margin));
-  max-height: calc(100% - 2 * var(--pokyd-margin));
+  flex: 0 0 auto;
   overflow: auto;
   color: #000;
   background-color: #ece9d8;

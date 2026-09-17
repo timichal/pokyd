@@ -422,6 +422,74 @@ export function mountChat(
   element.appendChild(client);
   parent.appendChild(element);
 
+  /* ------------------------------------------------------ the heading row */
+
+  /* The one row in this window that a narrow screen breaks, and the reason it
+     does is in the author's own OnGetMinMaxInfo (mfcDlg.cpp:990-991): the
+     window would not go below 400 pixels across, so his three headings never
+     had to fit in less.  A phone is 390, and at 390 the title and "KYBLSoft
+     2005" meet with nothing between them.
+
+     They are scaled down together rather than moved, wrapped or dropped: the
+     two faces keep their ratio, :1071-:1077 keep their arithmetic, and every
+     window he could actually have had gets a factor of 1 and no change at all.
+
+     Measured, not computed.  The faces a visitor has are not the faces he had
+     -- Garamond is Palatino on an iPhone and wider than the Georgia a desktop
+     falls back to -- so the widths come off the three spans as they are drawn,
+     the same rule src/app/dlu.ts follows for everything else in this window. */
+  const headingRow = ["pokyd-heading-left", "pokyd-title", "pokyd-heading-right"]
+    .map((className) => headings.querySelector<HTMLElement>("." + className)!);
+  /** The three at a factor of 1, which is the only thing about them that never
+   *  changes: the strings are the template's and nothing re-writes them. */
+  let rowWidths: [number, number, number] | null = null;
+
+  function fitHeadings(): void {
+    const room = client.clientWidth;
+    if (room === 0) return;
+    if (rowWidths === null) {
+      element.style.setProperty("--pokyd-heading-fit", "1");
+      /* A Range and not the span: `.pokyd-title` is a box that stops one margin
+         short of the right edge and centres its text inside itself, so its own
+         width is the box and what has to fit is the text in it. */
+      const textWidth = (node: HTMLElement): number => {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return range.getBoundingClientRect().width;
+      };
+      const [left, title, right] = headingRow.map(textWidth);
+      if (title === 0) return;         /* not laid out yet; ask again on resize */
+      rowWidths = [left!, title!, right!];
+    }
+    const [left, title, right] = rowWidths;
+    /* :1074's own centre -- half of the window less one margin, which is half a
+       margin left of true centre -- and ROZESTUP for the gap the headings have
+       to keep, because that is the gap this window measures everything in. */
+    const centre = (room - margin) / 2;
+    const half = title / 2;
+    const factor = Math.min(1,
+      (centre - margin - spacing) / (left + half),
+      (centre - spacing) / (right + half));
+    /* A tenth is the floor, and only ever reached by a window narrower than the
+       margins it is holding: below it the arithmetic goes negative and the row
+       would turn inside out rather than get small. */
+    element.style.setProperty("--pokyd-heading-fit",
+      Math.max(factor, 0.1).toFixed(4));
+  }
+
+  fitHeadings();
+  /* And again once the document's fonts have settled, because the widths above
+     are whatever was available at first layout and the factor is only as good
+     as the face it was measured on. */
+  if (typeof document.fonts !== "undefined") {
+    document.fonts.ready.then((): void => {
+      rowWidths = null;
+      fitHeadings();
+    }).catch((): void => { /* the first widths are still widths */ });
+  }
+  const onResize = (): void => { fitHeadings(); };
+  window.addEventListener("resize", onResize);
+
   /* --------------------------------------------------------------- the state */
 
   let state: PokydChatState = "loading";
@@ -881,6 +949,7 @@ export function mountChat(
     state: (): PokydChatState => state,
     configStatus: (): number => configStatus,
     close: async (): Promise<void> => {
+      window.removeEventListener("resize", onResize);
       loading.remove();
       loadingSlot.remove();
       menu.remove();
